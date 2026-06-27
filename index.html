@@ -24,7 +24,11 @@
   button{font-family:inherit;cursor:pointer;color:inherit}
   input,textarea{font-family:inherit}
 
-  .mast{padding:24px 2px 8px}
+  .mast{padding:24px 2px 8px;position:relative}
+  .profile-btn{position:absolute;top:22px;right:2px;width:38px;height:38px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink-dim)}
+  .profile-btn:hover{border-color:var(--amber);color:var(--amber-bright)}
+  .profile-btn svg{width:19px;height:19px}
+  .profile-btn.has-data{border-color:var(--teal);color:var(--teal)}
   .kicker{font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:.22em;text-transform:uppercase;font-size:12px;color:var(--amber)}
   .mast h1{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:38px;line-height:.95;text-transform:uppercase;margin-top:3px}
   .mast .sub{color:var(--ink-dim);font-size:13px;margin-top:6px}
@@ -194,6 +198,28 @@
   .rsess.best{border-color:rgba(242,135,46,.4)}
   .rsess.best .rv{color:var(--amber-bright)}
 
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:7px}
+  .field input,.field textarea{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:15px;padding:11px 12px;font-family:inherit}
+  .field input:focus,.field textarea:focus{outline:none;border-color:var(--teal)}
+  .field textarea{min-height:90px;resize:vertical;line-height:1.5}
+  .field .unit{font-size:12px;color:var(--ink-faint);margin-top:5px}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .prof-saved{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--green);margin-top:4px;min-height:18px}
+  .prof-saved.hidden{visibility:hidden}
+
+  .analyze-btn{font-size:14.5px;font-weight:700;color:var(--ink);border-color:var(--amber)}
+  .analyze-btn:hover{background:var(--card-hi)}
+  .rep-block{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+  .rep-h{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;text-transform:uppercase;margin-bottom:8px}
+  .rep-h .rep-sub{font-family:'Inter',sans-serif;font-weight:500;font-size:11px;text-transform:none;color:var(--ink-faint);letter-spacing:0;margin-left:6px}
+  .rep-p{font-size:13.5px;color:var(--ink-dim);line-height:1.55;margin-bottom:6px}
+  .rep-p:last-child{margin-bottom:0}
+  .rep-row{padding:8px 0;font-size:13.5px;border-top:1px solid rgba(255,255,255,.04)}
+  .rep-row:first-child{border-top:none;padding-top:0}
+  .rep-sub{font-size:11.5px;color:var(--ink-faint);margin-top:2px}
+  .rep-tag{font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--amber-bright);background:rgba(242,135,46,.14);border:1px solid rgba(242,135,46,.3);border-radius:5px;padding:1px 6px;margin-left:4px}
+
   .timer-dock{position:fixed;left:0;right:0;bottom:0;z-index:50;transform:translateY(120%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
   .timer-dock.up{transform:translateY(0)}
   .dock-in{max-width:600px;margin:0 auto;padding:0 16px calc(16px + env(safe-area-inset-bottom))}
@@ -221,12 +247,15 @@
 <body>
 <div class="wrap">
   <header class="mast">
+    <button class="profile-btn" id="profileBtn" aria-label="Profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </button>
     <div class="kicker" id="kicker">Push / Pull · Tracker</div>
     <h1 id="title">Training</h1>
     <p class="sub" id="subtitle">Pick a day to start. Sets, weights and rest are tracked here.</p>
   </header>
   <div id="app"></div>
-  <footer>All weights in kg · saved in the Claude app · back up to a file anytime · rest timer needs the screen on (wake-lock requested during a session).</footer>
+  <footer>All weights in kg · saved on this device · back up to a file anytime · rest timer needs the screen on (wake-lock requested during a session).</footer>
 </div>
 
 <div class="timer-dock" id="dock"><div class="dock-in"><div class="timer" id="timer">
@@ -296,6 +325,7 @@ const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true},CUR=null,NOTES={},BACKMETA={at:0,count:0};
+let PROFILE={heightCm:"",weightKg:"",age:"",goal:""};
 
 /* ---------------- helpers ---------------- */
 function weekStart(d){const x=new Date(d);const day=(x.getDay()+6)%7;x.setHours(0,0,0,0);x.setDate(x.getDate()-day);return x.getTime();}
@@ -309,7 +339,8 @@ function getPlanEx(name){for(const k in PLAN){const e=PLAN[k].ex.find(x=>x.n===n
 function isBodyweight(name,hist){const pe=getPlanEx(name);const flag=pe&&(pe.abs||pe.reps==="to failure");if(hist&&hist.length)return hist.every(h=>!h.anyW);return!!flag;}
 function setComplete(ex,s){const wOk=s.weight!==""&&s.weight!=null;const rOk=s.reps!==""&&s.reps!=null;return (!SETTINGS.logReps||rOk)&&(wOk||!!(ex&&ex.abs));}
 
-function weeklyVolume(){const ws=thisWeek();const vol={};for(const m in MUSCLES)vol[m]=0;
+function weeklyVolume(){return weeklyVolumeForWeek(thisWeek());}
+function weeklyVolumeForWeek(ws){const vol={};for(const m in MUSCLES)vol[m]=0;
   const add=(s)=>{const p=PLAN[s.day];if(!p)return;p.ex.forEach((ex,i)=>{const l=s.ex[i];if(!l)return;vol[ex.m]=(vol[ex.m]||0)+l.sets.filter(x=>setComplete(ex,x)).length;});};
   HISTORY.forEach(s=>{if(weekStart(s.date)===ws)add(s);});if(CUR&&weekStart(CUR.start)===ws)add(CUR);return vol;}
 function priorSessionThisWeek(){const ws=thisWeek();return HISTORY.some(s=>weekStart(s.date)===ws);}
@@ -328,6 +359,65 @@ function exSeries(name,includeCur){const out=[];
 function exPRs(name){const ser=exSeries(name,true);if(!ser.length)return{hasData:false};
   const bw=isBodyweight(name,ser);
   return{hasData:true,bw,top:Math.max(...ser.map(s=>s.top)),vol:Math.max(...ser.map(s=>s.vol)),e1:Math.max(...ser.map(s=>s.e1)),reps:Math.max(...ser.map(s=>s.reps)),series:ser};}
+
+/* ---------------- progress analysis (rule-based, no AI call, no network) ---------------- */
+function allPlanExercises(){const out=[];const seen=new Set();for(const k in PLAN){PLAN[k].ex.forEach(e=>{if(!seen.has(e.n)){seen.add(e.n);out.push(e);}});}return out;}
+function recentWeekStarts(n){const out=[];let w=thisWeek();for(let i=0;i<n;i++){out.push(w);w=w-7*86400000;}return out;}
+
+function analyzeVolume(){
+  const weeks=recentWeekStarts(4);
+  const rows=[];
+  for(const m in MUSCLES){
+    const meta=MUSCLES[m];if(!meta.nudge)continue; // skip muscles we don't actively target-track (abs, glutes, lower back)
+    const samples=weeks.map(w=>weeklyVolumeForWeek(w)[m]||0);
+    const weeksBehind=samples.filter(v=>v<meta.t*0.7).length; // <70% of target counts as "behind" that week
+    const avg=round1(samples.reduce((a,b)=>a+b,0)/samples.length);
+    rows.push({muscle:m,target:meta.t,avg,weeksBehind,samples});
+  }
+  rows.sort((a,b)=>b.weeksBehind-a.weeksBehind||(a.avg/a.target)-(b.avg/b.target));
+  return rows;
+}
+function analyzeStrengthTrends(){
+  const out=[];
+  allPlanExercises().forEach(ex=>{
+    const ser=exSeries(ex.n,true).slice(-3); // last up to 3 logged sessions
+    if(ser.length<2)return; // need at least 2 points to call a trend
+    const bw=isBodyweight(ex.n,ser);
+    const metric=bw?"reps":"e1";
+    const first=ser[0][metric],last=ser[ser.length-1][metric];
+    if(!first&&!last)return;
+    const pct=first?round1(((last-first)/first)*100):0;
+    let dir="flat";if(pct>=5)dir="up";else if(pct<=-5)dir="down";
+    out.push({name:ex.n,main:!!ex.main,bw,dir,pct,sessions:ser.length});
+  });
+  return out;
+}
+function analyzeConsistency(){
+  const weeks=recentWeekStarts(4);
+  const counts=weeks.map(w=>HISTORY.filter(s=>weekStart(s.date)===w).length+((CUR&&weekStart(CUR.start)===w)?1:0));
+  const avg=round1(counts.reduce((a,b)=>a+b,0)/counts.length);
+  return{avgSessionsPerWeek:avg,target:4,weeks:counts};
+}
+function goalKeywordHits(goal){
+  const g=(goal||"").toLowerCase();
+  const map={
+    "chest":["Chest"],"shoulder":["Side delts","Front delts","Rear delts"],"delt":["Side delts","Front delts","Rear delts"],
+    "back":["Back"],"arm":["Biceps","Triceps"],"bicep":["Biceps"],"tricep":["Triceps"],
+    "leg":["Quads","Hamstrings","Calves"],"hamstring":["Hamstrings"],"quad":["Quads"],"calf":["Calves"],"calves":["Calves"],
+    "strength":["__strength__"],"strong":["__strength__"],"lean":["__lean__"],"bulk":["__bulk__"],"cut":["__lean__"],
+  };
+  const hits=new Set();
+  for(const k in map){if(g.includes(k))map[k].forEach(v=>hits.add(v));}
+  return hits;
+}
+function buildProgressReport(){
+  const vol=analyzeVolume();
+  const trends=analyzeStrengthTrends();
+  const consistency=analyzeConsistency();
+  const goalHits=goalKeywordHits(PROFILE.goal);
+  const hasAnyData=HISTORY.length>0||(CUR&&Object.values(CUR.ex).some(e=>e.sets.some(s=>s.weight||s.reps)));
+  return{vol,trends,consistency,goalHits,hasAnyData};
+}
 
 /* ---------------- views ---------------- */
 const app=document.getElementById("app");
@@ -350,10 +440,11 @@ function renderHome(summary){
   html+=`<div class="section-h">This week</div><div class="week">`;
   DASH_ORDER.forEach(m=>{const t=MUSCLES[m].t,v=vol[m]||0,r=Math.min(v/t,1);html+=`<div class="wrow"><div class="ml">${m}</div><div class="track"><div class="fill" style="width:${r*100}%;background:${muscleColor(v/t)}"></div></div><div class="num" style="color:${v>=t?'var(--green)':'var(--ink-dim)'}">${v}/${t}</div></div>`;});
   html+=`<div class="wk-note">Resets Monday. Bars track sets actually completed — skipping low-priority work is fine; the tracker only nudges when a muscle this day trains is genuinely behind.</div></div>`;
+  html+=`<div class="section-h">Progress analysis</div><button class="tool-btn analyze-btn" onclick="openProgressReport()" style="width:100%">📊 Run progress analysis</button>`;
   // backup
   const lastBk=BACKMETA.at?("Last backup: "+fmtDate(BACKMETA.at)):"Not backed up yet";
   html+=`<div class="section-h">Backup (optional)</div><p style="font-size:12px;color:var(--ink-dim);margin:-4px 2px 10px">Your workouts save automatically as you log them — no button needed. This is just an extra copy to keep off-device (e.g. in Google Drive) in case the app's storage is ever reset. <b style="color:var(--ink-faint)">${lastBk}</b></p><div class="tools"><button class="tool-btn" onclick="toggleExport()">⬇ Export to file</button><button class="tool-btn" onclick="toggleImport()">⬆ Restore from file</button></div>`;
-  if(showExport){const blob=JSON.stringify({v:1,exportedAt:Date.now(),settings:SETTINGS,notes:NOTES,history:HISTORY});
+  if(showExport){const blob=JSON.stringify({v:2,exportedAt:Date.now(),settings:SETTINGS,notes:NOTES,history:HISTORY,profile:PROFILE});
     html+=`<div class="panel-box"><h4>Export</h4><p>${HISTORY.length} session${HISTORY.length===1?"":"s"} + your notes. Copy this text (or download) and keep it safe — paste it into Restore later, or hand it to Claude to save in Google Drive.</p><textarea id="expArea" readonly>${blob}</textarea><div class="pb-row"><button class="primary" onclick="copyExport(this)">Copy</button><button onclick="downloadExport()">Download .json</button></div></div>`;}
   if(showImport){html+=`<div class="panel-box"><h4>Restore from file</h4><p>Paste a backup here and restore. This replaces your current saved history and notes.</p><textarea id="impArea" placeholder="Paste backup JSON..."></textarea><div class="pb-row"><button class="primary" onclick="doImport()">Restore</button></div></div>`;}
   app.innerHTML=html;
@@ -395,6 +486,98 @@ function renderSession(){
 let trendName=null,trendMetric="vol";
 function openTrend(name){trendName=name;const prs=exPRs(name);trendMetric=prs.bw?"reps":"vol";renderTrend();}
 function closeOverlay(){document.getElementById("overlayMount").innerHTML="";}
+
+/* ---------------- profile ---------------- */
+let profSaveT=null;
+function openProfile(){
+  closeOverlay();
+  const p=PROFILE;
+  const html=`<div class="overlay"><div class="ov-head"><button class="bk" onclick="closeOverlay()" aria-label="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><div class="ti"><span>Stored on this device</span>Profile</div></div><div class="ov-body">
+    <div class="field-row">
+      <div class="field"><label>Height</label><input id="pHeight" type="number" inputmode="decimal" placeholder="e.g. 178" value="${esc(p.heightCm)}" oninput="setProfileField('heightCm',this.value)"><div class="unit">cm</div></div>
+      <div class="field"><label>Weight</label><input id="pWeight" type="number" inputmode="decimal" placeholder="e.g. 76" value="${esc(p.weightKg)}" oninput="setProfileField('weightKg',this.value)"><div class="unit">kg</div></div>
+    </div>
+    <div class="field"><label>Age</label><input id="pAge" type="number" inputmode="numeric" placeholder="e.g. 27" value="${esc(p.age)}" oninput="setProfileField('age',this.value)"><div class="unit">years</div></div>
+    <div class="field"><label>Goal</label><textarea id="pGoal" placeholder="e.g. Lean bulk, prioritize chest and shoulder width while keeping strength progressing on the big lifts." oninput="setProfileField('goal',this.value)">${esc(p.goal)}</textarea></div>
+    <div class="prof-saved hidden" id="profSaved">✓ Saved</div>
+  </div></div>`;
+  document.getElementById("overlayMount").innerHTML=html;
+}
+function setProfileField(field,val){
+  PROFILE[field]=val;
+  updateProfileBtnState();
+  if(profSaveT)clearTimeout(profSaveT);
+  profSaveT=setTimeout(async()=>{
+    await sset("profile",PROFILE);
+    const el=document.getElementById("profSaved");
+    if(el){el.classList.remove("hidden");setTimeout(()=>{if(el)el.classList.add("hidden");},1500);}
+  },500);
+}
+function updateProfileBtnState(){
+  const btn=document.getElementById("profileBtn");if(!btn)return;
+  const hasData=!!(PROFILE.heightCm||PROFILE.weightKg||PROFILE.age||(PROFILE.goal&&PROFILE.goal.trim()));
+  btn.classList.toggle("has-data",hasData);
+}
+
+/* ---------------- progress report (rendering) ---------------- */
+function openProgressReport(){
+  closeOverlay();
+  const r=buildProgressReport();
+  let body="";
+  if(!r.hasAnyData){
+    body=`<div class="nohist" style="margin-bottom:0">No logged sets yet — finish at least one session and this'll have something to work with.</div>`;
+  }else{
+    // Consistency
+    body+=`<div class="rep-block"><div class="rep-h">Consistency</div><div class="rep-p">Averaging <b>${r.consistency.avgSessionsPerWeek}</b> session${r.consistency.avgSessionsPerWeek===1?"":"s"}/week over the last 4 weeks (split is built for ${r.consistency.target}/week).${r.consistency.avgSessionsPerWeek<r.consistency.target*0.6?" That gap is likely the biggest lever on results right now — more than any single exercise swap.":""}</div></div>`;
+
+    // Volume balance — surface goal-relevant findings first, then the rest.
+    // Split into "below target" (some volume, just not enough) vs "untrained"
+    // (zero sets across all 4 weeks) since the latter usually just means that
+    // muscle isn't on the days you've logged recently, not a real gap.
+    const belowTarget=r.vol.filter(v=>v.weeksBehind>0&&v.avg>0);
+    const untrained=r.vol.filter(v=>v.weeksBehind===4&&v.avg===0);
+    const goalBehind=belowTarget.filter(v=>r.goalHits.has(v.muscle));
+    const otherBehind=belowTarget.filter(v=>!r.goalHits.has(v.muscle));
+    body+=`<div class="rep-block"><div class="rep-h">Volume balance <span class="rep-sub">vs. weekly target, last 4 weeks</span></div>`;
+    if(belowTarget.length===0&&untrained.length===0){
+      body+=`<div class="rep-p">No muscle group has been meaningfully behind target the last 4 weeks. Volume balance looks solid.</div>`;
+    }else{
+      if(belowTarget.length===0){
+        body+=`<div class="rep-p">No muscle you've actually been training is behind its target — looks solid for the days you've been doing.</div>`;
+      }else{
+        [...goalBehind,...otherBehind].slice(0,5).forEach(v=>{
+          const tag=r.goalHits.has(v.muscle)?`<span class="rep-tag">matches your goal</span>`:"";
+          body+=`<div class="rep-row"><div><b>${v.muscle}</b> ${tag}<div class="rep-sub">avg ${v.avg}/${v.target} sets · behind in ${v.weeksBehind} of last 4 weeks</div></div></div>`;
+        });
+        if(belowTarget.length>5)body+=`<div class="rep-sub" style="margin-top:6px">+${belowTarget.length-5} more below target — see the weekly dashboard above for the full list.</div>`;
+      }
+      if(untrained.length){
+        body+=`<div class="rep-sub" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">Not appearing at all in the last 4 weeks: ${untrained.map(v=>v.muscle).join(", ")}. Likely just means those days haven't come up recently rather than a real gap — ignore if that's expected for your split.</div>`;
+      }
+    }
+    body+=`</div>`;
+
+    // Strength trends
+    const ups=r.trends.filter(t=>t.dir==="up"),downs=r.trends.filter(t=>t.dir==="down");
+    body+=`<div class="rep-block"><div class="rep-h">Strength trend <span class="rep-sub">last up to 3 sessions per lift</span></div>`;
+    if(r.trends.length===0){
+      body+=`<div class="rep-p">Not enough repeated sessions per exercise yet to call a trend — log the same lift a couple more times.</div>`;
+    }else{
+      if(ups.length){body+=`<div class="rep-p"><b style="color:var(--green)">Trending up:</b> ${ups.map(t=>t.name+" (+"+Math.abs(t.pct)+"%)").join(", ")}</div>`;}
+      if(downs.length){body+=`<div class="rep-p"><b style="color:var(--red)">Trending down:</b> ${downs.map(t=>t.name+" ("+t.pct+"%)").join(", ")}. A dip across 2–3 sessions can be normal fatigue — worth a deload if it continues.</div>`;}
+      if(!ups.length&&!downs.length)body+=`<div class="rep-p">Mostly flat across logged lifts recently — within range of normal, but worth pushing intensity if it continues.</div>`;
+    }
+    body+=`</div>`;
+
+    // Profile context line
+    if(PROFILE.heightCm||PROFILE.weightKg||PROFILE.age){
+      const bits=[];if(PROFILE.heightCm)bits.push(PROFILE.heightCm+"cm");if(PROFILE.weightKg)bits.push(PROFILE.weightKg+"kg");if(PROFILE.age)bits.push(PROFILE.age+"y");
+      body+=`<div class="rep-block"><div class="rep-h">Your profile</div><div class="rep-p">${bits.join(" · ")}${PROFILE.goal?` — goal: "${esc(PROFILE.goal)}"`:""}</div></div>`;
+    }
+  }
+  const html=`<div class="overlay"><div class="ov-head"><button class="bk" onclick="closeOverlay()" aria-label="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><div class="ti"><span>From your logged data — no AI, nothing sent anywhere</span>Progress analysis</div></div><div class="ov-body">${body}</div></div>`;
+  document.getElementById("overlayMount").innerHTML=html;
+}
 function renderTrend(){
   const name=trendName;const ser=exSeries(name,true);const bw=isBodyweight(name,ser);
   const now=Date.now(),win=90*86400000,from=now-win;
@@ -467,50 +650,82 @@ function copyExport(btn){const ta=document.getElementById("expArea");if(!ta)retu
   const txt=ta.value;const done=()=>{markBackup();if(btn){const o=btn.textContent;btn.textContent="Copied ✓";setTimeout(()=>{btn.textContent=o;renderHome();},1200);}};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done).catch(()=>{try{document.execCommand("copy");done();}catch(e){}});}
   else{try{document.execCommand("copy");done();}catch(e){}}}
-function downloadExport(){const blob=JSON.stringify({v:1,exportedAt:Date.now(),settings:SETTINGS,notes:NOTES,history:HISTORY});
+function downloadExport(){const blob=JSON.stringify({v:2,exportedAt:Date.now(),settings:SETTINGS,notes:NOTES,history:HISTORY,profile:PROFILE});
   try{const b=new Blob([blob],{type:"application/json"});const url=URL.createObjectURL(b);const a=document.createElement("a");const d=new Date();a.href=url;a.download="workout-backup-"+d.toISOString().slice(0,10)+".json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);markBackup();}catch(e){alert("Download blocked here — use Copy instead.");}}
 function markBackup(){BACKMETA={at:Date.now(),count:HISTORY.length};sset("backupMeta",BACKMETA);}
 async function doImport(){const ta=document.getElementById("impArea");if(!ta)return;let data;try{data=JSON.parse(ta.value);}catch(e){alert("That doesn't look like valid backup text.");return;}
   if(!data||!Array.isArray(data.history)){alert("No history found in that backup.");return;}
-  if(!confirm(`Restore ${data.history.length} session(s)? This replaces your current saved history and notes.`))return;
-  HISTORY=data.history;if(data.settings)SETTINGS=Object.assign(SETTINGS,data.settings);if(data.notes)NOTES=data.notes;
-  await sset("history",HISTORY);await sset("settings",SETTINGS);await sset("notes",NOTES);showImport=false;renderHome();alert("Restored "+HISTORY.length+" session(s).");}
+  if(!confirm(`Restore ${data.history.length} session(s)? This replaces your current saved history, notes, and profile.`))return;
+  HISTORY=data.history;if(data.settings)SETTINGS=Object.assign(SETTINGS,data.settings);if(data.notes)NOTES=data.notes;if(data.profile)PROFILE=Object.assign({heightCm:"",weightKg:"",age:"",goal:""},data.profile);
+  await sset("history",HISTORY);await sset("settings",SETTINGS);await sset("notes",NOTES);await sset("profile",PROFILE);updateProfileBtnState();showImport=false;renderHome();alert("Restored "+HISTORY.length+" session(s).");}
 
 /* ---------------- clock ---------------- */
 let clockIv=null;
 function tickClock(){if(clockIv)clearInterval(clockIv);const upd=()=>{const el=document.getElementById("clock");if(!el||!CUR){clearInterval(clockIv);return;}el.textContent=fmtClock(Math.floor((Date.now()-CUR.start)/1000));};upd();clockIv=setInterval(upd,1000);}
 
-/* ---------------- rest timer ---------------- */
+/* ---------------- rest timer ----------------
+   Always derives "time left" from a stored end-timestamp (restEndAt), never
+   from counting ticks. This means: if iOS suspends our setInterval while the
+   app is backgrounded/locked, the displayed time will simply jump to the
+   correct value the instant the app is foregrounded again (visibilitychange),
+   rather than silently drifting or freezing. The alert (sound/vibration)
+   fires either live if you're in the app when time runs out, or immediately
+   on resume if the time already elapsed while you were away. A best-effort
+   service-worker notification is also scheduled as a bonus for if iOS
+   happens to deliver it — but nothing here depends on that working. */
 const dock=document.getElementById("dock"),timer=document.getElementById("timer");
 const tCount=document.getElementById("timerCount"),tBar=document.getElementById("timerBar"),tCtx=document.getElementById("timerCtx");
-let restIv=null,restLeft=0,restTotal=0,restFired=false,restEndAt=0,restLabel="";
-function startTimer(sec,ex,i,j){stopTimer(true);restLeft=sec;restTotal=sec;restFired=false;restEndAt=Date.now()+sec*1000;const tot=(CUR&&CUR.ex[i])?CUR.ex[i].sets.length:ex.sets;const lastSet=j>=tot-1;
+let restEndAt=0,restTotal=0,restFired=false,restActive=false,restLabel="",restTickHandle=null;
+
+function startTimer(sec,ex,i,j){
+  restTotal=sec;restEndAt=Date.now()+sec*1000;restFired=false;restActive=true;
+  const tot=(CUR&&CUR.ex[i])?CUR.ex[i].sets.length:ex.sets;const lastSet=j>=tot-1;
   restLabel=`Rest done — ${ex.n}`;
   tCtx.innerHTML=`Rest · <b>${ex.n}</b><br>${lastSet?"next: next exercise":"next: set "+(j+2)+" of "+tot}`;
-  timer.classList.remove("go");dock.classList.add("up");updTimer();
+  timer.classList.remove("go");dock.classList.add("up");
   scheduleBgAlert(sec,restLabel);
-  restIv=setInterval(()=>{restLeft--;if(restLeft<=0&&!restFired){restFired=true;fireAlert();}if(restLeft<=0)restLeft=0;updTimer();},1000);}
-function updTimer(){tCount.textContent=fmtClock(Math.max(restLeft,0));tBar.style.width=(restTotal?Math.max(restLeft,0)/restTotal*100:0)+"%";if(restLeft<=0){timer.classList.add("go");tCount.textContent="GO";}}
-function stopTimer(hide){if(restIv){clearInterval(restIv);restIv=null;}if(hide){dock.classList.remove("up");timer.classList.remove("go");cancelBgAlert();}}
-document.getElementById("tMinus").onclick=()=>{restLeft=Math.max(0,restLeft-15);restEndAt=Date.now()+restLeft*1000;if(restLeft===0&&!restFired){restFired=true;fireAlert();}else{scheduleBgAlert(restLeft,restLabel);}updTimer();};
+  runTick();
+}
+function runTick(){
+  if(restTickHandle)clearInterval(restTickHandle);
+  restTickHandle=setInterval(syncTimer,250);
+  syncTimer();
+}
+// The single source of truth: called on every tick AND every time the app
+// becomes visible again. Computes remaining time from real elapsed time.
+function syncTimer(){
+  if(!restActive)return;
+  const left=Math.max(0,Math.round((restEndAt-Date.now())/1000));
+  tCount.textContent=left>0?fmtClock(left):"GO";
+  tBar.style.width=(restTotal?Math.min(left/restTotal,1)*100:0)+"%";
+  if(left<=0){
+    timer.classList.add("go");
+    if(!restFired){restFired=true;fireAlert();}
+  }else{
+    timer.classList.remove("go");
+  }
+}
+function stopTimer(hide){
+  restActive=false;
+  if(restTickHandle){clearInterval(restTickHandle);restTickHandle=null;}
+  if(hide){dock.classList.remove("up");timer.classList.remove("go");cancelBgAlert();}
+}
+document.getElementById("tMinus").onclick=()=>{if(!restActive)return;restEndAt-=15000;syncTimer();scheduleBgAlert(Math.max(0,Math.round((restEndAt-Date.now())/1000)),restLabel);};
 document.getElementById("tSkip").onclick=()=>stopTimer(true);
 document.getElementById("tDone").onclick=()=>stopTimer(true);
-tCount.onclick=()=>{restLeft+=15;restEndAt=Date.now()+restLeft*1000;if(restLeft>0){timer.classList.remove("go");restFired=false;}restTotal=Math.max(restTotal,restLeft);scheduleBgAlert(restLeft,restLabel);updTimer();};
+tCount.onclick=()=>{if(!restActive)return;restEndAt+=15000;restFired=false;restTotal=Math.max(restTotal,Math.round((restEndAt-Date.now())/1000));syncTimer();scheduleBgAlert(Math.max(0,Math.round((restEndAt-Date.now())/1000)),restLabel);};
 
-/* ---------------- background alert via service worker ---------------- */
-// On Claude's artifact iframe this silently no-ops (no SW available); on a hosted
-// standalone install, the service worker fires a real OS notification at restEndAt
-// even if the screen is locked or you've switched apps.
+/* ---------------- background alert via service worker (best-effort only) ---------------- */
+// iOS in particular does not guarantee this fires while backgrounded — that's
+// an OS limitation, not something fixable from web code. We schedule it
+// anyway as a bonus for platforms (mainly Android) where it reliably works.
+// The real guarantee is syncTimer() catching up the instant you reopen the app.
 function swReady(){return navigator.serviceWorker&&navigator.serviceWorker.controller;}
 function scheduleBgAlert(sec,label){if(!swReady())return;navigator.serviceWorker.controller.postMessage({type:"schedule-rest-alert",ms:sec*1000,label});}
 function cancelBgAlert(){if(!swReady())return;navigator.serviceWorker.controller.postMessage({type:"cancel-rest-alert"});}
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("sw.js").catch(()=>{});
-  navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="rest-alert-fired")fireAlert();});
-}
-if("Notification" in window&&Notification.permission==="default"){
-  // ask once a session actually starts, not on cold load, so it's not a surprise prompt
-  document.addEventListener("click",function reqOnce(){Notification.requestPermission();document.removeEventListener("click",reqOnce);},{once:true});
+  navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="rest-alert-fired"&&restActive&&!restFired){restFired=true;fireAlert();}});
 }
 
 /* ---------------- alert ---------------- */
@@ -523,10 +738,22 @@ function fireAlert(){initAudio();if(SETTINGS.alert!=="visual"){try{navigator.vib
 let wakeLock=null;
 async function requestWake(){try{if("wakeLock" in navigator)wakeLock=await navigator.wakeLock.request("screen");}catch(e){}}
 function releaseWake(){try{if(wakeLock){wakeLock.release();wakeLock=null;}}catch(e){}}
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){if(CUR&&app.querySelector(".shead"))requestWake();initAudio();}});
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible"){
+    if(CUR&&app.querySelector(".shead"))requestWake();
+    initAudio();
+    syncTimer(); // resync immediately — catches up if time elapsed while backgrounded
+    if(restActive&&restTickHandle){clearInterval(restTickHandle);restTickHandle=setInterval(syncTimer,250);}
+  }
+});
+window.addEventListener("focus",syncTimer);
+window.addEventListener("pageshow",syncTimer);
+
 
 /* ---------------- init ---------------- */
-(async function init(){SETTINGS=await sget("settings",SETTINGS);HISTORY=await sget("history",[]);NOTES=await sget("notes",{});BACKMETA=await sget("backupMeta",{at:0,count:0});CUR=await sget("current",null);if(CUR){openIdx=0;renderSession();requestWake();}else renderHome();})();
+/* ---------------- init ---------------- */
+document.getElementById("profileBtn").onclick=openProfile;
+(async function init(){SETTINGS=await sget("settings",SETTINGS);HISTORY=await sget("history",[]);NOTES=await sget("notes",{});BACKMETA=await sget("backupMeta",{at:0,count:0});PROFILE=await sget("profile",PROFILE);updateProfileBtnState();CUR=await sget("current",null);if(CUR){openIdx=0;renderSession();requestWake();}else renderHome();})();
 </script>
 </body>
 </html>
