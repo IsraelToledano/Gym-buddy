@@ -1,4 +1,4 @@
-const CACHE = "gym-buddy-v1";
+const CACHE = "gym-buddy-v2";
 const ASSETS = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", (e) => {
@@ -15,11 +15,21 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
-// Offline-first for the app shell; network for everything else (fonts, etc.)
+// Network-first for the app shell: always try to fetch the latest index.html
+// (and other shell assets) first, only falling back to the cache if the
+// network request fails (offline). This is what makes updates show up
+// reliably after a fresh deploy — a pure cache-first strategy would keep
+// serving the old cached version until the next SW activate cycle.
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   e.respondWith(
-    caches.match(e.request).then((cached) => cached || fetch(e.request).catch(() => cached))
+    fetch(e.request)
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy));
+        return res;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
 
