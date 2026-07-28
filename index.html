@@ -74,12 +74,12 @@
   .pb-row button{flex:1;border-radius:10px;padding:11px;font-weight:600;font-size:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink-dim)}
   .pb-row button.primary{background:var(--amber);color:#1a120a;border-color:var(--amber)}
 
-  .shead{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,var(--bg) 72%,rgba(19,17,16,0));backdrop-filter:blur(8px);padding:14px 0 8px;margin:0 -2px}
+  .shead{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,var(--bg) 72%,rgba(19,17,16,0));backdrop-filter:blur(8px);padding:9px 0 6px;margin:0 -2px}
   .shead .row1{display:flex;align-items:center;justify-content:space-between;gap:10px}
-  .shead h2{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:24px;text-transform:uppercase}
+  .shead h2{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;text-transform:uppercase}
   .shead h2 b{color:var(--amber)}
   .clock{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:18px;color:var(--teal);font-variant-numeric:tabular-nums}
-  .shead .row2{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+  .shead .row2{display:flex;align-items:center;justify-content:space-between;margin-top:4px}
   .prog{font-size:12px;color:var(--ink-dim)}
   .linkbtn{background:none;border:none;color:var(--ink-faint);font-size:12.5px;text-decoration:underline;padding:4px}
 
@@ -87,20 +87,20 @@
   .nudge .x{margin-left:auto;background:none;border:none;color:var(--amber-bright);font-size:18px;line-height:1;padding:0 2px}
   .nudge b{color:var(--amber-bright)}
 
-  .list{position:relative;margin-top:10px}
+  .list{position:relative;margin-top:7px}
   .list::before{content:"";position:absolute;left:18px;top:14px;bottom:14px;width:2px;background:linear-gradient(180deg,var(--amber),var(--line) 16%,var(--line));opacity:.5}
-  .ex{position:relative;margin-bottom:9px}
-  .ex-btn{width:100%;display:grid;grid-template-columns:38px 1fr auto;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:13px 14px 13px 6px;text-align:left;transition:border-color .16s,background .16s}
+  .ex{position:relative;margin-bottom:6px}
+  .ex-btn{width:100%;display:grid;grid-template-columns:38px 1fr auto;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:9px 12px 9px 5px;text-align:left;transition:border-color .16s,background .16s}
   .ex-btn:hover{border-color:#473e33}
   .ex-btn:focus-visible{outline:2px solid var(--amber-bright);outline-offset:2px}
-  .rank{justify-self:center;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;background:var(--bg);border:2px solid var(--line);color:var(--ink-dim);position:relative;z-index:1}
+  .rank{justify-self:center;width:23px;height:23px;border-radius:50%;display:grid;place-items:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;background:var(--bg);border:2px solid var(--line);color:var(--ink-dim);position:relative;z-index:1}
   .ex.main .rank{background:var(--amber);border-color:var(--amber);color:#1a120a}
   .ex.abs .rank{border-color:var(--amber-bright);color:var(--amber-bright);font-size:13px}
   .ex.done .rank{background:var(--green);border-color:var(--green);color:#10210f}
   .ex.partial .rank{border-color:var(--amber-bright)}
-  .ex-name{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:19px;line-height:1.1}
+  .ex-name{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:17.5px;line-height:1.1}
   .ex.main .ex-name{font-weight:700}
-  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+  .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
   .tg{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:5px;line-height:1.4}
   .tg.str{background:rgba(242,135,46,.16);color:var(--amber-bright);border:1px solid rgba(242,135,46,.35)}
   .tg.dont{background:rgba(255,163,80,.14);color:var(--amber-bright);border:1px solid rgba(255,163,80,.35)}
@@ -116,12 +116,12 @@
   .ex-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .26s ease}
   .ex-body>.inner{overflow:hidden}
   .ex-btn[aria-expanded="true"]+.ex-body{grid-template-rows:1fr}
-  .panel{border:1px solid var(--line);border-top:none;border-radius:0 0 var(--r) var(--r);margin-top:-6px;padding:14px;background:rgba(0,0,0,.18)}
+  .panel{border:1px solid var(--line);border-top:none;border-radius:0 0 var(--r) var(--r);margin-top:-6px;padding:11px;background:rgba(0,0,0,.18)}
 
-  .prstrip{display:flex;gap:8px;margin-bottom:13px;padding-bottom:13px;border-bottom:1px solid var(--line)}
-  .pr{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 9px}
+  .prstrip{display:flex;gap:7px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+  .pr{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:6px 8px}
   .pr .lab{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap}
-  .pr .val{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px;line-height:1.1;margin-top:2px}
+  .pr .val{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:17px;line-height:1.1;margin-top:1px}
   .pr .val small{font-size:11px;font-weight:600;color:var(--ink-faint)}
   .pr.top .val{color:var(--amber-bright)}
   .pr.vol .val{color:var(--teal)}
@@ -132,11 +132,11 @@
   .trendbtn:hover{border-color:var(--teal)}
 
   .setgrid{width:100%}
-  .setrow{display:grid;grid-template-columns:26px 1fr 1fr 32px;align-items:center;gap:8px;padding:6px 0}
+  .setrow{display:grid;grid-template-columns:24px 1fr 1fr 30px;align-items:center;gap:7px;padding:3.5px 0}
   .setrow.head{padding-bottom:4px}
   .setrow.head span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
   .setrow .sn{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;color:var(--ink-dim);text-align:center}
-  .setrow input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--ink);font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:600;font-size:15px;padding:9px 8px;text-align:center;-moz-appearance:textfield}
+  .setrow input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--ink);font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:600;font-size:15px;padding:7px 8px;text-align:center;-moz-appearance:textfield}
   .setrow input::-webkit-outer-spin-button,.setrow input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   .setrow input:focus{outline:none;border-color:var(--amber)}
   .setrow input::placeholder{color:var(--ink-faint)}
@@ -149,23 +149,26 @@
   .reps-target{font-size:11px;color:var(--ink-faint);text-align:center;margin-top:2px}
   .ck:disabled{opacity:.38;cursor:not-allowed}
   .ck:disabled svg{color:var(--ink-faint)}
-  .sethint{font-size:11px;color:var(--ink-faint);margin-top:9px}
-  .pbar{height:5px;border-radius:3px;background:rgba(255,255,255,.07);margin-top:9px;overflow:hidden}
+  .sethint{font-size:10.5px;color:var(--ink-faint);margin-top:7px}
+  .pbar{height:4px;border-radius:3px;background:rgba(255,255,255,.07);margin-top:6px;overflow:hidden}
   .pbar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--amber),var(--amber-bright));transition:width .35s ease;width:0}
-  .addset{margin-top:10px;width:100%;background:var(--bg);border:1px dashed var(--line);border-radius:10px;color:var(--ink-dim);font-weight:600;font-size:13px;padding:9px}
+  .addset{margin-top:8px;width:100%;background:var(--bg);border:1px dashed var(--line);border-radius:10px;color:var(--ink-dim);font-weight:600;font-size:13px;padding:7px}
   .addset:hover{border-color:var(--amber);color:var(--amber-bright)}
   .rmset{width:30px;height:38px;border:none;background:none;color:var(--ink-faint);font-size:15px;border-radius:8px}
   .rmset:hover{color:var(--red);background:rgba(224,112,62,.1)}
   .tg.note{background:rgba(84,185,168,.1);color:var(--teal);border:1px solid rgba(84,185,168,.28)}
-  .notesblock{margin-top:13px;padding-top:13px;border-top:1px solid var(--line)}
+  .notesblock{margin-top:11px;padding-top:11px;border-top:1px solid var(--line)}
+  .notesblock .formtog{margin-top:0}
+  .notewrap{display:none;margin-top:9px}
+  .notewrap.show{display:block}
   .notes-h{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:7px}
   .notes-h span{letter-spacing:0;text-transform:none;opacity:.85}
-  .exnotes{width:100%;min-height:52px;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:13.5px;padding:9px 10px;resize:vertical;line-height:1.45}
+  .exnotes{width:100%;min-height:46px;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:13.5px;padding:9px 10px;resize:vertical;line-height:1.45}
   .exnotes:focus{outline:none;border-color:var(--teal)}
   .exnotes::placeholder{color:var(--ink-faint)}
 
-  .formtog{margin-top:12px;background:none;border:1px solid var(--line);border-radius:9px;color:var(--ink-dim);font-size:12px;padding:7px 11px;display:inline-flex;align-items:center;gap:6px}
-  .cues{list-style:none;margin-top:11px;display:none;gap:8px}
+  .formtog{margin-top:10px;background:none;border:1px solid var(--line);border-radius:9px;color:var(--ink-dim);font-size:12px;padding:7px 11px;display:inline-flex;align-items:center;gap:6px}
+  .cues{list-style:none;margin-top:9px;display:none;gap:7px}
   .cues.show{display:grid}
   .cues li{position:relative;padding-left:17px;font-size:13.5px;color:var(--ink);line-height:1.5}
   .cues li::before{content:"";position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:2px;background:var(--amber);transform:rotate(45deg)}
@@ -227,19 +230,19 @@
 
   .timer-dock{position:fixed;left:0;right:0;bottom:0;z-index:50;transform:translateY(120%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
   .timer-dock.up{transform:translateY(0)}
-  .dock-in{max-width:600px;margin:0 auto;padding:0 16px calc(16px + env(safe-area-inset-bottom))}
-  .timer{background:var(--card-hi);border:1px solid var(--amber);border-radius:18px;padding:14px 16px;box-shadow:0 -10px 40px -12px rgba(0,0,0,.7),0 0 0 1px rgba(242,135,46,.25)}
+  .dock-in{max-width:600px;margin:0 auto;padding:0 13px calc(9px + env(safe-area-inset-bottom))}
+  .timer{background:var(--card-hi);border:1px solid var(--amber);border-radius:15px;padding:9px 13px;box-shadow:0 -10px 40px -12px rgba(0,0,0,.7),0 0 0 1px rgba(242,135,46,.25)}
   .timer.go{border-color:var(--green);box-shadow:0 -10px 40px -12px rgba(0,0,0,.7),0 0 0 2px var(--green)}
-  .timer .tr1{display:flex;align-items:center;justify-content:space-between;gap:12px}
-  .timer .ctx{font-size:12px;color:var(--ink-dim)}
-  .timer .ctx b{color:var(--ink);font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:15px}
-  .timer .count{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(26px,9vw,38px);line-height:1;color:var(--teal);font-variant-numeric:tabular-nums}
+  .timer .tr1{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .timer .ctx{font-size:11.5px;color:var(--ink-dim);line-height:1.35}
+  .timer .ctx b{color:var(--ink);font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:14px}
+  .timer .count{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(24px,7.4vw,30px);line-height:1;color:var(--teal);font-variant-numeric:tabular-nums}
   .timer.go .count{color:var(--green)}
-  .timer .bar{height:5px;border-radius:3px;background:rgba(255,255,255,.08);margin:10px 0 12px;overflow:hidden}
+  .timer .bar{height:4px;border-radius:3px;background:rgba(255,255,255,.08);margin:7px 0 8px;overflow:hidden}
   .timer .barfill{height:100%;background:var(--teal);border-radius:3px;width:100%}
   .timer.go .barfill{background:var(--green)}
-  .timer .ctrls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-  .timer .ctrls button{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px;font-weight:600;font-size:14px;color:var(--ink-dim)}
+  .timer .ctrls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+  .timer .ctrls button{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px;font-weight:600;font-size:13.5px;color:var(--ink-dim)}
   .timer .ctrls .done{background:var(--amber);color:#1a120a;border-color:var(--amber)}
   .timer.go .ctrls .done{background:var(--green);color:#10210f;border-color:var(--green)}
 
@@ -285,6 +288,55 @@
   .modal-cancel{width:100%;background:none;border:none;color:var(--ink-faint);font-size:13px;padding:8px;text-decoration:underline}
   @media (max-width:380px){.mast h1{font-size:32px}.ex-name{font-size:17px}.pr .val{font-size:16px}}
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+  /* ---- exercise animations: inline SVG stick figures, 2-keyframe CSS loops.
+     No external files, so they work offline in the gym. ---- */
+  .exanim{height:74px;display:flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow:hidden}
+  .exanim svg{height:64px;width:auto;display:block}
+  .exanim .bd{stroke:var(--ink-faint);stroke-width:2.6;stroke-linecap:round;fill:none}
+  .exanim .lm{stroke:var(--amber);stroke-width:3.2;stroke-linecap:round;fill:none}
+  .exanim .eq{stroke:var(--teal);stroke-width:3.4;stroke-linecap:round;fill:none}
+  .exanim .hd{fill:var(--ink-faint)}
+  .exanim .eqf{fill:var(--teal)}
+  .exanim g{transform-box:view-box}
+  .exanim g[class]{animation-duration:2.4s;animation-timing-function:ease-in-out;animation-iteration-count:infinite;animation-direction:alternate}
+  .a1{animation-name:k-press}
+  .aL{transform-origin:52px 36px;animation-name:k-latL}
+  .aR{transform-origin:58px 36px;animation-name:k-latR}
+  .aE{transform-origin:52px 52px;animation-name:k-legext}
+  .aC{animation-name:k-calf}
+  .aX{transform-origin:74px 58px;animation-name:k-crunch}
+  .fL{transform-origin:51px 40px;animation-name:k-flyL}
+  .fR{transform-origin:59px 40px;animation-name:k-flyR}
+  .aP{transform-origin:60px 44px;animation-name:k-push}
+  .aK{transform-origin:48px 54px;animation-name:k-kick}
+  .aG{animation-name:k-legpress}
+  .aN{transform-origin:55px 52px;animation-name:k-knee}
+  .aR2{animation-name:k-row}
+  .dL{transform-origin:51px 38px;animation-name:k-rdL}
+  .dR{transform-origin:59px 38px;animation-name:k-rdR}
+  .aB{transform-origin:56px 48px;animation-name:k-curl}
+  .aQ{transform-origin:66px 52px;animation-name:k-legcurl}
+  .aH{transform-origin:30px 54px;animation-name:k-backext}
+  @keyframes k-press{from{transform:translateY(0)}to{transform:translateY(17px)}}
+  @keyframes k-latL{from{transform:rotate(-72deg)}to{transform:rotate(0deg)}}
+  @keyframes k-latR{from{transform:rotate(72deg)}to{transform:rotate(0deg)}}
+  @keyframes k-legext{from{transform:rotate(0deg)}to{transform:rotate(-78deg)}}
+  @keyframes k-calf{from{transform:translateY(0)}to{transform:translateY(-9px)}}
+  @keyframes k-crunch{from{transform:rotate(0deg)}to{transform:rotate(-30deg)}}
+  @keyframes k-flyL{from{transform:rotate(0deg)}to{transform:rotate(34deg)}}
+  @keyframes k-flyR{from{transform:rotate(0deg)}to{transform:rotate(-34deg)}}
+  @keyframes k-push{from{transform:rotate(0deg)}to{transform:rotate(60deg)}}
+  @keyframes k-kick{from{transform:rotate(0deg)}to{transform:rotate(-44deg)}}
+  @keyframes k-legpress{from{transform:translate(-13px,8px)}to{transform:translate(0,0)}}
+  @keyframes k-knee{from{transform:rotate(0deg)}to{transform:rotate(-68deg)}}
+  @keyframes k-row{from{transform:translateX(0)}to{transform:translateX(-17px)}}
+  @keyframes k-rdL{from{transform:rotate(0deg)}to{transform:rotate(28deg)}}
+  @keyframes k-rdR{from{transform:rotate(0deg)}to{transform:rotate(-28deg)}}
+  @keyframes k-curl{from{transform:rotate(0deg)}to{transform:rotate(115deg)}}
+  @keyframes k-legcurl{from{transform:rotate(0deg)}to{transform:rotate(-75deg)}}
+  @keyframes k-backext{from{transform:rotate(0deg)}to{transform:rotate(40deg)}}
+  @media (prefers-reduced-motion:reduce){.exanim g[class]{animation:none!important}}
 </style>
 </head>
 <body>
@@ -298,7 +350,7 @@
     <p class="sub" id="subtitle">Pick a day to start. Sets, weights and rest are tracked here.</p>
   </header>
   <div id="app"></div>
-  <footer>All weights in kg · saved on this device · back up to a file anytime · rest timer needs the screen on (wake-lock requested during a session).</footer>
+  <footer>All weights in kg · saved on this device · back up to a file anytime · rest timer keeps the screen awake during a session, and the end-of-rest chime is queued in advance so it still sounds if you lock the phone.</footer>
 </div>
 
 <div class="timer-dock" id="dock"><div class="dock-in"><div class="timer" id="timer">
@@ -312,6 +364,9 @@
 
 <script>
 /* ---------------- data ---------------- */
+const ANIM_SVG={"press": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><line class=\"bd\" x1=\"16\" y1=\"60\" x2=\"94\" y2=\"60\"/><line class=\"bd\" x1=\"28\" y1=\"60\" x2=\"28\" y2=\"74\"/><line class=\"bd\" x1=\"82\" y1=\"60\" x2=\"82\" y2=\"74\"/><circle class=\"hd\" cx=\"28\" cy=\"52\" r=\"6\"/><line class=\"bd\" x1=\"36\" y1=\"54\" x2=\"72\" y2=\"54\"/><line class=\"bd\" x1=\"72\" y1=\"54\" x2=\"88\" y2=\"68\"/><g class=\"a1\"><line class=\"lm\" x1=\"44\" y1=\"54\" x2=\"52\" y2=\"30\"/><line class=\"eq\" x1=\"36\" y1=\"28\" x2=\"68\" y2=\"28\"/></g></svg>", "incline": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><line class=\"bd\" x1=\"16\" y1=\"72\" x2=\"88\" y2=\"72\"/><line class=\"bd\" x1=\"34\" y1=\"72\" x2=\"70\" y2=\"38\"/><circle class=\"hd\" cx=\"73\" cy=\"33\" r=\"6\"/><line class=\"bd\" x1=\"66\" y1=\"42\" x2=\"42\" y2=\"66\"/><line class=\"bd\" x1=\"42\" y1=\"66\" x2=\"22\" y2=\"70\"/><g class=\"a1\"><line class=\"lm\" x1=\"60\" y1=\"48\" x2=\"66\" y2=\"28\"/><line class=\"eq\" x1=\"50\" y1=\"26\" x2=\"82\" y2=\"26\"/></g></svg>", "ohp": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><circle class=\"hd\" cx=\"55\" cy=\"26\" r=\"6\"/><line class=\"bd\" x1=\"55\" y1=\"33\" x2=\"55\" y2=\"56\"/><line class=\"bd\" x1=\"55\" y1=\"56\" x2=\"46\" y2=\"76\"/><line class=\"bd\" x1=\"55\" y1=\"56\" x2=\"64\" y2=\"76\"/><g class=\"a1\"><line class=\"lm\" x1=\"47\" y1=\"38\" x2=\"43\" y2=\"22\"/><line class=\"lm\" x1=\"63\" y1=\"38\" x2=\"67\" y2=\"22\"/><line class=\"eq\" x1=\"36\" y1=\"20\" x2=\"74\" y2=\"20\"/></g></svg>", "lateral": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><circle class=\"hd\" cx=\"55\" cy=\"24\" r=\"6\"/><line class=\"bd\" x1=\"55\" y1=\"31\" x2=\"55\" y2=\"54\"/><line class=\"bd\" x1=\"55\" y1=\"54\" x2=\"46\" y2=\"74\"/><line class=\"bd\" x1=\"55\" y1=\"54\" x2=\"64\" y2=\"74\"/><g class=\"aL\"><line class=\"lm\" x1=\"52\" y1=\"36\" x2=\"27\" y2=\"36\"/><circle class=\"eqf\" cx=\"23\" cy=\"36\" r=\"4\"/></g><g class=\"aR\"><line class=\"lm\" x1=\"58\" y1=\"36\" x2=\"83\" y2=\"36\"/><circle class=\"eqf\" cx=\"87\" cy=\"36\" r=\"4\"/></g></svg>", "legext": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><line class=\"bd\" x1=\"20\" y1=\"38\" x2=\"20\" y2=\"66\"/><line class=\"bd\" x1=\"20\" y1=\"52\" x2=\"52\" y2=\"52\"/><line class=\"bd\" x1=\"20\" y1=\"66\" x2=\"54\" y2=\"66\"/><circle class=\"hd\" cx=\"27\" cy=\"32\" r=\"6\"/><line class=\"bd\" x1=\"27\" y1=\"39\" x2=\"26\" y2=\"50\"/><g class=\"aE\"><line class=\"lm\" x1=\"52\" y1=\"52\" x2=\"52\" y2=\"73\"/><circle class=\"eqf\" cx=\"52\" cy=\"77\" r=\"4\"/></g></svg>", "calf": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><g class=\"aC\"><circle class=\"hd\" cx=\"55\" cy=\"22\" r=\"6\"/><line class=\"bd\" x1=\"55\" y1=\"29\" x2=\"55\" y2=\"52\"/><line class=\"bd\" x1=\"55\" y1=\"52\" x2=\"48\" y2=\"70\"/><line class=\"bd\" x1=\"55\" y1=\"52\" x2=\"62\" y2=\"70\"/><line class=\"lm\" x1=\"48\" y1=\"70\" x2=\"43\" y2=\"75\"/><line class=\"lm\" x1=\"62\" y1=\"70\" x2=\"67\" y2=\"75\"/></g><line class=\"eq\" x1=\"28\" y1=\"77\" x2=\"82\" y2=\"77\"/></svg>", "crunch": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><line class=\"bd\" x1=\"28\" y1=\"70\" x2=\"82\" y2=\"70\"/><line class=\"bd\" x1=\"76\" y1=\"70\" x2=\"76\" y2=\"48\"/><g class=\"aX\"><circle class=\"hd\" cx=\"66\" cy=\"30\" r=\"6\"/><line class=\"lm\" x1=\"68\" y1=\"37\" x2=\"74\" y2=\"58\"/></g><line class=\"bd\" x1=\"74\" y1=\"58\" x2=\"46\" y2=\"66\"/><line class=\"eq\" x1=\"52\" y1=\"40\" x2=\"70\" y2=\"45\"/></svg>", "fly": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><circle class=\"hd\" cx=\"55\" cy=\"24\" r=\"6\"/><line class=\"bd\" x1=\"55\" y1=\"31\" x2=\"55\" y2=\"56\"/><line class=\"bd\" x1=\"44\" y1=\"70\" x2=\"66\" y2=\"70\"/><line class=\"bd\" x1=\"55\" y1=\"56\" x2=\"55\" y2=\"70\"/><g class=\"fL\"><line class=\"lm\" x1=\"51\" y1=\"40\" x2=\"27\" y2=\"34\"/><circle class=\"eqf\" cx=\"23\" cy=\"33\" r=\"4\"/></g><g class=\"fR\"><line class=\"lm\" x1=\"59\" y1=\"40\" x2=\"83\" y2=\"34\"/><circle class=\"eqf\" cx=\"87\" cy=\"33\" r=\"4\"/></g></svg>", "pushdown": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><circle class=\"hd\" cx=\"48\" cy=\"22\" r=\"6\"/><line class=\"bd\" x1=\"48\" y1=\"29\" x2=\"48\" y2=\"52\"/><line class=\"bd\" x1=\"48\" y1=\"52\" x2=\"41\" y2=\"72\"/><line class=\"bd\" x1=\"48\" y1=\"52\" x2=\"55\" y2=\"72\"/><line class=\"bd\" x1=\"68\" y1=\"10\" x2=\"68\" y2=\"28\"/><line class=\"bd\" x1=\"50\" y1=\"34\" x2=\"60\" y2=\"44\"/><g class=\"aP\"><line class=\"lm\" x1=\"60\" y1=\"44\" x2=\"72\" y2=\"34\"/><line class=\"eq\" x1=\"70\" y1=\"31\" x2=\"79\" y2=\"36\"/></g></svg>", "kickback": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><circle class=\"hd\" cx=\"44\" cy=\"24\" r=\"6\"/><line class=\"bd\" x1=\"44\" y1=\"31\" x2=\"48\" y2=\"54\"/><line class=\"bd\" x1=\"48\" y1=\"54\" x2=\"43\" y2=\"74\"/><line class=\"bd\" x1=\"45\" y1=\"36\" x2=\"31\" y2=\"45\"/><g class=\"aK\"><line class=\"lm\" x1=\"48\" y1=\"54\" x2=\"53\" y2=\"73\"/><circle class=\"eqf\" cx=\"54\" cy=\"77\" r=\"3.6\"/></g></svg>", "legpress": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><line class=\"bd\" x1=\"14\" y1=\"70\" x2=\"50\" y2=\"70\"/><line class=\"bd\" x1=\"20\" y1=\"70\" x2=\"20\" y2=\"46\"/><circle class=\"hd\" cx=\"27\" cy=\"41\" r=\"6\"/><line class=\"bd\" x1=\"27\" y1=\"48\" x2=\"34\" y2=\"64\"/><g class=\"aG\"><line class=\"lm\" x1=\"34\" y1=\"64\" x2=\"63\" y2=\"45\"/><line class=\"eq\" x1=\"60\" y1=\"52\" x2=\"75\" y2=\"35\"/></g></svg>", "kneeraise": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><line class=\"bd\" x1=\"34\" y1=\"8\" x2=\"34\" y2=\"30\"/><line class=\"bd\" x1=\"76\" y1=\"8\" x2=\"76\" y2=\"30\"/><line class=\"bd\" x1=\"29\" y1=\"30\" x2=\"39\" y2=\"30\"/><line class=\"bd\" x1=\"71\" y1=\"30\" x2=\"81\" y2=\"30\"/><circle class=\"hd\" cx=\"55\" cy=\"26\" r=\"6\"/><line class=\"bd\" x1=\"39\" y1=\"30\" x2=\"52\" y2=\"33\"/><line class=\"bd\" x1=\"71\" y1=\"30\" x2=\"58\" y2=\"33\"/><line class=\"bd\" x1=\"55\" y1=\"33\" x2=\"55\" y2=\"52\"/><g class=\"aN\"><line class=\"lm\" x1=\"55\" y1=\"52\" x2=\"55\" y2=\"73\"/><line class=\"lm\" x1=\"55\" y1=\"73\" x2=\"66\" y2=\"76\"/></g></svg>", "pulldown": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><line class=\"bd\" x1=\"22\" y1=\"72\" x2=\"88\" y2=\"72\"/><circle class=\"hd\" cx=\"55\" cy=\"34\" r=\"6\"/><line class=\"bd\" x1=\"55\" y1=\"41\" x2=\"55\" y2=\"62\"/><line class=\"bd\" x1=\"55\" y1=\"62\" x2=\"42\" y2=\"72\"/><line class=\"bd\" x1=\"55\" y1=\"62\" x2=\"68\" y2=\"72\"/><g class=\"a1\"><line class=\"eq\" x1=\"31\" y1=\"18\" x2=\"79\" y2=\"18\"/><line class=\"lm\" x1=\"48\" y1=\"44\" x2=\"36\" y2=\"20\"/><line class=\"lm\" x1=\"62\" y1=\"44\" x2=\"74\" y2=\"20\"/></g></svg>", "row": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><line class=\"bd\" x1=\"14\" y1=\"70\" x2=\"62\" y2=\"70\"/><circle class=\"hd\" cx=\"34\" cy=\"34\" r=\"6\"/><line class=\"bd\" x1=\"34\" y1=\"41\" x2=\"34\" y2=\"60\"/><line class=\"bd\" x1=\"34\" y1=\"60\" x2=\"60\" y2=\"62\"/><line class=\"bd\" x1=\"60\" y1=\"62\" x2=\"65\" y2=\"72\"/><g class=\"aR2\"><line class=\"lm\" x1=\"36\" y1=\"44\" x2=\"71\" y2=\"46\"/><line class=\"eq\" x1=\"71\" y1=\"40\" x2=\"75\" y2=\"52\"/></g></svg>", "reardelt": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><circle class=\"hd\" cx=\"55\" cy=\"24\" r=\"6\"/><line class=\"bd\" x1=\"55\" y1=\"31\" x2=\"55\" y2=\"54\"/><line class=\"bd\" x1=\"55\" y1=\"54\" x2=\"47\" y2=\"73\"/><line class=\"bd\" x1=\"55\" y1=\"54\" x2=\"63\" y2=\"73\"/><g class=\"dL\"><line class=\"lm\" x1=\"51\" y1=\"38\" x2=\"31\" y2=\"48\"/><circle class=\"eqf\" cx=\"27\" cy=\"50\" r=\"4\"/></g><g class=\"dR\"><line class=\"lm\" x1=\"59\" y1=\"38\" x2=\"79\" y2=\"48\"/><circle class=\"eqf\" cx=\"83\" cy=\"50\" r=\"4\"/></g></svg>", "curl": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><circle class=\"hd\" cx=\"50\" cy=\"22\" r=\"6\"/><line class=\"bd\" x1=\"50\" y1=\"29\" x2=\"50\" y2=\"52\"/><line class=\"bd\" x1=\"50\" y1=\"52\" x2=\"43\" y2=\"72\"/><line class=\"bd\" x1=\"50\" y1=\"52\" x2=\"57\" y2=\"72\"/><line class=\"bd\" x1=\"52\" y1=\"34\" x2=\"56\" y2=\"48\"/><g class=\"aB\"><line class=\"lm\" x1=\"56\" y1=\"48\" x2=\"60\" y2=\"65\"/><circle class=\"eqf\" cx=\"61\" cy=\"69\" r=\"4\"/></g></svg>", "legcurl": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><line class=\"bd\" x1=\"14\" y1=\"58\" x2=\"74\" y2=\"58\"/><line class=\"bd\" x1=\"24\" y1=\"58\" x2=\"24\" y2=\"72\"/><line class=\"bd\" x1=\"66\" y1=\"58\" x2=\"66\" y2=\"72\"/><circle class=\"hd\" cx=\"22\" cy=\"50\" r=\"6\"/><line class=\"bd\" x1=\"29\" y1=\"52\" x2=\"66\" y2=\"52\"/><g class=\"aQ\"><line class=\"lm\" x1=\"66\" y1=\"52\" x2=\"85\" y2=\"52\"/><circle class=\"eqf\" cx=\"89\" cy=\"52\" r=\"4\"/></g></svg>", "backext": "<svg viewBox=\"0 0 110 80\" aria-hidden=\"true\"><line class=\"bd\" x1=\"32\" y1=\"56\" x2=\"32\" y2=\"74\"/><line class=\"bd\" x1=\"20\" y1=\"74\" x2=\"46\" y2=\"74\"/><line class=\"bd\" x1=\"25\" y1=\"56\" x2=\"40\" y2=\"56\"/><line class=\"bd\" x1=\"32\" y1=\"56\" x2=\"50\" y2=\"70\"/><g class=\"aH\"><line class=\"lm\" x1=\"30\" y1=\"54\" x2=\"10\" y2=\"66\"/><circle class=\"hd\" cx=\"7\" cy=\"67\" r=\"5\"/></g></svg>"};
+const ANIM_FOR={"Dumbbell bench press": "press", "Machine bench press": "press", "Incline bench press": "incline", "Incline barbell press": "incline", "Dumbbell overhead press": "ohp", "Machine shoulder press": "ohp", "Lateral raises": "lateral", "Leg extension": "legext", "Calf raise": "calf", "Calf press": "calf", "Machine crunch": "crunch", "Pec deck / butterfly": "fly", "Triceps rope extension": "pushdown", "Triceps V-cable pushdown": "pushdown", "Machine triceps extension": "pushdown", "Glute rear kick": "kickback", "Leg press": "legpress", "Knee raise (parallel bars)": "kneeraise", "Captain knee raise": "kneeraise", "Lat pulldown": "pulldown", "Lat pulldown (machine)": "pulldown", "Seated cable row (V-grip)": "row", "Seated cable row (machine)": "row", "Rear delt reverse fly": "reardelt", "Concentration curl": "curl", "Incline dumbbell curl": "curl", "Hammer curl": "curl", "Seated incline curl": "curl", "Leg curl": "legcurl", "Back extension": "backext"};
+function animHtml(n){const k=ANIM_FOR[n];return k&&ANIM_SVG[k]?`<div class="exanim">${ANIM_SVG[k]}</div>`:"";}
 const REST={"90–120s":120,"90s":90,"75–90s":90,"60–90s":75,"60–75s":75,"45–60s":60,"60s":60};
 function rs(l){return REST[l]||75;}
 const PLAN={
@@ -565,9 +620,10 @@ function renderSession(){
     let rows=`<div class="setrow head"><span></span><span>Weight (kg)</span><span>${SETTINGS.logReps?"Reps":""}</span><span></span></div>`;
     log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${extra?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>`;});
     const cues=ex.cues.map(c=>`<li>${c}</li>`).join("");
-    const noteBlock=`<div class="notesblock"><div class="notes-h">Notes <span>· stays with this exercise</span></div><textarea class="exnotes" placeholder="Seat height, pin number, grip, machine #…" oninput="setNote('${name.replace(/'/g,"\\'")}',this.value)">${esc(NOTES[name]||"")}</textarea></div>`;
+    const nVal=(NOTES[name]||"");const nOpen=nVal.trim()?" show":"";
+    const noteBlock=`<div class="notesblock"><button class="formtog notetog" onclick="toggleNotes(this)">Notes ${nOpen?"\u25b4":"\u25be"}</button><div class="notewrap${nOpen}"><textarea class="exnotes" placeholder="Seat height, pin number, grip, machine #\u2026" oninput="setNote('${name.replace(/'/g,"\\'")}',this.value)">${esc(nVal)}</textarea></div></div>`;
     const swapOpts=getSwapOptions(name);
-    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount"><b>${dn}</b>/${total}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${prHtml}${noteBlock}<div class="setgrid">${rows}</div><button class="addset" onclick="addSet(${i})">+ Add set</button><div class="sethint">${ex.abs?"A set logs once you enter reps. Clear it to unlog.":"A set logs once weight & reps are filled. Clear either to unlog."}</div><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button><ul class="cues">${cues}</ul></div></div></div></div>`;
+    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount"><b>${dn}</b>/${total}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${prHtml}<div class="setgrid">${rows}</div><button class="addset" onclick="addSet(${i})">+ Add set</button><div class="sethint">${ex.abs?"A set logs once you enter reps. Clear it to unlog.":"A set logs once weight & reps are filled. Clear either to unlog."}</div><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button><ul class="cues">${cues}</ul>${noteBlock}</div></div></div></div>`;
     if(ex.abs&&!absSeen){absSeen=true;html+=`<div class="cutline"><span class="txt">Cut from here ↓</span><span class="rule"></span></div>`;}
   });
   html+=`</div><div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
@@ -717,6 +773,7 @@ function startSession(day){
 function openSession(){openIdx=0;if(CUR&&!CUR.order){CUR.order=getDayOrderNames(CUR.day);CUR.defaultOrder=CUR.order.slice();}renderSession();requestWake();}
 function lastLog(name){for(let i=HISTORY.length-1;i>=0;i--){const log=sessionLog(HISTORY[i],name);if(log)return log.sets;}return null;}
 function toggleEx(i){openIdx=(openIdx===i?-1:i);renderSession();if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}}
+function toggleNotes(b){const w=b.nextElementSibling;w.classList.toggle("show");b.textContent=w.classList.contains("show")?"Notes \u25b4":"Notes \u25be";}
 function toggleCues(b){const ul=b.nextElementSibling;ul.classList.toggle("show");b.textContent=ul.classList.contains("show")?"Form cues ▴":"Form cues ▾";}
 function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const s=CUR.ex[name].sets[j];const was=setComplete(ex,s);s[f]=v;const now=setComplete(ex,s);
   const row=document.getElementById("row-"+i+"-"+j);if(row)row.classList.toggle("set-done",now);
@@ -851,7 +908,7 @@ function tickClock(){if(clockIv)clearInterval(clockIv);const upd=()=>{const el=d
    happens to deliver it — but nothing here depends on that working. */
 const dock=document.getElementById("dock"),timer=document.getElementById("timer");
 const tCount=document.getElementById("timerCount"),tBar=document.getElementById("timerBar"),tCtx=document.getElementById("timerCtx");
-let restEndAt=0,restTotal=0,restFired=false,restActive=false,restLabel="",restTickHandle=null;
+let restEndAt=0,restTotal=0,restFired=false,restActive=false,restLabel="",restTickHandle=null,restBeepScheduled=false;
 
 function startTimer(sec,ex,i,j){
   restTotal=sec;restEndAt=Date.now()+sec*1000;restFired=false;restActive=true;
@@ -859,6 +916,9 @@ function startTimer(sec,ex,i,j){
   restLabel=`Rest done — ${ex.n}`;
   tCtx.innerHTML=`Rest · <b>${ex.n}</b><br>${lastSet?"next: next exercise":"next: set "+(j+2)+" of "+tot}`;
   timer.classList.remove("go");dock.classList.add("up");
+  initAudio();
+  restBeepScheduled=scheduleBeep(sec);
+  if(restBeepScheduled)startKeepAlive();
   scheduleBgAlert(sec,restLabel);
   runTick();
 }
@@ -883,13 +943,16 @@ function syncTimer(){
 }
 function stopTimer(hide){
   restActive=false;
+  cancelScheduledBeep();stopKeepAlive();restBeepScheduled=false;
   if(restTickHandle){clearInterval(restTickHandle);restTickHandle=null;}
   if(hide){dock.classList.remove("up");timer.classList.remove("go");cancelBgAlert();}
 }
-document.getElementById("tMinus").onclick=()=>{if(!restActive)return;restEndAt-=15000;syncTimer();scheduleBgAlert(Math.max(0,Math.round((restEndAt-Date.now())/1000)),restLabel);};
+document.getElementById("tMinus").onclick=()=>{if(!restActive)return;restEndAt-=15000;syncTimer();reschedule();};
 document.getElementById("tSkip").onclick=()=>stopTimer(true);
 document.getElementById("tDone").onclick=()=>stopTimer(true);
-tCount.onclick=()=>{if(!restActive)return;restEndAt+=15000;restFired=false;restTotal=Math.max(restTotal,Math.round((restEndAt-Date.now())/1000));syncTimer();scheduleBgAlert(Math.max(0,Math.round((restEndAt-Date.now())/1000)),restLabel);};
+tCount.onclick=()=>{if(!restActive)return;restEndAt+=15000;restFired=false;restTotal=Math.max(restTotal,Math.round((restEndAt-Date.now())/1000));syncTimer();reschedule();};
+// Re-queue both the audio chime and the SW notification against the new deadline.
+function reschedule(){const left=Math.max(0,Math.round((restEndAt-Date.now())/1000));restBeepScheduled=scheduleBeep(left);if(restBeepScheduled)startKeepAlive();else stopKeepAlive();scheduleBgAlert(left,restLabel);}
 
 /* ---------------- background alert via service worker (best-effort only) ---------------- */
 // iOS in particular does not guarantee this fires while backgrounded — that's
@@ -907,8 +970,56 @@ if("serviceWorker" in navigator){
 /* ---------------- alert ---------------- */
 let audioCtx=null;
 function initAudio(){try{const AC=window.AudioContext||window.webkitAudioContext;if(AC&&!audioCtx)audioCtx=new AC();if(audioCtx&&audioCtx.state==="suspended")audioCtx.resume();}catch(e){}}
-function beep(){if(!audioCtx)return;try{[0,0.18,0.36].forEach((t,k)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type="sine";o.frequency.value=k===2?1040:780;o.connect(g);g.connect(audioCtx.destination);const s=audioCtx.currentTime+t;g.gain.setValueAtTime(0.0001,s);g.gain.exponentialRampToValueAtTime(0.5,s+0.02);g.gain.exponentialRampToValueAtTime(0.0001,s+0.15);o.start(s);o.stop(s+0.16);});}catch(e){}}
-function fireAlert(){initAudio();if(SETTINGS.alert!=="visual"){try{navigator.vibrate&&navigator.vibrate([120,80,120,80,200]);}catch(e){}}if(SETTINGS.alert==="sound_vibe")beep();}
+let schedNodes=[],silentSrc=null,schedAudioAt=0;
+// Emit the 3-tone chime starting at an ABSOLUTE AudioContext time. Because the
+// notes are queued into the audio hardware up front, they still play even if
+// iOS has frozen our JS (backgrounded / screen locked) by the time they fire.
+function beepAt(at){
+  if(!audioCtx)return[];
+  const made=[];
+  try{[0,0.18,0.36].forEach((t,k)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type="sine";o.frequency.value=k===2?1040:780;o.connect(g);g.connect(audioCtx.destination);
+    const st=at+t;
+    g.gain.setValueAtTime(0.0001,st);
+    g.gain.exponentialRampToValueAtTime(0.5,st+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,st+0.15);
+    o.start(st);o.stop(st+0.16);made.push(o);
+  });}catch(e){}
+  return made;
+}
+function beep(){if(audioCtx)beepAt(audioCtx.currentTime);}
+// Queue the end-of-rest chime `sec` seconds from now. Returns true if it took.
+function scheduleBeep(sec){
+  cancelScheduledBeep();
+  if(SETTINGS.alert!=="sound_vibe")return false;
+  initAudio();
+  if(!audioCtx||audioCtx.state!=="running"||sec<=0)return false;
+  schedAudioAt=audioCtx.currentTime+sec;
+  schedNodes=beepAt(schedAudioAt);
+  return schedNodes.length>0;
+}
+function cancelScheduledBeep(){schedAudioAt=0;schedNodes.forEach(o=>{try{o.stop();o.disconnect();}catch(e){}});schedNodes=[];}
+// A near-silent looping buffer. iOS suspends an idle AudioContext when the app
+// leaves the foreground; keeping one source playing holds the audio session
+// open so the queued chime above actually reaches the speaker. Runs only while
+// a rest is counting down, then stops, so it is not a whole-session battery draw.
+function startKeepAlive(){
+  if(!audioCtx||silentSrc)return;
+  try{
+    const buf=audioCtx.createBuffer(1,audioCtx.sampleRate,audioCtx.sampleRate);
+    const src=audioCtx.createBufferSource(),g=audioCtx.createGain();
+    src.buffer=buf;src.loop=true;g.gain.value=0.0001;
+    src.connect(g);g.connect(audioCtx.destination);src.start();
+    silentSrc=src;
+  }catch(e){}
+}
+function stopKeepAlive(){if(!silentSrc)return;try{silentSrc.stop();silentSrc.disconnect();}catch(e){}silentSrc=null;}
+function fireAlert(){initAudio();if(SETTINGS.alert!=="visual"){try{navigator.vibrate&&navigator.vibrate([120,80,120,80,200]);}catch(e){}}
+  // If the chime was queued ahead of time it has already sounded — don't repeat it.
+  const chimePlayed=restBeepScheduled&&audioCtx&&audioCtx.currentTime>=schedAudioAt;
+  if(SETTINGS.alert==="sound_vibe"&&!chimePlayed)beep();
+  stopKeepAlive();}
 
 /* ---------------- wake lock ---------------- */
 let wakeLock=null;
