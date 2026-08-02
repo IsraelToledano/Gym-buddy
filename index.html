@@ -204,6 +204,23 @@
   .ex.skip .ex-btn{opacity:.66}
   .ex.skip.done .ex-btn,.ex.skip.partial .ex-btn{opacity:1}
 
+  /* user-marked skip (distinct from the auto "cut first" suggestion above) */
+  .ex.uskip .ex-btn{opacity:.6}
+  .ex.uskip .ex-name{text-decoration:line-through;text-decoration-color:var(--ink-faint);color:var(--ink-faint)}
+  .ex.uskip .rank{background:var(--bg);border-color:var(--line);color:var(--ink-faint)}
+  .skiptog{color:var(--ink-faint)}
+  .skiptog.active{border-color:var(--teal);color:var(--teal)}
+
+  /* fun completion feedback: the card gives a little bounce and its rank
+     badge pops before the list re-renders into the collapsed/advanced state */
+  @keyframes exPop{0%{transform:scale(1)}30%{transform:scale(1.035)}55%{transform:scale(.985)}100%{transform:scale(1)}}
+  @keyframes rankPop{0%{transform:scale(1) rotate(0deg)}40%{transform:scale(1.4) rotate(-10deg)}70%{transform:scale(.9) rotate(5deg)}100%{transform:scale(1) rotate(0deg)}}
+  .ex-btn.celebrate{animation:exPop .5s ease;box-shadow:0 0 0 3px rgba(111,191,115,.35)}
+  .ex-btn.celebrate .rank{animation:rankPop .5s ease}
+  .ex-btn.skip-celebrate{animation:exPop .38s ease}
+
+  #confettiCanvas{position:fixed;inset:0;z-index:95;pointer-events:none}
+
   .finishbar{margin-top:18px;display:flex;gap:10px}
   .btn{flex:1;border-radius:12px;padding:14px;font-weight:600;font-size:15px;border:1px solid var(--line);background:var(--card)}
   .btn.primary{background:var(--amber);color:#1a120a;border-color:var(--amber)}
@@ -231,10 +248,16 @@
   .rsess.best{border-color:rgba(242,135,46,.4)}
   .rsess.best .rv{color:var(--amber-bright)}
 
+  .tennis-box{margin-bottom:4px}
+  .tennis-recent{margin-top:9px}
+  .tennis-recent .rsess{margin-bottom:6px;font-size:12.5px}
+  .tdel{background:none;border:none;color:var(--ink-faint);font-size:18px;line-height:1;padding:0 2px}
+  .tdel:hover{color:var(--red)}
+
   .field{margin-bottom:16px}
   .field label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:7px}
-  .field input,.field textarea{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:16px;padding:11px 12px;font-family:inherit}
-  .field input:focus,.field textarea:focus{outline:none;border-color:var(--teal)}
+  .field input,.field textarea,.field select{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:16px;padding:11px 12px;font-family:inherit}
+  .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--teal)}
   .field textarea{min-height:90px;resize:vertical;line-height:1.5}
   .field .unit{font-size:12px;color:var(--ink-faint);margin-top:5px}
   .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -345,6 +368,7 @@
 
 <div id="overlayMount"></div>
 <div id="modalMount"></div>
+<canvas id="confettiCanvas" aria-hidden="true"></canvas>
 
 <script>
 /* ---------------- data ---------------- */
@@ -396,70 +420,86 @@ const REST={"90–120s":120,"90s":90,"75–90s":90,"60–90s":75,"60–75s":75,"
 function rs(l){return REST[l]||75;}
 const PLAN={
   A1:{name:"Push",ex:[
-    {n:"Dumbbell bench press",m:"Chest",main:1,sets:4,reps:"8–12",rest:"90–120s",cues:["Shoulder blades back and down, slight arch, planted into the bench.","Lower to mid-chest, elbows ~45° from the torso.","Press up and slightly together; stop short of lockout.","Control the descent — don't drift over your face."]},
-    {n:"Incline bench press",m:"Chest",main:1,sets:3,reps:"8–12",rest:"90–120s",cues:["~30° incline — steeper hits front delts.","Lower to the upper-chest line, elbows tucked ~45°.","Drive up and slightly back.","No bounce off the chest."]},
-    {n:"Dumbbell overhead press",m:"Front delts",sets:3,reps:"8–12",rest:"90s",cues:["Brace core and glutes; don't lean back.","Start at ear height, wrists over elbows.","Press without clashing the dumbbells.","Lower under control to ear level."]},
-    {n:"Lateral raises",m:"Side delts",sets:3,reps:"12–15",rest:"45–60s",cues:["Lead with the elbows, slight fixed bend.","Raise to shoulder height, pinkies a touch up.","No swing or shrug.","Slow negative."]},
-    {n:"Leg extension",m:"Quads",leg:1,sets:3,reps:"10–15",rest:"90s",cues:["Knee aligned with the pivot.","Squeeze hard 1s at the top.","Control the lowering.","Lower back stays on the pad."]},
-    {n:"Calf raise",m:"Calves",calf:1,sets:3,reps:"10–15",rest:"60–90s",cues:["Deep stretch at the bottom, full rise onto the toes.","Pause top and stretch.","No bouncing.","Knees mostly straight."]},
-    {n:"Machine crunch",m:"Abs",abs:1,sets:3,reps:"10–15",rest:"60–75s",cues:["Pad across the chest/upper abs.","Round the spine — ribs to hips, not a hip bend.","Exhale and squeeze at the bottom.","Control the return."]},
-    {n:"Pec deck / butterfly",m:"Chest",sets:2,reps:"12–15",rest:"60s",cues:["Handles level with the shoulders.","Push through the elbows, slight elbow bend.","Squeeze and pause at full contraction.","Slow stretch back."]},
-    {n:"Triceps rope extension",m:"Triceps",sets:2,reps:"10–12",rest:"60s",cues:["Elbows pinned to the sides.","Push down and spread the rope.","Full lockout, 1s squeeze.","Control the way up."]},
-    {n:"Glute rear kick",m:"Glutes",sets:3,reps:"12–15",rest:"60s",cues:["Slight hinge, soft knee bend.","Drive the heel back with the glute.","Squeeze at the top; don't over-arch.","Slow return."]}
+    {n:"Dumbbell bench press",m:"Chest",equip:"dumbbell",main:1,sets:4,reps:"8–12",rest:"90–120s",cues:["Shoulder blades back and down, slight arch, planted into the bench.","Lower to mid-chest, elbows ~45° from the torso.","Press up and slightly together; stop short of lockout.","Control the descent — don't drift over your face."]},
+    {n:"Incline bench press",m:"Chest",equip:"dumbbell",main:1,sets:3,reps:"8–12",rest:"90–120s",cues:["~30° incline — steeper hits front delts.","Lower to the upper-chest line, elbows tucked ~45°.","Drive up and slightly back.","No bounce off the chest."]},
+    {n:"Dumbbell overhead press",m:"Front delts",equip:"dumbbell",sets:3,reps:"8–12",rest:"90s",cues:["Brace core and glutes; don't lean back.","Start at ear height, wrists over elbows.","Press without clashing the dumbbells.","Lower under control to ear level."]},
+    {n:"Lateral raises",m:"Side delts",equip:"dumbbell",sets:3,reps:"12–15",rest:"45–60s",cues:["Lead with the elbows, slight fixed bend.","Raise to shoulder height, pinkies a touch up.","No swing or shrug.","Slow negative."]},
+    {n:"Leg extension",m:"Quads",equip:"machine",leg:1,sets:3,reps:"10–15",rest:"90s",cues:["Knee aligned with the pivot.","Squeeze hard 1s at the top.","Control the lowering.","Lower back stays on the pad."]},
+    {n:"Calf raise",m:"Calves",equip:"machine",calf:1,sets:3,reps:"10–15",rest:"60–90s",cues:["Deep stretch at the bottom, full rise onto the toes.","Pause top and stretch.","No bouncing.","Knees mostly straight."]},
+    {n:"Machine crunch",m:"Abs",equip:"machine",abs:1,sets:3,reps:"10–15",rest:"60–75s",cues:["Pad across the chest/upper abs.","Round the spine — ribs to hips, not a hip bend.","Exhale and squeeze at the bottom.","Control the return."]},
+    {n:"Pec deck / butterfly",m:"Chest",equip:"machine",sets:2,reps:"12–15",rest:"60s",cues:["Handles level with the shoulders.","Push through the elbows, slight elbow bend.","Squeeze and pause at full contraction.","Slow stretch back."]},
+    {n:"Triceps rope extension",m:"Triceps",equip:"cable",sets:2,reps:"10–12",rest:"60s",cues:["Elbows pinned to the sides.","Push down and spread the rope.","Full lockout, 1s squeeze.","Control the way up."]},
+    {n:"Glute rear kick",m:"Glutes",equip:"machine",sets:3,reps:"12–15",rest:"60s",cues:["Slight hinge, soft knee bend.","Drive the heel back with the glute.","Squeeze at the top; don't over-arch.","Slow return."]}
   ]},
   A2:{name:"Push",ex:[
-    {n:"Machine bench press",m:"Chest",main:1,sets:3,reps:"6–8",rest:"90–120s",cues:["Handles at mid-chest height.","Shoulder blades pinned to the pad.","Smooth press, no hard lockout.","Drive with intent on the heavy top set."]},
-    {n:"Incline barbell press",m:"Chest",main:1,sets:4,reps:"6–10",rest:"90–120s",cues:["30° incline, grip just outside shoulders.","Lower to upper chest, elbows ~45–60°.","Blades retracted, feet planted.","Brief touch, no bounce."]},
-    {n:"Machine shoulder press",m:"Front delts",sets:3,reps:"6–10",rest:"90s",cues:["Handles start near ear height.","Press without shrugging; stop short of lockout.","Back braced on the pad.","Lower under control."]},
-    {n:"Lateral raises",m:"Side delts",sets:3,reps:"12–20",rest:"45–60s",cues:["Lead with the elbows.","Only to shoulder height.","Strict, no momentum.","Slow negative."]},
-    {n:"Leg press",m:"Quads",leg:1,sets:3,reps:"8–12",rest:"90–120s",cues:["Feet shoulder-width, mid-platform.","Lower to ~90° at the knee.","Lower back stays down.","Push through mid-foot; no hard lockout."]},
-    {n:"Calf press",m:"Calves",calf:1,sets:3,reps:"10–15",rest:"60–90s",cues:["Balls of the feet on the edge.","Drop the heels deep, press to full extension.","Pause both ends.","Slow, no bounce."]},
-    {n:"Knee raise (parallel bars)",m:"Abs",abs:1,sets:3,reps:"to failure",rest:"60s",cues:["Back flat to the pad, no swing.","Curl the pelvis up, not just the thighs.","Knees to chest, squeeze.","Lower slowly."]},
-    {n:"Triceps V-cable pushdown",m:"Triceps",sets:3,reps:"8–12",rest:"60–90s",cues:["Tall, elbows pinned.","Full lockout, 1s squeeze.","Only forearms move.","Control back to ~90°."]},
-    {n:"Machine triceps extension",m:"Triceps",sets:3,reps:"8–12",rest:"60–90s",cues:["Pivot in line with the elbows.","Extend fully, squeeze.","Upper arms still.","Slow return."]}
+    {n:"Machine bench press",m:"Chest",equip:"machine",main:1,sets:3,reps:"6–8",rest:"90–120s",cues:["Handles at mid-chest height.","Shoulder blades pinned to the pad.","Smooth press, no hard lockout.","Drive with intent on the heavy top set."]},
+    {n:"Incline barbell press",m:"Chest",equip:"barbell",main:1,sets:4,reps:"6–10",rest:"90–120s",cues:["30° incline, grip just outside shoulders.","Lower to upper chest, elbows ~45–60°.","Blades retracted, feet planted.","Brief touch, no bounce."]},
+    {n:"Machine shoulder press",m:"Front delts",equip:"machine",sets:3,reps:"6–10",rest:"90s",cues:["Handles start near ear height.","Press without shrugging; stop short of lockout.","Back braced on the pad.","Lower under control."]},
+    {n:"Lateral raises",m:"Side delts",equip:"dumbbell",sets:3,reps:"12–20",rest:"45–60s",cues:["Lead with the elbows.","Only to shoulder height.","Strict, no momentum.","Slow negative."]},
+    {n:"Leg press",m:"Quads",equip:"machine",leg:1,sets:3,reps:"8–12",rest:"90–120s",cues:["Feet shoulder-width, mid-platform.","Lower to ~90° at the knee.","Lower back stays down.","Push through mid-foot; no hard lockout."]},
+    {n:"Calf press",m:"Calves",equip:"machine",calf:1,sets:3,reps:"10–15",rest:"60–90s",cues:["Balls of the feet on the edge.","Drop the heels deep, press to full extension.","Pause both ends.","Slow, no bounce."]},
+    {n:"Knee raise (parallel bars)",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:["Back flat to the pad, no swing.","Curl the pelvis up, not just the thighs.","Knees to chest, squeeze.","Lower slowly."]},
+    {n:"Triceps V-cable pushdown",m:"Triceps",equip:"cable",sets:3,reps:"8–12",rest:"60–90s",cues:["Tall, elbows pinned.","Full lockout, 1s squeeze.","Only forearms move.","Control back to ~90°."]},
+    {n:"Machine triceps extension",m:"Triceps",equip:"machine",sets:3,reps:"8–12",rest:"60–90s",cues:["Pivot in line with the elbows.","Extend fully, squeeze.","Upper arms still.","Slow return."]}
   ]},
   B1:{name:"Pull",ex:[
-    {n:"Lat pulldown (machine)",m:"Back",main:1,sets:4,reps:"8–12",rest:"90–120s",cues:["Grip a bit wider than shoulders.","Elbows down and back, bar to upper chest.","Drive with the lats, minimal lean.","Full stretch at the top."]},
-    {n:"Seated cable row (machine)",m:"Back",main:1,sets:3,reps:"8–12",rest:"90s",cues:["Tall chest, slight stretch forward.","Row to the lower ribs, squeeze the blades.","Don't heave with the lower back.","Full stretch, flat back."]},
-    {n:"Rear delt reverse fly",m:"Rear delts",sets:3,reps:"12–15",rest:"60s",cues:["Fixed slight elbow bend.","Open to shoulder height, lead with elbows.","Rear delts, not traps — shoulders down.","Light and slow."]},
-    {n:"Concentration curl",m:"Biceps",sets:3,reps:"10–12",rest:"60s",cues:["Elbow braced on the inner thigh.","Curl with the bicep, pinky up at the top.","Squeeze hard, full stretch.","No swing."]},
-    {n:"Incline dumbbell curl",m:"Biceps",sets:3,reps:"10–12",rest:"60–75s",cues:["Arms hang behind the torso — big stretch.","Elbows don't drift forward.","Supinate and squeeze at the top.","Slow to a full stretch."]},
-    {n:"Leg curl",m:"Hamstrings",leg:1,sets:3,reps:"8–12",rest:"90s",cues:["Knees aligned, pad above the heels.","Curl fully, squeeze the hams.","Hips stay down.","Control the negative."]},
-    {n:"Captain knee raise",m:"Abs",abs:1,sets:3,reps:"to failure",rest:"60s",cues:["Back flat, no swing.","Curl the pelvis up.","Squeeze at the top.","Lower slowly."]},
-    {n:"Back extension",m:"Lower back",sets:3,reps:"10–12",rest:"75–90s",cues:["Pad at the hip crease, hinge at the hips.","Flat back down, rise to a straight line.","Squeeze glutes and hams.","Add load only when bodyweight is easy."]}
+    {n:"Lat pulldown (machine)",m:"Back",equip:"machine",main:1,sets:4,reps:"8–12",rest:"90–120s",cues:["Grip a bit wider than shoulders.","Elbows down and back, bar to upper chest.","Drive with the lats, minimal lean.","Full stretch at the top."]},
+    {n:"Seated cable row (machine)",m:"Back",equip:"machine",main:1,sets:3,reps:"8–12",rest:"90s",cues:["Tall chest, slight stretch forward.","Row to the lower ribs, squeeze the blades.","Don't heave with the lower back.","Full stretch, flat back."]},
+    {n:"Rear delt reverse fly",m:"Rear delts",equip:"machine",sets:3,reps:"12–15",rest:"60s",cues:["Fixed slight elbow bend.","Open to shoulder height, lead with elbows.","Rear delts, not traps — shoulders down.","Light and slow."]},
+    {n:"Concentration curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60s",cues:["Elbow braced on the inner thigh.","Curl with the bicep, pinky up at the top.","Squeeze hard, full stretch.","No swing."]},
+    {n:"Incline dumbbell curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60–75s",cues:["Arms hang behind the torso — big stretch.","Elbows don't drift forward.","Supinate and squeeze at the top.","Slow to a full stretch."]},
+    {n:"Leg curl",m:"Hamstrings",equip:"machine",leg:1,sets:3,reps:"8–12",rest:"90s",cues:["Knees aligned, pad above the heels.","Curl fully, squeeze the hams.","Hips stay down.","Control the negative."]},
+    {n:"Captain knee raise",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:["Back flat, no swing.","Curl the pelvis up.","Squeeze at the top.","Lower slowly."]},
+    {n:"Back extension",m:"Lower back",equip:"machine",sets:3,reps:"10–12",rest:"75–90s",cues:["Pad at the hip crease, hinge at the hips.","Flat back down, rise to a straight line.","Squeeze glutes and hams.","Add load only when bodyweight is easy."]}
   ]},
   B2:{name:"Pull",ex:[
-    {n:"Lat pulldown",m:"Back",main:1,sets:4,reps:"8–12",rest:"90–120s",cues:["Grip a bit wider than shoulders.","Elbows down and back to the upper chest.","Lead with the lats.","Controlled full stretch."]},
-    {n:"Seated cable row (V-grip)",m:"Back",main:1,sets:3,reps:"8–12",rest:"90s",cues:["Neutral V-grip to the navel.","Squeeze the blades, brief hold.","Torso upright.","Control the stretch forward."]},
-    {n:"Rear delt reverse fly",m:"Rear delts",sets:3,reps:"12–15",rest:"60s",cues:["Fixed slight elbow bend.","Open to shoulder height.","Target rear delts; traps down.","Light, controlled."]},
-    {n:"Leg curl",m:"Hamstrings",leg:1,sets:3,reps:"10–12",rest:"90s",cues:["Knees aligned, pad above the heels.","Curl fully, squeeze.","Hips down on the pad.","Slow negative."]},
-    {n:"Hammer curl",m:"Biceps",sets:3,reps:"8–10",rest:"60s",cues:["Neutral grip, elbows pinned.","No swing, wrists straight.","Squeeze at the top.","Lower under control."]},
-    {n:"Seated incline curl",m:"Biceps",sets:3,reps:"10–12",rest:"60–75s",cues:["Arms hang for a full stretch.","Elbows don't travel forward.","Squeeze at the top.","Slow on the way down."]},
-    {n:"Captain knee raise",m:"Abs",abs:1,sets:3,reps:"to failure",rest:"60s",cues:["Back flat, no swing.","Curl the pelvis up.","Squeeze at the top.","Lower slowly."]},
-    {n:"Back extension",m:"Lower back",sets:3,reps:"8–10",rest:"75–90s",cues:["Pad at the hip crease, hinge at the hips.","Flat back down, rise to a straight line.","Squeeze glutes and hams.","Controlled tempo."]}
+    {n:"Lat pulldown",m:"Back",equip:"machine",main:1,sets:4,reps:"8–12",rest:"90–120s",cues:["Grip a bit wider than shoulders.","Elbows down and back to the upper chest.","Lead with the lats.","Controlled full stretch."]},
+    {n:"Seated cable row (V-grip)",m:"Back",equip:"machine",main:1,sets:3,reps:"8–12",rest:"90s",cues:["Neutral V-grip to the navel.","Squeeze the blades, brief hold.","Torso upright.","Control the stretch forward."]},
+    {n:"Rear delt reverse fly",m:"Rear delts",equip:"machine",sets:3,reps:"12–15",rest:"60s",cues:["Fixed slight elbow bend.","Open to shoulder height.","Target rear delts; traps down.","Light, controlled."]},
+    {n:"Leg curl",m:"Hamstrings",equip:"machine",leg:1,sets:3,reps:"10–12",rest:"90s",cues:["Knees aligned, pad above the heels.","Curl fully, squeeze.","Hips down on the pad.","Slow negative."]},
+    {n:"Hammer curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"8–10",rest:"60s",cues:["Neutral grip, elbows pinned.","No swing, wrists straight.","Squeeze at the top.","Lower under control."]},
+    {n:"Seated incline curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60–75s",cues:["Arms hang for a full stretch.","Elbows don't travel forward.","Squeeze at the top.","Slow on the way down."]},
+    {n:"Captain knee raise",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:["Back flat, no swing.","Curl the pelvis up.","Squeeze at the top.","Lower slowly."]},
+    {n:"Back extension",m:"Lower back",equip:"machine",sets:3,reps:"8–10",rest:"75–90s",cues:["Pad at the hip crease, hinge at the hips.","Flat back down, rise to a straight line.","Squeeze glutes and hams.","Controlled tempo."]}
   ]}
 };
+/* Extra exercises available as swap-in alternatives / "add exercise" picks,
+   even though they're not a default part of any day. Kept intentionally
+   small — mainly plugs equipment gaps (e.g. a machine option for a muscle
+   that's currently only trained with dumbbells). */
+const EXTRA_EX=[
+  {n:"Machine lateral raise",m:"Side delts",equip:"machine",sets:3,reps:"12–15",rest:"45–60s",cues:["Set the seat so the pivot lines up with your shoulder.","Lead with the elbows, raise to shoulder height.","No shrugging — keep traps relaxed.","Slow, controlled negative."]},
+  {n:"Machine bicep curl",m:"Biceps",equip:"machine",sets:3,reps:"10–12",rest:"60s",cues:["Elbows pinned against the pad.","Curl through the full range without swinging.","Squeeze hard at the top.","Slow negative back to a full stretch."]}
+];
 /* cross-day exercise index — lets an exercise be looked up by name regardless
    of which day it's originally defined under. This is what makes swapping
    (e.g. Dumbbell bench press ⇄ Machine bench press) and custom per-day
    ordering possible without duplicating exercise data. */
 const NAME_INDEX={};
 for(const k in PLAN)PLAN[k].ex.forEach(e=>{if(!(e.n in NAME_INDEX))NAME_INDEX[e.n]=e;});
-// Suggested swap targets — kept intentionally small and biased toward
-// machine alternatives; easy to extend with more pairs later.
+EXTRA_EX.forEach(e=>{if(!(e.n in NAME_INDEX))NAME_INDEX[e.n]=e;});
+// Manually curated swap pairs — shown first when present. These exist for
+// pairs where the "obvious" alternative isn't simply "same muscle" (e.g. an
+// incline press variant should map to the other incline variant, not a flat
+// press). Everything else is discovered automatically below.
 const SWAP_ALTS={
-  "Dumbbell bench press":["Machine bench press"],
-  "Machine bench press":["Dumbbell bench press"],
   "Incline bench press":["Incline barbell press"],
-  "Incline barbell press":["Incline bench press"],
-  "Dumbbell overhead press":["Machine shoulder press"],
-  "Machine shoulder press":["Dumbbell overhead press"],
-  "Concentration curl":["Hammer curl"],
-  "Hammer curl":["Concentration curl"],
-  "Incline dumbbell curl":["Seated incline curl"],
-  "Seated incline curl":["Incline dumbbell curl"]
+  "Incline barbell press":["Incline bench press"]
 };
-function getSwapOptions(name){return SWAP_ALTS[name]||[];}
+// Auto-discovers same-muscle alternatives from the full exercise pool
+// (default days + EXTRA_EX + any custom exercises the user has added),
+// sorted so machine options surface first — matches the stated preference
+// for machine-based training.
+const EQUIP_RANK={machine:0,cable:1,barbell:2,dumbbell:3,bodyweight:4};
+function getSwapOptions(name){
+  const cur=NAME_INDEX[name];if(!cur)return[];
+  const pinned=(SWAP_ALTS[name]||[]).filter(n=>NAME_INDEX[n]);
+  const auto=Object.values(NAME_INDEX)
+    .filter(e=>e.m===cur.m&&e.n!==name&&!pinned.includes(e.n))
+    .sort((a,b)=>(EQUIP_RANK[a.equip]??9)-(EQUIP_RANK[b.equip]??9)||a.n.localeCompare(b.n))
+    .map(e=>e.n);
+  return[...pinned,...auto].slice(0,6);
+}
 function getDayOrderNames(day){
   const planNames=PLAN[day].ex.map(e=>e.n);
   let order=(SETTINGS.dayOrder&&SETTINGS.dayOrder[day])?SETTINGS.dayOrder[day].filter(n=>NAME_INDEX[n]):planNames.slice();
@@ -476,6 +516,8 @@ const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0};
+let TENNIS=[];
+let CUSTOM_EX=[];
 let PROFILE={heightCm:"",weightKg:"",age:"",goal:""};
 
 /* ---------------- helpers ---------------- */
@@ -659,6 +701,12 @@ function renderHome(summary){
   html+=`<div class="days">`;
   for(const k of ["A1","A2","B1","B2"]){const p=PLAN[k];html+=`<button class="day-btn${(!CUR&&k===nextDay)?" upnext-day":""}" onclick="startSession('${k}')"><div class="code"><b>${k}</b></div><div class="nm">${p.name}</div><div class="ct">${p.ex.length} exercises</div></button>`;}
   html+=`</div>`;
+  html+=`<div class="section-h">Other activity</div><div class="tennis-box"><button class="tool-btn" style="width:100%" onclick="openTennisLog()">🎾 Log tennis session</button>`;
+  if(TENNIS.length){
+    const recentT=TENNIS.slice().sort((a,b)=>b.date-a.date).slice(0,4);
+    html+=`<div class="tennis-recent">`+recentT.map(t=>`<div class="rsess"><span class="rd">${fmtDate(t.date)} · ${t.duration} min${t.intensity?" · "+esc(t.intensity):""}</span><button class="tdel" onclick="deleteTennis(${t.date})" aria-label="delete">×</button></div>`).join("")+`</div>`;
+  }
+  html+=`</div>`;
   const vol=weeklyVolume();
   html+=`<div class="section-h">This week</div><div class="week">`;
   DASH_ORDER.forEach(m=>{const t=MUSCLES[m].t,v=vol[m]||0,r=Math.min(v/t,1);html+=`<div class="wrow"><div class="ml">${m}</div><div class="track"><div class="fill" style="width:${r*100}%;background:${muscleColor(v/t)}"></div></div><div class="num" style="color:${v>=t?'var(--green)':'var(--ink-dim)'}">${v}/${t}</div></div>`;});
@@ -667,7 +715,7 @@ function renderHome(summary){
   // backup
   const lastBk=BACKMETA.at?("Last backup: "+fmtDate(BACKMETA.at)):"Not backed up yet";
   html+=`<div class="section-h">Backup (optional)</div><p style="font-size:12px;color:var(--ink-dim);margin:-4px 2px 10px">Your workouts save automatically as you log them — no button needed. This is just an extra copy to keep off-device (e.g. in Google Drive) in case the app's storage is ever reset. <b style="color:var(--ink-faint)">${lastBk}</b></p><div class="tools"><button class="tool-btn" onclick="toggleExport()">⬇ Export to file</button><button class="tool-btn" onclick="toggleImport()">⬆ Restore from file</button></div>`;
-  if(showExport){const blob=JSON.stringify({v:2,exportedAt:Date.now(),settings:SETTINGS,notes:NOTES,history:HISTORY,profile:PROFILE});
+  if(showExport){const blob=JSON.stringify({v:2,exportedAt:Date.now(),settings:SETTINGS,notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});
     html+=`<div class="panel-box"><h4>Export</h4><p>${HISTORY.length} session${HISTORY.length===1?"":"s"} + your notes. Copy this text (or download) and keep it safe — paste it into Restore later, or hand it to Claude to save in Google Drive.</p><textarea id="expArea" readonly>${blob}</textarea><div class="pb-row"><button class="primary" onclick="copyExport(this)">Copy</button><button onclick="downloadExport()">Download .json</button></div></div>`;}
   if(showImport){html+=`<div class="panel-box"><h4>Restore from file</h4><p>Paste a backup here and restore. This replaces your current saved history and notes.</p><textarea id="impArea" placeholder="Paste backup JSON..."></textarea><div class="pb-row"><button class="primary" onclick="doImport()">Restore</button></div></div>`;}
   app.innerHTML=html;
@@ -678,7 +726,7 @@ const DRAG_SVG='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="
 const SWAP_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
 function renderSession(){
   const names=CUR.order;let totSets=0,doneSets=0,absSeen=false;
-  names.forEach(name=>{const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;totSets+=sets.length;doneSets+=sets.filter(s=>setComplete(ex,s)).length;});
+  names.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];if(log.skipped)return;const sets=log.sets;totSets+=sets.length;doneSets+=sets.filter(s=>setComplete(ex,s)).length;});
   const p=PLAN[CUR.day];
   const pct=totSets?Math.round(doneSets/totSets*100):0;
   let html=`<div class="shead"><div class="row1"><h2><b>${CUR.day}</b> · ${p.name}</h2><div class="clock" id="clock">0:00</div></div><div class="row2"><div class="prog" id="prog">${doneSets}/${totSets} sets · ${pct}%</div><button class="linkbtn" onclick="renderHome()">Back</button></div><div class="pbar"><div class="pbar-fill" id="progFill" style="width:${pct}%"></div></div></div>`;
@@ -688,10 +736,11 @@ function renderSession(){
   names.forEach((name,i)=>{
     const ex=NAME_INDEX[name];
     const log=CUR.ex[name];const total=log.sets.length;const dn=log.sets.filter(s=>setComplete(ex,s)).length;
+    const uskip=!!log.skipped;
     const cls=["ex"];if(ex.main)cls.push("main");if(ex.abs)cls.push("abs");if(absSeen)cls.push("skip");
-    if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
-    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(ex.calf)tags.push('<span class="tg pair">⟂ Pair with legs</span>');if(absSeen)tags.push('<span class="tg sk">Cut first</span>');if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
-    const rankInner=ex.abs?"★":((dn===total&&total>0)?"✓":(i+1));const exp=(openIdx===i);
+    if(uskip)cls.push("uskip");else if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
+    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(ex.calf)tags.push('<span class="tg pair">⟂ Pair with legs</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(absSeen)tags.push('<span class="tg sk">Cut first</span>');if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
+    const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let prHtml="";
     if(exp){
       if(!prs.hasData){prHtml=`<div class="nohist">No history yet — your first logged session sets the baseline.</div>`;}
@@ -704,10 +753,10 @@ function renderSession(){
     const nVal=(NOTES[name]||"");const nOpen=nVal.trim()?" show":"";
     const noteBlock=`<div class="notesblock"><button class="formtog notetog" onclick="toggleNotes(this)">Notes ${nOpen?"\u25b4":"\u25be"}</button><div class="notewrap${nOpen}"><textarea class="exnotes" placeholder="Seat height, pin number, grip, machine #\u2026" oninput="setNote('${name.replace(/'/g,"\\'")}',this.value)">${esc(nVal)}</textarea></div></div>`;
     const swapOpts=getSwapOptions(name);
-    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount"><b>${dn}</b>/${total}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${prHtml}<div class="setgrid">${rows}</div>${effortHtml(i)}<button class="addset" onclick="addSet(${i})">+ Add set</button><div class="sethint">A set logs once you enter reps. Weight is optional. Clear reps to unlog.</div><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button><ul class="cues">${cues}</ul>${noteBlock}</div></div></div></div>`;
+    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${prHtml}<div class="setgrid">${rows}</div>${effortHtml(i)}<button class="addset" onclick="addSet(${i})">+ Add set</button><div class="sethint">A set logs once you enter reps. Weight is optional. Clear reps to unlog.</div><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo skip":"⤼ Mark as skipped"}</button><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button><ul class="cues">${cues}</ul>${noteBlock}</div></div></div></div>`;
     if(ex.abs&&!absSeen){absSeen=true;html+=`<div class="cutline"><span class="txt">Cut from here ↓</span><span class="rule"></span></div>`;}
   });
-  html+=`</div><div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
+  html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button><div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
   app.innerHTML=html;tickClock();attachDragHandlers();initExImg();
 }
 
@@ -830,19 +879,54 @@ function renderTrend(){
 }
 function setMetric(m){trendMetric=m;renderTrend();}
 function chartSVG(pts,from,to,unit){
-  const W=520,H=210,pl=40,pr=14,pt=14,pb=28;const pw=W-pl-pr,ph=H-pt-pb;
+  const W=520,H=220,pl=46,pr=14,pt=16,pb=32;const pw=W-pl-pr,ph=H-pt-pb;
   const maxV=Math.max(...pts.map(p=>p.v),1);const yMax=maxV*1.12||1;
   const X=t=>pl+((t-from)/(to-from))*pw;const Y=v=>pt+(1-v/yMax)*ph;
-  let g="";for(let k=0;k<=2;k++){const val=yMax*(1-k/2);const y=pt+(ph*k/2);g+=`<line x1="${pl}" y1="${y.toFixed(1)}" x2="${W-pr}" y2="${y.toFixed(1)}" stroke="#322C25" stroke-width="1"/><text x="${pl-6}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="10" fill="#6E665C">${round1(val)}</text>`;}
+  let g="";for(let k=0;k<=2;k++){const val=yMax*(1-k/2);const y=pt+(ph*k/2);g+=`<line x1="${pl}" y1="${y.toFixed(1)}" x2="${W-pr}" y2="${y.toFixed(1)}" stroke="#322C25" stroke-width="1"/><text x="${pl-7}" y="${(y+5).toFixed(1)}" text-anchor="end" font-size="14" fill="#8A8177">${round1(val)}</text>`;}
   // x labels
   const mid=(from+to)/2;
-  const xlab=t=>`<text x="${X(t).toFixed(1)}" y="${H-9}" text-anchor="middle" font-size="10" fill="#6E665C">${fmtShort(t)}</text>`;
+  const xlab=t=>`<text x="${X(t).toFixed(1)}" y="${H-10}" text-anchor="middle" font-size="14" fill="#8A8177">${fmtShort(t)}</text>`;
   let xl=xlab(from)+xlab(mid)+xlab(to);
   let line="",dots="";
   if(pts.length>=2){line=`<polyline fill="none" stroke="#54B9A8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="${pts.map(p=>X(p.t).toFixed(1)+","+Y(p.v).toFixed(1)).join(" ")}"/>`;}
   pts.forEach((p,i)=>{const last=i===pts.length-1;dots+=`<circle cx="${X(p.t).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="${last?4.5:3.2}" fill="${last?"#FFA350":"#54B9A8"}" stroke="#131110" stroke-width="1.5"/>`;});
-  const lp=pts[pts.length-1];const lv=`<text x="${Math.min(X(lp.t),W-pr-2).toFixed(1)}" y="${(Y(lp.v)-9).toFixed(1)}" text-anchor="end" font-size="11" font-weight="700" fill="#FFA350">${lp.v}${unit?" "+unit:""}</text>`;
+  const lp=pts[pts.length-1];const lv=`<text x="${Math.min(X(lp.t),W-pr-2).toFixed(1)}" y="${(Y(lp.v)-11).toFixed(1)}" text-anchor="end" font-size="15" font-weight="700" fill="#FFA350">${lp.v}${unit?" "+unit:""}</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" font-family="Inter,sans-serif">${g}${xl}${line}${dots}${lv}</svg>`;
+}
+
+/* ---------------- tennis log ---------------- */
+function openTennisLog(){
+  closeOverlay();
+  const today=new Date().toISOString().slice(0,10);
+  const html=`<div class="overlay"><div class="ov-head"><button class="bk" onclick="closeOverlay()" aria-label="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><div class="ti"><span>Quick log</span>🎾 Tennis session</div></div><div class="ov-body">
+    <div class="field"><label>Date</label><input type="date" id="tnDate" value="${today}"></div>
+    <div class="field"><label>Duration (minutes)</label><input type="number" id="tnDur" inputmode="numeric" placeholder="e.g. 60"></div>
+    <div class="field"><label>Intensity</label><div class="mtoggle" id="tnInt">
+      <button type="button" class="on" data-v="Light" onclick="setTnIntensity(this)">Light</button>
+      <button type="button" data-v="Moderate" onclick="setTnIntensity(this)">Moderate</button>
+      <button type="button" data-v="Intense" onclick="setTnIntensity(this)">Intense</button>
+    </div></div>
+    <div class="field"><label>Notes (optional)</label><textarea id="tnNotes" placeholder="Singles vs. Alex, worked on backhand..."></textarea></div>
+    <button class="btn primary" style="width:100%" onclick="saveTennisLog()">Save session</button>
+  </div></div>`;
+  document.getElementById("overlayMount").innerHTML=html;
+}
+function setTnIntensity(btn){document.querySelectorAll("#tnInt button").forEach(b=>b.classList.remove("on"));btn.classList.add("on");}
+async function saveTennisLog(){
+  const dEl=document.getElementById("tnDate"),durEl=document.getElementById("tnDur"),notesEl=document.getElementById("tnNotes");
+  const dur=parseInt(durEl.value,10);
+  if(!dur||dur<=0){await showAlert("Enter a duration in minutes.");return;}
+  const intBtn=document.querySelector("#tnInt button.on");
+  const dateVal=dEl.value?new Date(dEl.value+"T12:00:00").getTime():Date.now();
+  TENNIS.push({date:dateVal,duration:dur,intensity:intBtn?intBtn.dataset.v:"Moderate",notes:(notesEl.value||"").trim()});
+  await sset("tennis",TENNIS);
+  closeOverlay();renderHome();
+}
+async function deleteTennis(date){
+  if(!(await showConfirm("Delete this tennis session?")))return;
+  TENNIS=TENNIS.filter(t=>t.date!==date);
+  await sset("tennis",TENNIS);
+  renderHome();
 }
 
 /* ---------------- interactions ---------------- */
@@ -859,9 +943,41 @@ function toggleCues(b){const ul=b.nextElementSibling;ul.classList.toggle("show")
 function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const s=CUR.ex[name].sets[j];const was=setComplete(ex,s);s[f]=v;const now=setComplete(ex,s);
   const row=document.getElementById("row-"+i+"-"+j);if(row)row.classList.toggle("set-done",now);
   refreshExHead(i);updateProgress();scheduleSave();
-  if(now&&!was)startTimer(rs(ex.rest),ex,i,j);}
+  if(now&&!was){
+    startTimer(rs(ex.rest),ex,i,j);
+    const log=CUR.ex[name];const doneCount=log.sets.filter(x=>setComplete(ex,x)).length;
+    if(!log.skipped&&doneCount===log.sets.length)collapseAndAdvance(i,"done");
+  }
+}
 function refreshExHead(i){const name=CUR.order[i];const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;const dn=sets.filter(s=>setComplete(ex,s)).length;const total=sets.length;const el=document.getElementById("ex-"+i);if(!el)return;el.classList.toggle("done",dn===total&&total>0);el.classList.toggle("partial",dn>0&&dn<total);const sc=el.querySelector(".setcount");if(sc)sc.innerHTML=`<b>${dn}</b>/${total}`;if(!ex.abs){const rk=el.querySelector(".rank");if(rk)rk.textContent=(dn===total&&total>0)?"✓":(i+1);}}
-function updateProgress(){if(!CUR)return;let done=0,total=0;CUR.order.forEach(name=>{const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;total+=sets.length;done+=sets.filter(s=>setComplete(ex,s)).length;});const pct=total?Math.round(done/total*100):0;const f=document.getElementById("progFill");if(f)f.style.width=pct+"%";const pr=document.getElementById("prog");if(pr)pr.textContent=`${done}/${total} sets · ${pct}%`;}
+/* marks an exercise skipped/unskipped; skipping (like completing) gives a
+   quick celebratory pop then collapses the card and opens the next
+   exercise that still needs attention */
+function toggleSkipEx(i){
+  const name=CUR.order[i];const log=CUR.ex[name];
+  log.skipped=!log.skipped;
+  saveCur();
+  if(log.skipped)collapseAndAdvance(i,"skip");else renderSession();
+}
+function nextOpenIdx(from){
+  for(let k=from+1;k<CUR.order.length;k++){
+    const nm=CUR.order[k];const lg=CUR.ex[nm];const d=NAME_INDEX[nm];
+    if(lg.skipped)continue;
+    const dn=lg.sets.filter(s=>setComplete(d,s)).length;
+    if(dn<lg.sets.length)return k;
+  }
+  return -1;
+}
+function collapseAndAdvance(i,kind){
+  const els=app.querySelectorAll(".ex");const btn=els[i]&&els[i].querySelector(".ex-btn");
+  if(btn)btn.classList.add(kind==="skip"?"skip-celebrate":"celebrate");
+  setTimeout(()=>{
+    openIdx=nextOpenIdx(i);
+    renderSession();
+    if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}
+  },kind==="skip"?360:520);
+}
+function updateProgress(){if(!CUR)return;let done=0,total=0;CUR.order.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];if(log.skipped)return;const sets=log.sets;total+=sets.length;done+=sets.filter(s=>setComplete(ex,s)).length;});const pct=total?Math.round(done/total*100):0;const f=document.getElementById("progFill");if(f)f.style.width=pct+"%";const pr=document.getElementById("prog");if(pr)pr.textContent=`${done}/${total} sets · ${pct}%`;}
 function propWeight(i,j){const name=CUR.order[i];const ex=NAME_INDEX[name];const w=CUR.ex[name].sets[j].weight;if(w===""||w==null)return;const sets=CUR.ex[name].sets;
   // Cascade the weight down to every later set that isn't logged yet. A set
   // counts as logged once its reps are in, so anything you've actually
@@ -979,6 +1095,56 @@ async function openSwap(i){
   CUR.ex[newName]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–"}))};
   saveCur();renderSession();
 }
+
+/* ---------------- add exercise ---------------- */
+function openAddExercise(){
+  closeOverlay();
+  const musclesToday=[...new Set(CUR.order.map(n=>NAME_INDEX[n].m))];
+  const inOrder=new Set(CUR.order);
+  const suggested=Object.values(NAME_INDEX)
+    .filter(e=>musclesToday.includes(e.m)&&!inOrder.has(e.n))
+    .sort((a,b)=>(EQUIP_RANK[a.equip]??9)-(EQUIP_RANK[b.equip]??9)||a.n.localeCompare(b.n));
+  const sugHtml=suggested.length?`<div class="section-h" style="margin-top:0">Suggested for today</div><div class="modal-opts" style="margin-bottom:18px">${suggested.map(e=>`<button class="modal-opt" onclick="addFromLibrary('${e.n.replace(/'/g,"\\'")}')">${e.n} <span style="color:var(--ink-faint);font-weight:400">· ${e.m}</span></button>`).join("")}</div>`:"";
+  const muscleOpts=Object.keys(MUSCLES).map(m=>`<option value="${m}">${m}</option>`).join("");
+  const html=`<div class="overlay"><div class="ov-head"><button class="bk" onclick="closeOverlay()" aria-label="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><div class="ti"><span>Added to this session</span>Add exercise</div></div><div class="ov-body">
+    ${sugHtml}
+    <div class="section-h" style="margin-top:0">Or add a custom exercise</div>
+    <div class="field"><label>Name</label><input id="ceName" type="text" placeholder="e.g. Cable fly"></div>
+    <div class="field"><label>Muscle group</label><select id="ceMuscle">${muscleOpts}</select></div>
+    <div class="field"><label>Equipment</label><select id="ceEquip">
+      <option value="machine">Machine</option><option value="cable">Cable</option><option value="barbell">Barbell</option><option value="dumbbell">Dumbbell</option><option value="bodyweight">Bodyweight</option>
+    </select></div>
+    <div class="field-row">
+      <div class="field"><label>Sets</label><input id="ceSets" type="number" inputmode="numeric" value="3"></div>
+      <div class="field"><label>Rest</label><input id="ceRest" type="text" placeholder="e.g. 60–90s" value="60–90s"></div>
+    </div>
+    <div class="field"><label>Reps</label><input id="ceReps" type="text" placeholder="e.g. 8–12" value="8–12"></div>
+    <button class="btn primary" style="width:100%" onclick="saveCustomExercise()">Add to today's session</button>
+  </div></div>`;
+  document.getElementById("overlayMount").innerHTML=html;
+}
+function addFromLibrary(name){
+  const def=NAME_INDEX[name];if(!def)return;
+  CUR.order.push(name);
+  const prev=lastLog(name);
+  CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–"}))};
+  closeOverlay();saveCur();renderSession();
+}
+async function saveCustomExercise(){
+  const nameEl=document.getElementById("ceName");
+  const name=(nameEl.value||"").trim();
+  if(!name){await showAlert("Give the exercise a name.");return;}
+  if(NAME_INDEX[name]){await showAlert("An exercise named \""+name+"\" already exists — pick a different name or use it from the suggested list.");return;}
+  const muscle=document.getElementById("ceMuscle").value;
+  const equip=document.getElementById("ceEquip").value;
+  const sets=Math.max(1,parseInt(document.getElementById("ceSets").value,10)||3);
+  const reps=(document.getElementById("ceReps").value||"8–12").trim();
+  const rest=(document.getElementById("ceRest").value||"60–90s").trim();
+  const def={n:name,m:muscle,equip,sets,reps,rest,cues:[],custom:1};
+  CUSTOM_EX.push(def);NAME_INDEX[name]=def;
+  await sset("customEx",CUSTOM_EX);
+  addFromLibrary(name);
+}
 let saveT=null;function scheduleSave(){if(saveT)clearTimeout(saveT);saveT=setTimeout(()=>saveCur(),500);}
 function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function setNote(name,v){NOTES[name]=v;if(noteT)clearTimeout(noteT);noteT=setTimeout(()=>sset("notes",NOTES),500);}
@@ -987,8 +1153,17 @@ function dismissNudge(){CUR.nudgeDismissed=true;saveCur();renderSession();}
 function computeNudge(){if(!priorSessionThisWeek())return null;const vol=weeklyVolume();const defs=CUR.order.map(n=>NAME_INDEX[n]);const trained=[...new Set(defs.map(e=>e.m))];let best=null;
   trained.forEach(m=>{const meta=MUSCLES[m];if(!meta||!meta.nudge)return;const v=vol[m]||0,t=meta.t,ratio=v/t;if(v<t&&ratio<0.5){if(!best||ratio<best.ratio){const names=defs.filter(e=>e.m===m).map(e=>e.n);best={muscle:m,v,t,ratio,exNames:names.join(" & ")};}}});return best;}
 async function finishSession(){
+  const missedMain=CUR.order.find(n=>{const d=NAME_INDEX[n];const lg=CUR.ex[n];return d.main&&!lg.skipped&&lg.sets.filter(s=>setComplete(d,s)).length===0;});
+  if(missedMain){
+    const proceed=await showConfirm(`You haven't logged ${missedMain} yet — it's today's key lift. Worth getting at least that one in before you finish.`,{okLabel:"Finish anyway",cancelLabel:"Go back to it"});
+    if(!proceed){
+      const idx=CUR.order.indexOf(missedMain);openIdx=idx;renderSession();
+      const el=app.querySelectorAll(".ex")[idx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});
+      return;
+    }
+  }
   CUR.date=Date.now();const rec={day:CUR.day,date:CUR.date,exOrder:CUR.order.slice(),ex:{}};let done=0,total=0,skipped=0;
-  CUR.order.forEach(name=>{const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets.map(s=>({weight:s.weight,reps:s.reps}));rec.ex[name]={sets};const d=CUR.ex[name].sets.filter(s=>setComplete(ex,s)).length;done+=d;total+=sets.length;if(d===0)skipped++;});
+  CUR.order.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];const sets=log.sets.map(s=>({weight:s.weight,reps:s.reps}));rec.ex[name]={sets,skipped:!!log.skipped};const d=log.sets.filter(s=>setComplete(ex,s)).length;done+=d;total+=sets.length;if(d===0)skipped++;});
   const orderChanged=JSON.stringify(CUR.order)!==JSON.stringify(CUR.defaultOrder);
   HISTORY.push(rec);await sset("history",HISTORY);CUR=null;await sset("current",null);
   if(orderChanged){
@@ -996,6 +1171,7 @@ async function finishSession(){
     if(keep){SETTINGS.dayOrder=SETTINGS.dayOrder||{};SETTINGS.dayOrder[rec.day]=rec.exOrder.slice();await sset("settings",SETTINGS);}
   }
   renderHome({day:rec.day,done,total,skipped});
+  launchConfetti();
 }
 async function discardSession(){if(!(await showConfirm("Discard this session? Logged sets won't be saved.")))return;CUR=null;sset("current",null);renderHome();}
 function saveCur(){sset("current",CUR);}
@@ -1007,7 +1183,7 @@ function copyExport(btn){const ta=document.getElementById("expArea");if(!ta)retu
   const txt=ta.value;const done=()=>{markBackup();if(btn){const o=btn.textContent;btn.textContent="Copied ✓";setTimeout(()=>{btn.textContent=o;renderHome();},1200);}};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done).catch(()=>{try{document.execCommand("copy");done();}catch(e){}});}
   else{try{document.execCommand("copy");done();}catch(e){}}}
-function downloadExport(){const blob=JSON.stringify({v:2,exportedAt:Date.now(),settings:SETTINGS,notes:NOTES,history:HISTORY,profile:PROFILE});
+function downloadExport(){const blob=JSON.stringify({v:2,exportedAt:Date.now(),settings:SETTINGS,notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});
   try{const b=new Blob([blob],{type:"application/json"});const url=URL.createObjectURL(b);const a=document.createElement("a");const d=new Date();a.href=url;a.download="workout-backup-"+d.toISOString().slice(0,10)+".json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);markBackup();}catch(e){showAlert("Download blocked here — use Copy instead.");}}
 
 /* ---------------- custom modals (native confirm/alert silently no-op in an
@@ -1031,8 +1207,8 @@ function markBackup(){BACKMETA={at:Date.now(),count:HISTORY.length};sset("backup
 async function doImport(){const ta=document.getElementById("impArea");if(!ta)return;let data;try{data=JSON.parse(ta.value);}catch(e){await showAlert("That doesn't look like valid backup text.");return;}
   if(!data||!Array.isArray(data.history)){await showAlert("No history found in that backup.");return;}
   if(!(await showConfirm(`Restore ${data.history.length} session(s)? This replaces your current saved history, notes, and profile.`)))return;
-  HISTORY=data.history;if(data.settings)SETTINGS=Object.assign(SETTINGS,data.settings);if(data.notes)NOTES=data.notes;if(data.profile)PROFILE=Object.assign({heightCm:"",weightKg:"",age:"",goal:""},data.profile);
-  await sset("history",HISTORY);await sset("settings",SETTINGS);await sset("notes",NOTES);await sset("profile",PROFILE);updateProfileBtnState();applyTheme();showImport=false;renderHome();await showAlert("Restored "+HISTORY.length+" session(s).");}
+  HISTORY=data.history;if(data.settings)SETTINGS=Object.assign(SETTINGS,data.settings);if(data.notes)NOTES=data.notes;if(data.profile)PROFILE=Object.assign({heightCm:"",weightKg:"",age:"",goal:""},data.profile);if(Array.isArray(data.tennis))TENNIS=data.tennis;if(Array.isArray(data.customEx)){CUSTOM_EX=data.customEx;CUSTOM_EX.forEach(e=>{NAME_INDEX[e.n]=e;});}
+  await sset("history",HISTORY);await sset("settings",SETTINGS);await sset("notes",NOTES);await sset("profile",PROFILE);await sset("tennis",TENNIS);await sset("customEx",CUSTOM_EX);updateProfileBtnState();applyTheme();showImport=false;renderHome();await showAlert("Restored "+HISTORY.length+" session(s).");}
 
 /* ---------------- clock ---------------- */
 let clockIv=null;
@@ -1179,13 +1355,47 @@ window.addEventListener("focus",syncTimer);
 window.addEventListener("pageshow",syncTimer);
 
 
-/* ---------------- init ---------------- */
+/* ---------------- confetti ---------------- */
+let confettiRAF=null;
+function launchConfetti(){
+  const canvas=document.getElementById("confettiCanvas");if(!canvas)return;
+  const ctx=canvas.getContext("2d");
+  const W=canvas.width=window.innerWidth,H=canvas.height=window.innerHeight;
+  const colors=["#F2872E","#FFA350","#54B9A8","#6FBF73","#F2E3C8"];
+  const N=90,parts=[];
+  for(let k=0;k<N;k++){
+    parts.push({
+      x:Math.random()*W,y:-20-Math.random()*H*0.4,
+      vx:(Math.random()-0.5)*2.6,vy:2.2+Math.random()*2.6,
+      size:5+Math.random()*6,rot:Math.random()*Math.PI*2,vrot:(Math.random()-0.5)*0.35,
+      color:colors[k%colors.length],shape:Math.random()<0.5?"rect":"circle"
+    });
+  }
+  const start=performance.now(),life=2400;
+  if(confettiRAF)cancelAnimationFrame(confettiRAF);
+  function frame(t){
+    const el=t-start;
+    ctx.clearRect(0,0,W,H);
+    if(el>life){canvas.width=canvas.width;confettiRAF=null;return;}
+    const fade=el>life-500?Math.max(0,(life-el)/500):1;
+    parts.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;p.vy+=0.045;p.rot+=p.vrot;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.globalAlpha=fade;ctx.fillStyle=p.color;
+      if(p.shape==="rect")ctx.fillRect(-p.size/2,-p.size/3,p.size,p.size*0.66);
+      else{ctx.beginPath();ctx.arc(0,0,p.size/2,0,Math.PI*2);ctx.fill();}
+      ctx.restore();
+    });
+    confettiRAF=requestAnimationFrame(frame);
+  }
+  confettiRAF=requestAnimationFrame(frame);
+}
+
 /* ---------------- init ---------------- */
 document.getElementById("profileBtn").onclick=openProfile;
 (async function init(){
   SETTINGS=await sget("settings",SETTINGS);SETTINGS.dayOrder=SETTINGS.dayOrder||{};
   applyTheme();
-  HISTORY=await sget("history",[]);NOTES=await sget("notes",{});BACKMETA=await sget("backupMeta",{at:0,count:0});PROFILE=await sget("profile",PROFILE);updateProfileBtnState();
+  HISTORY=await sget("history",[]);NOTES=await sget("notes",{});BACKMETA=await sget("backupMeta",{at:0,count:0});PROFILE=await sget("profile",PROFILE);TENNIS=await sget("tennis",[]);CUSTOM_EX=await sget("customEx",[]);CUSTOM_EX.forEach(e=>{NAME_INDEX[e.n]=e;});updateProfileBtnState();
   CUR=await sget("current",null);
   if(CUR&&!CUR.order){
     // migrate a session started on the old index-keyed build (or discard if it doesn't match)
