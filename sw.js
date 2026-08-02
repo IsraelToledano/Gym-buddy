@@ -1,4 +1,6 @@
-const CACHE = "gym-buddy-v3";
+const CACHE = "gym-buddy-v4";
+const IMG_CACHE = "gym-buddy-exercise-img-v1";
+const IMG_HOST = "raw.githubusercontent.com";
 const ASSETS = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", (e) => {
@@ -9,7 +11,7 @@ self.addEventListener("install", (e) => {
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k !== CACHE && k !== IMG_CACHE).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();
@@ -22,6 +24,28 @@ self.addEventListener("activate", (e) => {
 // serving the old cached version until the next SW activate cycle.
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+
+  // Exercise photos are immutable and remote: cache-first, and keep them
+  // in their own cache so an app-shell version bump doesn't force a
+  // re-download of every image on the next gym session.
+  const url = new URL(e.request.url);
+  if (url.hostname === IMG_HOST) {
+    e.respondWith(
+      caches.open(IMG_CACHE).then((c) =>
+        c.match(e.request).then((hit) => {
+          if (hit) return hit;
+          return fetch(e.request)
+            .then((res) => {
+              if (res && res.status === 200) c.put(e.request, res.clone());
+              return res;
+            })
+            .catch(() => hit);
+        })
+      )
+    );
+    return;
+  }
+
   e.respondWith(
     fetch(e.request)
       .then((res) => {
