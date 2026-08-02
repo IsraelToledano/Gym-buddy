@@ -169,6 +169,14 @@
   .sethint{font-size:10.5px;color:var(--ink-faint);margin-top:7px}
   .pbar{height:4px;border-radius:3px;background:rgba(255,255,255,.07);margin-top:6px;overflow:hidden}
   .pbar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--amber),var(--amber-bright));transition:width .35s ease;width:0}
+.effort{background:var(--card-hi);border:1px solid var(--teal);border-radius:12px;padding:12px 14px;margin:10px 0 4px}
+  .ef-tag{font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:.18em;text-transform:uppercase;font-size:10.5px;color:var(--teal)}
+  .ef-body{font-size:13px;color:var(--ink-dim);line-height:1.5;margin-top:5px}
+  .ef-body b{color:var(--ink)}
+  .ef-btns{display:flex;gap:8px;margin-top:11px}
+  .ef-btns button{flex:1;border-radius:9px;padding:9px 10px;font-weight:600;font-size:13.5px;font-family:inherit;border:1px solid var(--line);background:var(--bg);color:var(--ink-dim)}
+  .ef-yes{background:var(--teal)!important;border-color:var(--teal)!important;color:#0c1f1b!important}
+  .ef-note{font-size:11px;color:var(--ink-faint);margin-top:8px}
   .addset{margin-top:8px;width:100%;background:var(--bg);border:1px dashed var(--line);border-radius:10px;color:var(--ink-dim);font-weight:600;font-size:13px;padding:7px}
   .addset:hover{border-color:var(--amber);color:var(--amber-bright)}
   .rmset{width:30px;height:38px;border:none;background:none;color:var(--ink-faint);font-size:15px;border-radius:8px}
@@ -696,7 +704,7 @@ function renderSession(){
     const nVal=(NOTES[name]||"");const nOpen=nVal.trim()?" show":"";
     const noteBlock=`<div class="notesblock"><button class="formtog notetog" onclick="toggleNotes(this)">Notes ${nOpen?"\u25b4":"\u25be"}</button><div class="notewrap${nOpen}"><textarea class="exnotes" placeholder="Seat height, pin number, grip, machine #\u2026" oninput="setNote('${name.replace(/'/g,"\\'")}',this.value)">${esc(nVal)}</textarea></div></div>`;
     const swapOpts=getSwapOptions(name);
-    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount"><b>${dn}</b>/${total}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${prHtml}<div class="setgrid">${rows}</div><button class="addset" onclick="addSet(${i})">+ Add set</button><div class="sethint">"A set logs once you enter reps. Weight is optional. Clear reps to unlog."</div><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button><ul class="cues">${cues}</ul>${noteBlock}</div></div></div></div>`;
+    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount"><b>${dn}</b>/${total}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${prHtml}<div class="setgrid">${rows}</div>${effortHtml(i)}<button class="addset" onclick="addSet(${i})">+ Add set</button><div class="sethint">A set logs once you enter reps. Weight is optional. Clear reps to unlog.</div><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button><ul class="cues">${cues}</ul>${noteBlock}</div></div></div></div>`;
     if(ex.abs&&!absSeen){absSeen=true;html+=`<div class="cutline"><span class="txt">Cut from here ↓</span><span class="rule"></span></div>`;}
   });
   html+=`</div><div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
@@ -868,6 +876,54 @@ function propWeight(i,j){const name=CUR.order[i];const ex=NAME_INDEX[name];const
     const row=document.getElementById("row-"+i+"-"+k);if(row)row.classList.toggle("set-done",setComplete(ex,sets[k]));
   }
   refreshExHead(i);updateProgress();scheduleSave();}
+/* ---- effort check --------------------------------------------------
+   After you finish the planned sets for an exercise, compare this
+   session's total work against your recent norm for that same exercise.
+   If it lands meaningfully short, offer one extra set to even it out.
+
+   Weight is optional in this tracker, so the comparison uses tonnage
+   (weight x reps) only when both this session and your history actually
+   carry weights; otherwise it falls back to total reps. The suggestion is
+   session-only — accepting appends a set to today's log and never touches
+   the stored plan. */
+function effortCheck(i){
+  const name=CUR.order[i], ex=NAME_INDEX[name];
+  if(CUR.effortOff&&CUR.effortOff[name])return null;   // dismissed this session
+  const sets=CUR.ex[name].sets;
+  if(sets.length>ex.sets)return null;                   // already carrying an extra set
+  const done=sets.filter(s=>setComplete(ex,s));
+  if(done.length<ex.sets)return null;                   // planned sets not finished yet
+  const prior=exSeries(name,false);
+  if(prior.length<2)return null;                        // need a baseline first
+  const recent=prior.slice(-4);
+  const curHasW=done.some(s=>parseFloat(s.weight)>0);
+  const useVol=curHasW&&recent.every(p=>p.anyW);
+  const cur=useVol
+    ? done.reduce((a,s)=>a+(parseFloat(s.weight)||0)*(parseInt(s.reps)||0),0)
+    : done.reduce((a,s)=>a+(parseInt(s.reps)||0),0);
+  const vals=recent.map(p=>useVol?p.vol:p.reps).filter(v=>v>0).sort((a,b)=>a-b);
+  if(vals.length<2)return null;
+  const med=vals.length%2?vals[(vals.length-1)/2]:(vals[vals.length/2-1]+vals[vals.length/2])/2;
+  if(!med)return null;
+  const ratio=cur/med;
+  if(ratio>=0.9)return null;                            // within 10% is fine
+  const shortBy=Math.round((1-ratio)*100);
+  const perSet=cur/done.length;
+  const closes=perSet>0?Math.min(100,Math.round(perSet/med*100)):0;
+  return{name,cur:round1(cur),med:round1(med),shortBy,useVol,closes};
+}
+function dismissEffort(i){const name=CUR.order[i];CUR.effortOff=CUR.effortOff||{};CUR.effortOff[name]=1;saveCur();renderSession();}
+function acceptEffort(i){const name=CUR.order[i];CUR.effortOff=CUR.effortOff||{};CUR.effortOff[name]=1;addSet(i);}
+function effortHtml(i){
+  const e=effortCheck(i);if(!e)return"";
+  const unit=e.useVol?"kg lifted":"reps";
+  return `<div class="effort">
+    <div class="ef-top"><span class="ef-tag">Light session</span></div>
+    <div class="ef-body">You're <b>${e.shortBy}% below</b> your recent norm for this one — ${e.cur} vs ${e.med} ${unit}. One more set would close most of the gap.</div>
+    <div class="ef-btns"><button class="ef-yes" onclick="acceptEffort(${i})">Add a set</button><button class="ef-no" onclick="dismissEffort(${i})">No thanks</button></div>
+    <div class="ef-note">Today only — your saved routine stays at ${NAME_INDEX[e.name].sets} sets.</div>
+  </div>`;
+}
 function addSet(i){const name=CUR.order[i];const sets=CUR.ex[name].sets;const last=sets[sets.length-1];sets.push({weight:last?last.weight:"",reps:"",ph:last?last.ph:"–"});saveCur();renderSession();}
 function removeSet(i,j){const name=CUR.order[i];CUR.ex[name].sets.splice(j,1);saveCur();renderSession();}
 
