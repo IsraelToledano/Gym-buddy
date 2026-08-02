@@ -854,7 +854,20 @@ function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const
   if(now&&!was)startTimer(rs(ex.rest),ex,i,j);}
 function refreshExHead(i){const name=CUR.order[i];const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;const dn=sets.filter(s=>setComplete(ex,s)).length;const total=sets.length;const el=document.getElementById("ex-"+i);if(!el)return;el.classList.toggle("done",dn===total&&total>0);el.classList.toggle("partial",dn>0&&dn<total);const sc=el.querySelector(".setcount");if(sc)sc.innerHTML=`<b>${dn}</b>/${total}`;if(!ex.abs){const rk=el.querySelector(".rank");if(rk)rk.textContent=(dn===total&&total>0)?"✓":(i+1);}}
 function updateProgress(){if(!CUR)return;let done=0,total=0;CUR.order.forEach(name=>{const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;total+=sets.length;done+=sets.filter(s=>setComplete(ex,s)).length;});const pct=total?Math.round(done/total*100):0;const f=document.getElementById("progFill");if(f)f.style.width=pct+"%";const pr=document.getElementById("prog");if(pr)pr.textContent=`${done}/${total} sets · ${pct}%`;}
-function propWeight(i,j){const name=CUR.order[i];const ex=NAME_INDEX[name];const w=CUR.ex[name].sets[j].weight;if(w===""||w==null)return;const sets=CUR.ex[name].sets;for(let k=j+1;k<sets.length;k++){if(sets[k].weight===""||sets[k].weight==null){sets[k].weight=w;const inp=document.getElementById("w-"+i+"-"+k);if(inp)inp.value=w;const row=document.getElementById("row-"+i+"-"+k);if(row)row.classList.toggle("set-done",setComplete(ex,sets[k]));}}refreshExHead(i);updateProgress();scheduleSave();}
+function propWeight(i,j){const name=CUR.order[i];const ex=NAME_INDEX[name];const w=CUR.ex[name].sets[j].weight;if(w===""||w==null)return;const sets=CUR.ex[name].sets;
+  // Cascade the weight down to every later set that isn't logged yet. A set
+  // counts as logged once its reps are in, so anything you've actually
+  // performed keeps the weight you lifted — only the sets still ahead of you
+  // follow the change. This makes mid-exercise corrections (dropping from 22
+  // to 20 on set 2) carry forward without rewriting your history.
+  for(let k=j+1;k<sets.length;k++){
+    if(setComplete(ex,sets[k]))continue;
+    if(sets[k].weight===w)continue;
+    sets[k].weight=w;
+    const inp=document.getElementById("w-"+i+"-"+k);if(inp)inp.value=w;
+    const row=document.getElementById("row-"+i+"-"+k);if(row)row.classList.toggle("set-done",setComplete(ex,sets[k]));
+  }
+  refreshExHead(i);updateProgress();scheduleSave();}
 function addSet(i){const name=CUR.order[i];const sets=CUR.ex[name].sets;const last=sets[sets.length-1];sets.push({weight:last?last.weight:"",reps:"",ph:last?last.ph:"–"});saveCur();renderSession();}
 function removeSet(i,j){const name=CUR.order[i];CUR.ex[name].sets.splice(j,1);saveCur();renderSession();}
 
