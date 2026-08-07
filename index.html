@@ -311,10 +311,13 @@
   .day-btn.upnext-day{border-color:var(--amber)}
 
   /* drag handle & reordering */
-  .drag-handle{touch-action:none;width:18px;height:26px;display:grid;place-items:center;color:var(--ink-faint);flex:none;cursor:grab;justify-self:center}
+  .drag-handle{touch-action:none;position:relative;width:18px;height:26px;display:grid;place-items:center;color:var(--ink-faint);flex:none;cursor:grab;justify-self:center}
+  .drag-handle::before{content:"";position:absolute;inset:-11px -8px}
   .drag-handle svg{width:14px;height:14px}
-  .ex.dragging{opacity:.55}
-  .ex.dragging .ex-btn{border-color:var(--amber)}
+  .ex{transition:opacity .15s ease}
+  .ex-btn{transition:border-color .16s,background .16s,box-shadow .16s,transform .16s}
+  .ex.dragging{opacity:.97;position:relative;z-index:5}
+  .ex.dragging .ex-btn{border-color:var(--amber);box-shadow:0 8px 20px rgba(0,0,0,.28);transform:scale(1.015)}
   .ex-btn{grid-template-columns:18px 38px 1fr auto!important}
 
   /* swap button */
@@ -373,7 +376,7 @@
 <script>
 /* ---------------- data ---------------- */
 const EXIMG_BASE="https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/";
-const EX_IMG={"Dumbbell bench press":["Dumbbell_Bench_Press/0.jpg","Dumbbell_Bench_Press/1.jpg"],"Incline bench press":["Incline_Dumbbell_Press/0.jpg","Incline_Dumbbell_Press/1.jpg"],"Dumbbell overhead press":["Dumbbell_Shoulder_Press/0.jpg","Dumbbell_Shoulder_Press/1.jpg"],"Lateral raises":["Side_Lateral_Raise/0.jpg","Side_Lateral_Raise/1.jpg"],"Leg extension":["Leg_Extensions/0.jpg","Leg_Extensions/1.jpg"],"Calf raise":["Standing_Calf_Raises/0.jpg","Standing_Calf_Raises/1.jpg"],"Machine crunch":["Ab_Crunch_Machine/0.jpg","Ab_Crunch_Machine/1.jpg"],"Pec deck / butterfly":["Butterfly/0.jpg","Butterfly/1.jpg"],"Triceps rope extension":["Triceps_Pushdown_-_Rope_Attachment/0.jpg","Triceps_Pushdown_-_Rope_Attachment/1.jpg"],"Glute rear kick":["Glute_Kickback/0.jpg","Glute_Kickback/1.jpg"],"Machine bench press":["Machine_Bench_Press/0.jpg","Machine_Bench_Press/1.jpg"],"Incline barbell press":["Barbell_Incline_Bench_Press_-_Medium_Grip/0.jpg","Barbell_Incline_Bench_Press_-_Medium_Grip/1.jpg"],"Machine shoulder press":["Leverage_Shoulder_Press/0.jpg","Leverage_Shoulder_Press/1.jpg"],"Leg press":["Leg_Press/0.jpg","Leg_Press/1.jpg"],"Calf press":["Calf_Press_On_The_Leg_Press_Machine/0.jpg","Calf_Press_On_The_Leg_Press_Machine/1.jpg"],"Knee raise (parallel bars)":["Knee_Hip_Raise_On_Parallel_Bars/0.jpg","Knee_Hip_Raise_On_Parallel_Bars/1.jpg"],"Triceps V-cable pushdown":["Triceps_Pushdown_-_V-Bar_Attachment/0.jpg","Triceps_Pushdown_-_V-Bar_Attachment/1.jpg"],"Machine triceps extension":["Machine_Triceps_Extension/0.jpg","Machine_Triceps_Extension/1.jpg"],"Lat pulldown (machine)":["Wide-Grip_Lat_Pulldown/0.jpg","Wide-Grip_Lat_Pulldown/1.jpg"],"Seated cable row (machine)":["Seated_Cable_Rows/0.jpg","Seated_Cable_Rows/1.jpg"],"Rear delt reverse fly":["Cable_Rear_Delt_Fly/0.jpg","Cable_Rear_Delt_Fly/1.jpg"],"Concentration curl":["Concentration_Curls/0.jpg","Concentration_Curls/1.jpg"],"Incline dumbbell curl":["Incline_Dumbbell_Curl/0.jpg","Incline_Dumbbell_Curl/1.jpg"],"Leg curl":["Seated_Leg_Curl/0.jpg","Seated_Leg_Curl/1.jpg"],"Captain knee raise":["Knee_Hip_Raise_On_Parallel_Bars/0.jpg","Knee_Hip_Raise_On_Parallel_Bars/1.jpg"],"Back extension":["Hyperextensions_Back_Extensions/0.jpg","Hyperextensions_Back_Extensions/1.jpg"],"Lat pulldown":["Wide-Grip_Lat_Pulldown/0.jpg","Wide-Grip_Lat_Pulldown/1.jpg"],"Seated cable row (V-grip)":["Seated_Cable_Rows/0.jpg","Seated_Cable_Rows/1.jpg"],"Hammer curl":["Hammer_Curls/0.jpg","Hammer_Curls/1.jpg"],"Seated incline curl":["Incline_Dumbbell_Curl/0.jpg","Incline_Dumbbell_Curl/1.jpg"]};
+const EX_IMG={"Dumbbell bench press":["Dumbbell_Bench_Press/0.jpg","Dumbbell_Bench_Press/1.jpg"],"Incline bench press":["Incline_Dumbbell_Press/0.jpg","Incline_Dumbbell_Press/1.jpg"],"Dumbbell overhead press":["Dumbbell_Shoulder_Press/0.jpg","Dumbbell_Shoulder_Press/1.jpg"],"Lateral raises":["Side_Lateral_Raise/0.jpg","Side_Lateral_Raise/1.jpg"],"Leg extension":["Leg_Extensions/0.jpg","Leg_Extensions/1.jpg"],"Calf raise":["Standing_Calf_Raises/0.jpg","Standing_Calf_Raises/1.jpg"],"Machine crunch":["Ab_Crunch_Machine/0.jpg","Ab_Crunch_Machine/1.jpg"],"Pec deck / butterfly":["Butterfly/0.jpg","Butterfly/1.jpg"],"Triceps rope extension":["Triceps_Pushdown_-_Rope_Attachment/0.jpg","Triceps_Pushdown_-_Rope_Attachment/1.jpg"],"Glute rear kick":["Glute_Kickback/0.jpg","Glute_Kickback/1.jpg"],"Machine bench press":["Machine_Bench_Press/0.jpg","Machine_Bench_Press/1.jpg"],"Incline barbell press":["Barbell_Incline_Bench_Press_-_Medium_Grip/0.jpg","Barbell_Incline_Bench_Press_-_Medium_Grip/1.jpg"],"Machine shoulder press":["Leverage_Shoulder_Press/0.jpg","Leverage_Shoulder_Press/1.jpg"],"Leg press":["Leg_Press/0.jpg","Leg_Press/1.jpg"],"Calf press":["Calf_Press_On_The_Leg_Press_Machine/0.jpg","Calf_Press_On_The_Leg_Press_Machine/1.jpg"],"Knee raise (parallel bars)":["Knee_Hip_Raise_On_Parallel_Bars/0.jpg","Knee_Hip_Raise_On_Parallel_Bars/1.jpg"],"Triceps V-cable pushdown":["Triceps_Pushdown_-_V-Bar_Attachment/0.jpg","Triceps_Pushdown_-_V-Bar_Attachment/1.jpg"],"Machine triceps extension":["Machine_Triceps_Extension/0.jpg","Machine_Triceps_Extension/1.jpg"],"Lat pulldown (machine)":["Leverage_High_Row/0.jpg","Leverage_High_Row/1.jpg"],"Seated cable row (machine)":["Seated_Cable_Rows/0.jpg","Seated_Cable_Rows/1.jpg"],"Rear delt reverse fly":["Reverse_Machine_Flyes/0.jpg","Reverse_Machine_Flyes/1.jpg"],"Concentration curl":["Concentration_Curls/0.jpg","Concentration_Curls/1.jpg"],"Incline dumbbell curl":["Incline_Dumbbell_Curl/0.jpg","Incline_Dumbbell_Curl/1.jpg"],"Leg curl":["Seated_Leg_Curl/0.jpg","Seated_Leg_Curl/1.jpg"],"Captain knee raise":["Knee_Hip_Raise_On_Parallel_Bars/0.jpg","Knee_Hip_Raise_On_Parallel_Bars/1.jpg"],"Back extension":["Hyperextensions_Back_Extensions/0.jpg","Hyperextensions_Back_Extensions/1.jpg"],"Lat pulldown":["Leverage_High_Row/0.jpg","Leverage_High_Row/1.jpg"],"Seated cable row (V-grip)":["Seated_Cable_Rows/0.jpg","Seated_Cable_Rows/1.jpg"],"Hammer curl":["Hammer_Curls/0.jpg","Hammer_Curls/1.jpg"],"Seated incline curl":["Incline_Dumbbell_Curl/0.jpg","Incline_Dumbbell_Curl/1.jpg"],"Decline crunch (weighted)":["Decline_Crunch/0.jpg","Decline_Crunch/1.jpg"]};
 function animHtml(n){const f=EX_IMG[n];if(!f)return"";
   return `<div class="exanim" data-ex="${n.replace(/"/g,'&quot;')}"><img class="exframe" src="${EXIMG_BASE}${f[0]}" alt="${n}" loading="lazy" decoding="async" data-f0="${EXIMG_BASE}${f[0]}" data-f1="${EXIMG_BASE}${f[1]}"><span class="exphase">start</span></div>`;}
 
@@ -469,7 +472,8 @@ const PLAN={
    that's currently only trained with dumbbells). */
 const EXTRA_EX=[
   {n:"Machine lateral raise",m:"Side delts",equip:"machine",sets:3,reps:"12–15",rest:"45–60s",cues:["Set the seat so the pivot lines up with your shoulder.","Lead with the elbows, raise to shoulder height.","No shrugging — keep traps relaxed.","Slow, controlled negative."]},
-  {n:"Machine bicep curl",m:"Biceps",equip:"machine",sets:3,reps:"10–12",rest:"60s",cues:["Elbows pinned against the pad.","Curl through the full range without swinging.","Squeeze hard at the top.","Slow negative back to a full stretch."]}
+  {n:"Machine bicep curl",m:"Biceps",equip:"machine",sets:3,reps:"10–12",rest:"60s",cues:["Elbows pinned against the pad.","Curl through the full range without swinging.","Squeeze hard at the top.","Slow negative back to a full stretch."]},
+  {n:"Decline crunch (weighted)",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"12–15",rest:"60–75s",cues:["Hook feet under the pads, hands or plate at your chest.","Curl the ribs toward the hips — round the spine, don't just hinge at the hips.","Exhale and squeeze hard at the top.","Lower slow and controlled, no swinging."]}
 ];
 /* cross-day exercise index — lets an exercise be looked up by name regardless
    of which day it's originally defined under. This is what makes swapping
@@ -1044,20 +1048,31 @@ function addSet(i){const name=CUR.order[i];const sets=CUR.ex[name].sets;const la
 function removeSet(i,j){const name=CUR.order[i];CUR.ex[name].sets.splice(j,1);saveCur();renderSession();}
 
 /* ---------------- drag-to-reorder ---------------- */
+// iOS/WKWebView note: setPointerCapture must be called synchronously inside
+// the pointerdown handler — calling it later from a setTimeout (as the old
+// code did) silently fails on iOS Safari, so the drag never actually engages
+// even though the press+move gesture looks right. Capture now happens
+// immediately; a short hold delay still gates when reordering actually
+// "arms" so quick taps don't trigger it.
 let dragState=null;
 function attachDragHandlers(){
   document.querySelectorAll(".drag-handle").forEach(h=>{
     h.onpointerdown=(e)=>{
+      e.preventDefault();
       const exEl=h.closest(".ex");const list=document.getElementById("exList");
-      let pressTimer=setTimeout(()=>{
-        dragState={exEl,list};exEl.classList.add("dragging");
-        try{h.setPointerCapture(e.pointerId);}catch(err){}
-      },220);
-      const clearPress=()=>clearTimeout(pressTimer);
-      h.onpointerup=()=>{clearPress();finishDrag();};
-      h.onpointercancel=clearPress;
+      try{h.setPointerCapture(e.pointerId);}catch(err){}
+      let armed=false;
+      const pressTimer=setTimeout(()=>{
+        armed=true;dragState={exEl,list};exEl.classList.add("dragging");
+      },180);
+      const cleanup=()=>{
+        clearTimeout(pressTimer);
+        h.onpointermove=null;h.onpointerup=null;h.onpointercancel=null;
+      };
+      h.onpointerup=()=>{cleanup();finishDrag();};
+      h.onpointercancel=()=>{cleanup();if(dragState){dragState.exEl.classList.remove("dragging");dragState=null;}};
       h.onpointermove=(ev)=>{
-        if(!dragState)return;
+        if(!armed||!dragState)return;
         ev.preventDefault();
         const siblings=[...dragState.list.querySelectorAll(".ex")].filter(el=>el!==dragState.exEl);
         const y=ev.clientY;
