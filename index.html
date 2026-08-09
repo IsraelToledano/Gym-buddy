@@ -147,6 +147,19 @@
   .nohist{font-size:12px;color:var(--ink-faint);margin-bottom:13px;padding-bottom:13px;border-bottom:1px solid var(--line)}
   .trendbtn{background:none;border:1px solid var(--line);border-radius:9px;color:var(--teal);font-size:12px;font-weight:600;padding:7px 12px}
   .trendbtn:hover{border-color:var(--teal)}
+  .targetrow{margin-bottom:8px}
+  .target-badge{display:inline-block;font-size:11px;font-weight:600;color:var(--teal);background:rgba(84,185,168,.12);border:1px solid rgba(84,185,168,.3);border-radius:20px;padding:3px 10px}
+  .lasttime{font-size:12px;color:var(--ink-faint);margin-bottom:10px;line-height:1.4}
+  .lasttime b{color:var(--ink-dim);font-weight:600}
+  .ex-toast{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);max-width:460px;margin:0 auto;background:var(--card-hi);border:1px solid rgba(242,135,46,.4);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:60;opacity:0;transform:translateY(12px);transition:opacity .22s ease,transform .22s ease;overflow:hidden}
+  .ex-toast.show{opacity:1;transform:translateY(0)}
+  .ex-toast.paused{border-color:var(--teal)}
+  .ex-toast .ic{font-size:17px;flex-shrink:0}
+  .ex-toast .tx{flex:1;font-size:13px;line-height:1.35;color:var(--ink)}
+  .ex-toast .tx b{color:var(--amber-bright)}
+  .ex-toast .bar-track{position:absolute;left:0;right:0;bottom:0;height:2.5px;background:rgba(255,255,255,.06)}
+  .ex-toast .bar-fill{height:100%;background:var(--amber-bright);width:100%}
+  .ex-toast.paused .bar-fill{background:var(--teal)}
 
   .setgrid{width:100%}
   .setrow{display:grid;grid-template-columns:24px 1fr 1fr 30px;align-items:center;gap:7px;padding:3.5px 0}
@@ -242,9 +255,10 @@
   .chart-note{font-size:12px;color:var(--ink-faint);text-align:center;padding:30px 10px}
   .recent{margin-top:18px}
   .recent .rh{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:8px}
-  .rsess{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:7px;font-size:13px}
+  .rsess{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:10px;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:7px;font-size:13px}
   .rsess .rd{color:var(--ink-dim)}
-  .rsess .rv{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;color:var(--ink)}
+  .rsess .rv{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;color:var(--ink);text-align:right}
+  .rsess .rsets{grid-column:1/-1;color:var(--ink-faint);font-size:12px;margin-top:3px;line-height:1.4}
   .rsess.best{border-color:rgba(242,135,46,.4)}
   .rsess.best .rv{color:var(--amber-bright)}
 
@@ -376,7 +390,7 @@
 <script>
 /* ---------------- data ---------------- */
 const EXIMG_BASE="https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/";
-const EX_IMG={"Dumbbell bench press":["Dumbbell_Bench_Press/0.jpg","Dumbbell_Bench_Press/1.jpg"],"Incline bench press":["Incline_Dumbbell_Press/0.jpg","Incline_Dumbbell_Press/1.jpg"],"Dumbbell overhead press":["Dumbbell_Shoulder_Press/0.jpg","Dumbbell_Shoulder_Press/1.jpg"],"Lateral raises":["Side_Lateral_Raise/0.jpg","Side_Lateral_Raise/1.jpg"],"Leg extension":["Leg_Extensions/0.jpg","Leg_Extensions/1.jpg"],"Calf raise":["Standing_Calf_Raises/0.jpg","Standing_Calf_Raises/1.jpg"],"Machine crunch":["Ab_Crunch_Machine/0.jpg","Ab_Crunch_Machine/1.jpg"],"Pec deck / butterfly":["Butterfly/0.jpg","Butterfly/1.jpg"],"Triceps rope extension":["Triceps_Pushdown_-_Rope_Attachment/0.jpg","Triceps_Pushdown_-_Rope_Attachment/1.jpg"],"Glute rear kick":["Glute_Kickback/0.jpg","Glute_Kickback/1.jpg"],"Machine bench press":["Machine_Bench_Press/0.jpg","Machine_Bench_Press/1.jpg"],"Incline barbell press":["Barbell_Incline_Bench_Press_-_Medium_Grip/0.jpg","Barbell_Incline_Bench_Press_-_Medium_Grip/1.jpg"],"Machine shoulder press":["Leverage_Shoulder_Press/0.jpg","Leverage_Shoulder_Press/1.jpg"],"Leg press":["Leg_Press/0.jpg","Leg_Press/1.jpg"],"Calf press":["Calf_Press_On_The_Leg_Press_Machine/0.jpg","Calf_Press_On_The_Leg_Press_Machine/1.jpg"],"Knee raise (parallel bars)":["Knee_Hip_Raise_On_Parallel_Bars/0.jpg","Knee_Hip_Raise_On_Parallel_Bars/1.jpg"],"Triceps V-cable pushdown":["Triceps_Pushdown_-_V-Bar_Attachment/0.jpg","Triceps_Pushdown_-_V-Bar_Attachment/1.jpg"],"Machine triceps extension":["Machine_Triceps_Extension/0.jpg","Machine_Triceps_Extension/1.jpg"],"Lat pulldown (machine)":["Leverage_High_Row/0.jpg","Leverage_High_Row/1.jpg"],"Seated cable row (machine)":["Seated_Cable_Rows/0.jpg","Seated_Cable_Rows/1.jpg"],"Rear delt reverse fly":["Reverse_Machine_Flyes/0.jpg","Reverse_Machine_Flyes/1.jpg"],"Concentration curl":["Concentration_Curls/0.jpg","Concentration_Curls/1.jpg"],"Incline dumbbell curl":["Incline_Dumbbell_Curl/0.jpg","Incline_Dumbbell_Curl/1.jpg"],"Leg curl":["Seated_Leg_Curl/0.jpg","Seated_Leg_Curl/1.jpg"],"Captain knee raise":["Knee_Hip_Raise_On_Parallel_Bars/0.jpg","Knee_Hip_Raise_On_Parallel_Bars/1.jpg"],"Back extension":["Hyperextensions_Back_Extensions/0.jpg","Hyperextensions_Back_Extensions/1.jpg"],"Lat pulldown":["Leverage_High_Row/0.jpg","Leverage_High_Row/1.jpg"],"Seated cable row (V-grip)":["Seated_Cable_Rows/0.jpg","Seated_Cable_Rows/1.jpg"],"Hammer curl":["Hammer_Curls/0.jpg","Hammer_Curls/1.jpg"],"Seated incline curl":["Incline_Dumbbell_Curl/0.jpg","Incline_Dumbbell_Curl/1.jpg"],"Decline crunch (weighted)":["Decline_Crunch/0.jpg","Decline_Crunch/1.jpg"]};
+const EX_IMG={"Dumbbell bench press":["Dumbbell_Bench_Press/0.jpg","Dumbbell_Bench_Press/1.jpg"],"Incline bench press":["Incline_Dumbbell_Press/0.jpg","Incline_Dumbbell_Press/1.jpg"],"Dumbbell overhead press":["Dumbbell_Shoulder_Press/0.jpg","Dumbbell_Shoulder_Press/1.jpg"],"Lateral raises":["Side_Lateral_Raise/0.jpg","Side_Lateral_Raise/1.jpg"],"Leg extension":["Leg_Extensions/0.jpg","Leg_Extensions/1.jpg"],"Calf raise":["Standing_Calf_Raises/0.jpg","Standing_Calf_Raises/1.jpg"],"Machine crunch":["Ab_Crunch_Machine/0.jpg","Ab_Crunch_Machine/1.jpg"],"Pec deck / butterfly":["Butterfly/0.jpg","Butterfly/1.jpg"],"Triceps rope extension":["Triceps_Pushdown_-_Rope_Attachment/0.jpg","Triceps_Pushdown_-_Rope_Attachment/1.jpg"],"Glute rear kick":["Glute_Kickback/0.jpg","Glute_Kickback/1.jpg"],"Machine bench press":["Machine_Bench_Press/0.jpg","Machine_Bench_Press/1.jpg"],"Incline barbell press":["Barbell_Incline_Bench_Press_-_Medium_Grip/0.jpg","Barbell_Incline_Bench_Press_-_Medium_Grip/1.jpg"],"Machine shoulder press":["Leverage_Shoulder_Press/0.jpg","Leverage_Shoulder_Press/1.jpg"],"Leg press":["Leg_Press/0.jpg","Leg_Press/1.jpg"],"Calf press":["Calf_Press_On_The_Leg_Press_Machine/0.jpg","Calf_Press_On_The_Leg_Press_Machine/1.jpg"],"Knee raise (parallel bars)":["Knee_Hip_Raise_On_Parallel_Bars/0.jpg","Knee_Hip_Raise_On_Parallel_Bars/1.jpg"],"Triceps V-cable pushdown":["Triceps_Pushdown_-_V-Bar_Attachment/0.jpg","Triceps_Pushdown_-_V-Bar_Attachment/1.jpg"],"Machine triceps extension":["Machine_Triceps_Extension/0.jpg","Machine_Triceps_Extension/1.jpg"],"Lat pulldown (machine)":["Wide-Grip_Lat_Pulldown/0.jpg","Wide-Grip_Lat_Pulldown/1.jpg"],"Seated cable row (machine)":["Seated_Cable_Rows/0.jpg","Seated_Cable_Rows/1.jpg"],"Rear delt reverse fly":["Reverse_Machine_Flyes/0.jpg","Reverse_Machine_Flyes/1.jpg"],"Concentration curl":["Concentration_Curls/0.jpg","Concentration_Curls/1.jpg"],"Incline dumbbell curl":["Incline_Dumbbell_Curl/0.jpg","Incline_Dumbbell_Curl/1.jpg"],"Leg curl":["Seated_Leg_Curl/0.jpg","Seated_Leg_Curl/1.jpg"],"Captain knee raise":["Knee_Hip_Raise_On_Parallel_Bars/0.jpg","Knee_Hip_Raise_On_Parallel_Bars/1.jpg"],"Back extension":["Hyperextensions_Back_Extensions/0.jpg","Hyperextensions_Back_Extensions/1.jpg"],"Lat pulldown":["Wide-Grip_Lat_Pulldown/0.jpg","Wide-Grip_Lat_Pulldown/1.jpg"],"Seated cable row (V-grip)":["Seated_Cable_Rows/0.jpg","Seated_Cable_Rows/1.jpg"],"Hammer curl":["Hammer_Curls/0.jpg","Hammer_Curls/1.jpg"],"Seated incline curl":["Incline_Dumbbell_Curl/0.jpg","Incline_Dumbbell_Curl/1.jpg"],"Decline crunch (weighted)":["Decline_Crunch/0.jpg","Decline_Crunch/1.jpg"]};
 function animHtml(n){const f=EX_IMG[n];if(!f)return"";
   return `<div class="exanim" data-ex="${n.replace(/"/g,'&quot;')}"><img class="exframe" src="${EXIMG_BASE}${f[0]}" alt="${n}" loading="lazy" decoding="async" data-f0="${EXIMG_BASE}${f[0]}" data-f1="${EXIMG_BASE}${f[1]}"><span class="exphase">start</span></div>`;}
 
@@ -608,7 +622,7 @@ function sessStats(planEx,log){let top=0,vol=0,e1=0,reps=0,anyW=false;
   return{top:round1(top),vol:round1(vol),e1:round1(e1),reps,anyW};}
 // history series for an exercise (completed sessions + live current)
 function exSeries(name,includeCur){const out=[];
-  const grab=(s,date)=>{const pe=NAME_INDEX[name];if(!pe)return;const log=sessionLog(s,name);if(!log)return;if(!log.sets.some(x=>setComplete(pe,x)))return;const st=sessStats(pe,log);out.push({date,...st});};
+  const grab=(s,date)=>{const pe=NAME_INDEX[name];if(!pe)return;const log=sessionLog(s,name);if(!log)return;if(!log.sets.some(x=>setComplete(pe,x)))return;const st=sessStats(pe,log);const setDetail=log.sets.filter(x=>setComplete(pe,x)).map(x=>({w:x.weight,r:x.reps}));out.push({date,...st,setDetail});};
   HISTORY.forEach(s=>grab(s,s.date));
   if(includeCur&&CUR)grab({day:CUR.day,exOrder:CUR.order,ex:CUR.ex},CUR.start);
   out.sort((a,b)=>a.date-b.date);return out;}
@@ -746,13 +760,17 @@ function renderSession(){
     const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(ex.calf)tags.push('<span class="tg pair">⟂ Pair with legs</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(absSeen)tags.push('<span class="tg sk">Cut first</span>');if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let prHtml="";
+    const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
     if(exp){
-      if(!prs.hasData){prHtml=`<div class="nohist">No history yet — your first logged session sets the baseline.</div>`;}
-      else if(prs.bw){prHtml=`<div class="prstrip"><div class="pr top"><div class="lab">Best set total</div><div class="val">${prs.reps} <small>reps</small></div></div></div><div class="prfoot" style="margin-top:-4px;margin-bottom:12px"><span style="font-size:11px;color:var(--ink-faint)">Bodyweight — tracking total reps</span><button class="trendbtn" onclick="openTrend('${name.replace(/'/g,"\\'")}')">View trend ›</button></div>`;}
-      else{prHtml=`<div class="prstrip"><div class="pr top"><div class="lab">Top weight</div><div class="val">${prs.top} <small>kg</small></div></div><div class="pr vol"><div class="lab">Best volume</div><div class="val">${prs.vol} <small>kg</small></div></div><div class="pr e1"><div class="lab">est 1RM</div><div class="val">${prs.e1} <small>kg</small></div></div></div><div class="prfoot" style="margin-top:-4px;margin-bottom:12px"><span style="font-size:11px;color:var(--ink-faint)">past best</span><button class="trendbtn" onclick="openTrend('${name.replace(/'/g,"\\'")}')">View trend ›</button></div>`;}
+      const prevSets=lastLog(name);
+      const lastTimeStr=prevSets?prevSets.filter(s=>s.reps!==""&&s.reps!=null).map(s=>{const w=parseFloat(s.weight);return prs.bw?`${s.reps} reps`:(w?`${w}kg×${s.reps}`:`${s.reps} reps`);}).join(" · "):"";
+      const lastTimeHtml=lastTimeStr?`<div class="lasttime">Last time: <b>${lastTimeStr}</b></div>`:"";
+      if(!prs.hasData){prHtml=`${targetBadge?`<div class="targetrow">${targetBadge}</div>`:""}<div class="nohist">No history yet — your first logged session sets the baseline.</div>`;}
+      else if(prs.bw){prHtml=`${targetBadge?`<div class="targetrow">${targetBadge}</div>`:""}${lastTimeHtml}<div class="prstrip"><div class="pr top"><div class="lab">Best set total</div><div class="val">${prs.reps} <small>reps</small></div></div></div><div class="prfoot" style="margin-top:-4px;margin-bottom:12px"><span style="font-size:11px;color:var(--ink-faint)">Bodyweight — tracking total reps</span><button class="trendbtn" onclick="openTrend('${name.replace(/'/g,"\\'")}')">View trend ›</button></div>`;}
+      else{prHtml=`${targetBadge?`<div class="targetrow">${targetBadge}</div>`:""}${lastTimeHtml}<div class="prstrip"><div class="pr top"><div class="lab">Top weight</div><div class="val">${prs.top} <small>kg</small></div></div><div class="pr vol"><div class="lab">Best volume</div><div class="val">${prs.vol} <small>kg</small></div></div><div class="pr e1"><div class="lab">est 1RM</div><div class="val">${prs.e1} <small>kg</small></div></div></div><div class="prfoot" style="margin-top:-4px;margin-bottom:12px"><span style="font-size:11px;color:var(--ink-faint)">past best</span><button class="trendbtn" onclick="openTrend('${name.replace(/'/g,"\\'")}')">View trend ›</button></div>`;}
     }
     let rows=`<div class="setrow head"><span></span><span>Weight (kg)</span><span>${SETTINGS.logReps?"Reps":""}</span><span></span></div>`;
-    log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${extra?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>`;});
+    log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${extra?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>`;});
     const cues=ex.cues.map(c=>`<li>${c}</li>`).join("");
     const nVal=(NOTES[name]||"");const nOpen=nVal.trim()?" show":"";
     const noteBlock=`<div class="notesblock"><button class="formtog notetog" onclick="toggleNotes(this)">Notes ${nOpen?"\u25b4":"\u25be"}</button><div class="notewrap${nOpen}"><textarea class="exnotes" placeholder="Seat height, pin number, grip, machine #\u2026" oninput="setNote('${name.replace(/'/g,"\\'")}',this.value)">${esc(nVal)}</textarea></div></div>`;
@@ -876,7 +894,9 @@ function renderTrend(){
   // recent list (most recent first)
   const best=Math.max(...ser.map(s=>s[trendMetric]||0));
   let recent=`<div class="recent"><div class="rh">Recent sessions</div>`;
-  ser.slice().reverse().slice(0,8).forEach(s=>{const v=s[trendMetric]||0;recent+=`<div class="rsess ${v===best&&best>0?"best":""}"><span class="rd">${fmtDate(s.date)}</span><span class="rv">${v}${unit?" "+unit:bw?" reps":""}</span></div>`;});
+  ser.slice().reverse().slice(0,8).forEach(s=>{const v=s[trendMetric]||0;
+    const setsStr=(s.setDetail||[]).map(d=>{const w=parseFloat(d.w);const r=d.r!==""&&d.r!=null?d.r:"";if(bw)return r?`${r} reps`:"";return (w?w+"kg":"–")+(r?"×"+r:"");}).filter(Boolean).join(" · ");
+    recent+=`<div class="rsess ${v===best&&best>0?"best":""}"><div class="rd">${fmtDate(s.date)}</div><div class="rv">${v}${unit?" "+unit:bw?" reps":""}</div>${setsStr?`<div class="rsets">${setsStr}</div>`:""}</div>`;});
   recent+=`</div>`;
   const html=`<div class="overlay"><div class="ov-head"><button class="bk" onclick="closeOverlay()" aria-label="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><div class="ti"><span>Last 3 months</span>${name}</div></div><div class="ov-body">${toggle}${chart}${recent}</div></div>`;
   document.getElementById("overlayMount").innerHTML=html;
@@ -937,7 +957,7 @@ async function deleteTennis(date){
 function startSession(day){
   const order=getDayOrderNames(day);
   CUR={day,start:Date.now(),nudgeDismissed:false,order,defaultOrder:order.slice(),ex:{}};
-  order.forEach(name=>{const def=NAME_INDEX[name];const prev=lastLog(name);CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–"}))};});
+  order.forEach(name=>{const def=NAME_INDEX[name];const prev=lastLog(name);CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};});
   openIdx=0;saveCur();initAudio();requestWake();renderSession();}
 function openSession(){openIdx=0;if(CUR&&!CUR.order){CUR.order=getDayOrderNames(CUR.day);CUR.defaultOrder=CUR.order.slice();}renderSession();requestWake();}
 function lastLog(name){for(let i=HISTORY.length-1;i>=0;i--){const log=sessionLog(HISTORY[i],name);if(log)return log.sets;}return null;}
@@ -975,12 +995,68 @@ function nextOpenIdx(from){
 function collapseAndAdvance(i,kind){
   const els=app.querySelectorAll(".ex");const btn=els[i]&&els[i].querySelector(".ex-btn");
   if(btn)btn.classList.add(kind==="skip"?"skip-celebrate":"celebrate");
+  if(kind==="done"){const name=CUR.order[i];const h=computeExHighlight(name);if(h)showExToast(h);}
   setTimeout(()=>{
     openIdx=nextOpenIdx(i);
     renderSession();
     if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}
   },kind==="skip"?360:520);
 }
+/* ---------------- post-exercise highlight toast ---------------- */
+function computeExHighlight(name){
+  const ex=NAME_INDEX[name];const log=CUR.ex[name];if(!log)return null;
+  const cur=sessStats(ex,log);
+  const priorSeries=exSeries(name,false); // HISTORY only, excludes the session in progress
+  if(!priorSeries.length)return null; // first time logging this exercise — no baseline to compare, stay quiet
+  const bw=isBodyweight(name,priorSeries);
+  if(bw){
+    const priorBestReps=Math.max(...priorSeries.map(s=>s.reps));
+    if(cur.reps>priorBestReps)return{icon:"🔥",text:`<b>New rep PR</b> — ${cur.reps} reps (+${cur.reps-priorBestReps} vs previous best)`};
+    return null;
+  }
+  const priorBestTop=Math.max(...priorSeries.map(s=>s.top));
+  const priorLastVol=priorSeries[priorSeries.length-1].vol;
+  if(cur.top>priorBestTop)return{icon:"🔥",text:`<b>New PR</b> — ${cur.top}kg top weight (+${round1(cur.top-priorBestTop)}kg)`};
+  if(priorLastVol>0){
+    const pct=Math.round((cur.vol-priorLastVol)/priorLastVol*100);
+    if(pct>=8)return{icon:"📈",text:`Volume <b>+${pct}%</b> vs last session — ${cur.vol}kg`};
+    if(pct<=-15)return{icon:"📉",text:`Volume <b>${pct}%</b> vs last session — worth noting`};
+  }
+  return null;
+}
+let toastTimer=null,toastRemaining=3000,toastStart=0,toastPaused=false;
+function showExToast(h){
+  removeExToast();
+  const div=document.createElement("div");
+  div.className="ex-toast";div.id="exToast";
+  div.innerHTML=`<span class="ic">${h.icon}</span><div class="tx">${h.text}</div><div class="bar-track"><div class="bar-fill" id="exToastBar"></div></div>`;
+  div.onclick=toggleToastPause;
+  document.body.appendChild(div);
+  requestAnimationFrame(()=>div.classList.add("show"));
+  toastRemaining=3000;toastPaused=false;
+  runToastTimer();
+}
+function runToastTimer(){
+  toastStart=Date.now();
+  const bar=document.getElementById("exToastBar");
+  if(bar){bar.style.transition="none";bar.style.width="100%";requestAnimationFrame(()=>{bar.style.transition=`width ${toastRemaining}ms linear`;bar.style.width="0%";});}
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(dismissExToast,toastRemaining);
+}
+function toggleToastPause(){
+  const el=document.getElementById("exToast");if(!el)return;
+  if(!toastPaused){
+    toastPaused=true;clearTimeout(toastTimer);
+    const bar=document.getElementById("exToastBar");
+    if(bar){const w=getComputedStyle(bar).width;bar.style.transition="none";bar.style.width=w;}
+    toastRemaining=Math.max(600,toastRemaining-(Date.now()-toastStart));
+    el.classList.add("paused");
+  }else{
+    toastPaused=false;el.classList.remove("paused");runToastTimer();
+  }
+}
+function dismissExToast(){const el=document.getElementById("exToast");if(!el)return;el.classList.remove("show");setTimeout(()=>{if(el)el.remove();},250);}
+function removeExToast(){clearTimeout(toastTimer);const el=document.getElementById("exToast");if(el)el.remove();}
 function updateProgress(){if(!CUR)return;let done=0,total=0;CUR.order.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];if(log.skipped)return;const sets=log.sets;total+=sets.length;done+=sets.filter(s=>setComplete(ex,s)).length;});const pct=total?Math.round(done/total*100):0;const f=document.getElementById("progFill");if(f)f.style.width=pct+"%";const pr=document.getElementById("prog");if(pr)pr.textContent=`${done}/${total} sets · ${pct}%`;}
 function propWeight(i,j){const name=CUR.order[i];const ex=NAME_INDEX[name];const w=CUR.ex[name].sets[j].weight;if(w===""||w==null)return;const sets=CUR.ex[name].sets;
   // Cascade the weight down to every later set that isn't logged yet. A set
@@ -1044,7 +1120,7 @@ function effortHtml(i){
     <div class="ef-note">Today only — your saved routine stays at ${NAME_INDEX[e.name].sets} sets.</div>
   </div>`;
 }
-function addSet(i){const name=CUR.order[i];const sets=CUR.ex[name].sets;const last=sets[sets.length-1];sets.push({weight:last?last.weight:"",reps:"",ph:last?last.ph:"–"});saveCur();renderSession();}
+function addSet(i){const name=CUR.order[i];const sets=CUR.ex[name].sets;const last=sets[sets.length-1];sets.push({weight:last?last.weight:"",reps:"",ph:last?last.ph:"–",phReps:last?last.phReps:""});saveCur();renderSession();}
 function removeSet(i,j){const name=CUR.order[i];CUR.ex[name].sets.splice(j,1);saveCur();renderSession();}
 
 /* ---------------- drag-to-reorder ---------------- */
@@ -1168,6 +1244,7 @@ function dismissNudge(){CUR.nudgeDismissed=true;saveCur();renderSession();}
 function computeNudge(){if(!priorSessionThisWeek())return null;const vol=weeklyVolume();const defs=CUR.order.map(n=>NAME_INDEX[n]);const trained=[...new Set(defs.map(e=>e.m))];let best=null;
   trained.forEach(m=>{const meta=MUSCLES[m];if(!meta||!meta.nudge)return;const v=vol[m]||0,t=meta.t,ratio=v/t;if(v<t&&ratio<0.5){if(!best||ratio<best.ratio){const names=defs.filter(e=>e.m===m).map(e=>e.n);best={muscle:m,v,t,ratio,exNames:names.join(" & ")};}}});return best;}
 async function finishSession(){
+  removeExToast();
   const missedMain=CUR.order.find(n=>{const d=NAME_INDEX[n];const lg=CUR.ex[n];return d.main&&!lg.skipped&&lg.sets.filter(s=>setComplete(d,s)).length===0;});
   if(missedMain){
     const proceed=await showConfirm(`You haven't logged ${missedMain} yet — it's today's key lift. Worth getting at least that one in before you finish.`,{okLabel:"Finish anyway",cancelLabel:"Go back to it"});
@@ -1188,7 +1265,7 @@ async function finishSession(){
   renderHome({day:rec.day,done,total,skipped});
   launchConfetti();
 }
-async function discardSession(){if(!(await showConfirm("Discard this session? Logged sets won't be saved.")))return;CUR=null;sset("current",null);renderHome();}
+async function discardSession(){if(!(await showConfirm("Discard this session? Logged sets won't be saved.")))return;removeExToast();CUR=null;sset("current",null);renderHome();}
 function saveCur(){sset("current",CUR);}
 
 /* ---------------- backup ---------------- */
