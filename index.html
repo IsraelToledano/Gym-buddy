@@ -160,6 +160,17 @@
   .ex-toast .bar-track{position:absolute;left:0;right:0;bottom:0;height:2.5px;background:rgba(255,255,255,.06)}
   .ex-toast .bar-fill{height:100%;background:var(--amber-bright);width:100%}
   .ex-toast.paused .bar-fill{background:var(--teal)}
+  .persist-highlight{margin-top:12px;display:flex;align-items:center;gap:9px;background:var(--card-hi);border:1px solid rgba(242,135,46,.35);border-radius:10px;padding:9px 11px}
+  .persist-highlight .ic{font-size:16px;flex-shrink:0}
+  .persist-highlight .tx{color:var(--ink);font-size:12.5px;line-height:1.35}
+  .persist-highlight .tx b{color:var(--amber-bright)}
+  .muscle-block{margin-bottom:12px}
+  .muscle-block .muscle-name{color:var(--ink);font-size:13.5px;font-weight:600;margin-bottom:6px}
+  .insight{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:6px}
+  .insight .ic{font-size:15px;flex-shrink:0}
+  .insight .tx{color:var(--ink-dim);font-size:12.5px;line-height:1.3}
+  .insight .tx b{color:var(--amber-bright)}
+  .insight.down .tx b{color:var(--red)}
 
   .setgrid{width:100%}
   .setrow{display:grid;grid-template-columns:24px 1fr 1fr 30px;align-items:center;gap:7px;padding:3.5px 0}
@@ -533,7 +544,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0};
+let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null};
 let TENNIS=[];
 let CUSTOM_EX=[];
 let PROFILE={heightCm:"",weightKg:"",age:"",goal:""};
@@ -700,7 +711,17 @@ function renderHome(summary){
   titleEl.textContent="Training";kickEl.textContent="Push / Pull · Tracker";
   subEl.textContent="Pick a day to start. Sets, weights and rest are tracked here.";
   let html="";
-  if(summary){html+=`<div class="nudge" style="border-color:rgba(111,191,115,.4);background:rgba(111,191,115,.1)"><span>✓</span><div><b style="color:var(--green)">${summary.day} logged.</b> ${summary.done}/${summary.total} sets done${summary.skipped?` · ${summary.skipped} exercise${summary.skipped>1?"s":""} skipped`:""}.</div></div>`;}
+  if(summary){html+=`<div class="nudge" style="border-color:rgba(111,191,115,.4);background:rgba(111,191,115,.1)"><span>✓</span><div><b style="color:var(--green)">${summary.day} logged.</b> ${summary.done}/${summary.total} sets done${summary.skipped?` · ${summary.skipped} exercise${summary.skipped>1?"s":""} skipped`:""}.</div></div>`;
+    if(summary.highlights&&summary.highlights.length){
+      const byMuscle={};summary.highlights.forEach(h=>{(byMuscle[h.muscle]=byMuscle[h.muscle]||[]).push(h);});
+      html+=`<div class="section-h">Highlights by muscle group</div>`;
+      Object.keys(byMuscle).forEach(m=>{
+        html+=`<div class="muscle-block"><div class="muscle-name">${esc(m)}</div>`;
+        byMuscle[m].forEach(h=>{html+=`<div class="insight${h.icon==="📉"?" down":""}"><span class="ic">${h.icon}</span><div class="tx">${h.text}, ${esc(h.name)}</div></div>`;});
+        html+=`</div>`;
+      });
+    }
+  }
   if(CUR){const p=PLAN[CUR.day];const names=CUR.order||p.ex.map(e=>e.n);let tot=0,done=0;names.forEach(n=>{const ex=NAME_INDEX[n];const log=CUR.ex[n];if(!log)return;tot+=log.sets.length;done+=log.sets.filter(s=>setComplete(ex,s)).length;});
     html+=`<div class="resume"><div class="l"><div class="t">Resume ${CUR.day} · ${p.name}</div><div class="d">${done}/${tot} sets · started ${fmtDate(CUR.start)}</div></div><button onclick="openSession()">Resume</button></div>`;}
   const sg=suggestDay();
@@ -732,7 +753,8 @@ function renderHome(summary){
   html+=`<div class="section-h">Progress analysis</div><button class="tool-btn analyze-btn" onclick="openProgressReport()" style="width:100%">📊 Run progress analysis</button>`;
   // backup
   const lastBk=BACKMETA.at?("Last backup: "+fmtDate(BACKMETA.at)):"Not backed up yet";
-  html+=`<div class="section-h">Backup (optional)</div><p style="font-size:12px;color:var(--ink-dim);margin:-4px 2px 10px">Your workouts save automatically as you log them — no button needed. This is just an extra copy to keep off-device (e.g. in Google Drive) in case the app's storage is ever reset. <b style="color:var(--ink-faint)">${lastBk}</b></p><div class="tools"><button class="tool-btn" onclick="toggleExport()">⬇ Export to file</button><button class="tool-btn" onclick="toggleImport()">⬆ Restore from file</button></div>`;
+  const bkStatus=BACKMETA.lastError?`<b style="color:var(--red)">${esc(BACKMETA.lastError)}</b>`:`<b style="color:var(--ink-faint)">${lastBk}</b>`;
+  html+=`<div class="section-h">Backup (optional)</div><p style="font-size:12px;color:var(--ink-dim);margin:-4px 2px 10px">Your workouts save automatically as you log them — no button needed. If a GitHub token is set in your profile, a copy also auto-pushes to your repo at the end of every session. ${bkStatus}</p><div class="tools"><button class="tool-btn" onclick="toggleExport()">⬇ Export to file</button><button class="tool-btn" onclick="toggleImport()">⬆ Restore from file</button></div>`;
   if(showExport){const blob=JSON.stringify({v:2,exportedAt:Date.now(),settings:SETTINGS,notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});
     html+=`<div class="panel-box"><h4>Export</h4><p>${HISTORY.length} session${HISTORY.length===1?"":"s"} + your notes. Copy this text (or download) and keep it safe — paste it into Restore later, or hand it to Claude to save in Google Drive.</p><textarea id="expArea" readonly>${blob}</textarea><div class="pb-row"><button class="primary" onclick="copyExport(this)">Copy</button><button onclick="downloadExport()">Download .json</button></div></div>`;}
   if(showImport){html+=`<div class="panel-box"><h4>Restore from file</h4><p>Paste a backup here and restore. This replaces your current saved history and notes.</p><textarea id="impArea" placeholder="Paste backup JSON..."></textarea><div class="pb-row"><button class="primary" onclick="doImport()">Restore</button></div></div>`;}
@@ -775,7 +797,8 @@ function renderSession(){
     const nVal=(NOTES[name]||"");const nOpen=nVal.trim()?" show":"";
     const noteBlock=`<div class="notesblock"><button class="formtog notetog" onclick="toggleNotes(this)">Notes ${nOpen?"\u25b4":"\u25be"}</button><div class="notewrap${nOpen}"><textarea class="exnotes" placeholder="Seat height, pin number, grip, machine #\u2026" oninput="setNote('${name.replace(/'/g,"\\'")}',this.value)">${esc(nVal)}</textarea></div></div>`;
     const swapOpts=getSwapOptions(name);
-    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${prHtml}<div class="setgrid">${rows}</div>${effortHtml(i)}<button class="addset" onclick="addSet(${i})">+ Add set</button><div class="sethint">A set logs once you enter reps. Weight is optional. Clear reps to unlog.</div><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo skip":"⤼ Mark as skipped"}</button><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button><ul class="cues">${cues}</ul>${noteBlock}</div></div></div></div>`;
+    const hlHtml=log.highlight?`<div class="persist-highlight"><span class="ic">${log.highlight.icon}</span><div class="tx">${log.highlight.text}</div></div>`:"";
+    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${prHtml}<div class="setgrid">${rows}</div>${hlHtml}${effortHtml(i)}<button class="addset" onclick="addSet(${i})">+ Add set</button><div class="sethint">A set logs once you enter reps. Weight is optional. Clear reps to unlog.</div><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo skip":"⤼ Mark as skipped"}</button><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button><ul class="cues">${cues}</ul>${noteBlock}</div></div></div></div>`;
     if(ex.abs&&!absSeen){absSeen=true;html+=`<div class="cutline"><span class="txt">Cut from here ↓</span><span class="rule"></span></div>`;}
   });
   html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button><div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
@@ -801,8 +824,20 @@ function openProfile(){
     <div class="field"><label>Goal</label><textarea id="pGoal" placeholder="e.g. Lean bulk, prioritize chest and shoulder width while keeping strength progressing on the big lifts." oninput="setProfileField('goal',this.value)">${esc(p.goal)}</textarea></div>
     <div class="prof-saved hidden" id="profSaved">✓ Saved</div>
     <div class="theme-row"><div><div class="tl">Appearance</div><div class="td">${SETTINGS.theme==="light"?"Light":"Dark"} mode</div></div><button class="theme-switch" onclick="toggleTheme()" aria-label="toggle theme"><div class="knob"></div></button></div>
+    <div class="field" style="margin-top:14px"><label>GitHub backup token</label><input id="pGhToken" type="password" autocomplete="off" placeholder="Fine-grained PAT, Contents read/write" value="${esc(SETTINGS.ghToken||"")}" oninput="setGhToken(this.value)"></div>
+    <div class="prof-saved hidden" id="ghTokenSaved">✓ Saved — will auto-backup at end of each session</div>
   </div></div>`;
   document.getElementById("overlayMount").innerHTML=html;
+}
+let ghTokenSaveT=null;
+function setGhToken(val){
+  SETTINGS.ghToken=val.trim();
+  if(ghTokenSaveT)clearTimeout(ghTokenSaveT);
+  ghTokenSaveT=setTimeout(async()=>{
+    await sset("settings",SETTINGS);
+    const el=document.getElementById("ghTokenSaved");
+    if(el){el.classList.remove("hidden");setTimeout(()=>{if(el)el.classList.add("hidden");},1800);}
+  },500);
 }
 function applyTheme(){document.documentElement.setAttribute("data-theme",SETTINGS.theme==="light"?"light":"dark");}
 function toggleTheme(){SETTINGS.theme=SETTINGS.theme==="light"?"dark":"light";applyTheme();sset("settings",SETTINGS);openProfile();}
@@ -995,7 +1030,7 @@ function nextOpenIdx(from){
 function collapseAndAdvance(i,kind){
   const els=app.querySelectorAll(".ex");const btn=els[i]&&els[i].querySelector(".ex-btn");
   if(btn)btn.classList.add(kind==="skip"?"skip-celebrate":"celebrate");
-  if(kind==="done"){const name=CUR.order[i];const h=computeExHighlight(name);if(h)showExToast(h);}
+  if(kind==="done"){const name=CUR.order[i];const h=computeExHighlight(name);if(h){showExToast(h);CUR.ex[name].highlight=h;saveCur();}}
   setTimeout(()=>{
     openIdx=nextOpenIdx(i);
     renderSession();
@@ -1255,15 +1290,39 @@ async function finishSession(){
     }
   }
   CUR.date=Date.now();const rec={day:CUR.day,date:CUR.date,exOrder:CUR.order.slice(),ex:{}};let done=0,total=0,skipped=0;
-  CUR.order.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];const sets=log.sets.map(s=>({weight:s.weight,reps:s.reps}));rec.ex[name]={sets,skipped:!!log.skipped};const d=log.sets.filter(s=>setComplete(ex,s)).length;done+=d;total+=sets.length;if(d===0)skipped++;});
+  const highlights=[];
+  CUR.order.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];const sets=log.sets.map(s=>({weight:s.weight,reps:s.reps}));rec.ex[name]={sets,skipped:!!log.skipped};const d=log.sets.filter(s=>setComplete(ex,s)).length;done+=d;total+=sets.length;if(d===0)skipped++;
+    if(log.highlight&&!log.skipped)highlights.push({muscle:ex.m,name,icon:log.highlight.icon,text:log.highlight.text});});
   const orderChanged=JSON.stringify(CUR.order)!==JSON.stringify(CUR.defaultOrder);
   HISTORY.push(rec);await sset("history",HISTORY);CUR=null;await sset("current",null);
   if(orderChanged){
     const keep=await showConfirm(`You changed the exercise order or made a swap for ${rec.day} this session. Keep it as the default from now on?`,{okLabel:"Keep it",cancelLabel:"Just this once"});
     if(keep){SETTINGS.dayOrder=SETTINGS.dayOrder||{};SETTINGS.dayOrder[rec.day]=rec.exOrder.slice();await sset("settings",SETTINGS);}
   }
-  renderHome({day:rec.day,done,total,skipped});
+  renderHome({day:rec.day,done,total,skipped,highlights});
   launchConfetti();
+  githubBackup();
+}
+/* ---------------- GitHub auto-backup ---------------- */
+const BACKUP_REPO="IsraelToledano/Gym-buddy";
+function b64utf8(str){return btoa(unescape(encodeURIComponent(str)));}
+async function githubBackup(){
+  const token=SETTINGS.ghToken;
+  if(!token){BACKMETA.lastError="No token set — add one in Profile";await sset("backupMeta",BACKMETA);return;}
+  const blob=JSON.stringify({v:2,exportedAt:Date.now(),settings:SETTINGS,notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});
+  const content=b64utf8(blob);
+  const d=new Date();const stamp=d.toISOString().replace(/[:T]/g,"-").slice(0,16);
+  const headers={Authorization:`token ${token}`,"Content-Type":"application/json"};
+  try{
+    let sha=null;
+    const getRes=await fetch(`https://api.github.com/repos/${BACKUP_REPO}/contents/backups/latest.json`,{headers});
+    if(getRes.ok){const j=await getRes.json();sha=j.sha;}
+    const putLatest=await fetch(`https://api.github.com/repos/${BACKUP_REPO}/contents/backups/latest.json`,{method:"PUT",headers,body:JSON.stringify({message:`Auto-backup ${stamp}`,content,sha:sha||undefined})});
+    const putDated=await fetch(`https://api.github.com/repos/${BACKUP_REPO}/contents/backups/${stamp}.json`,{method:"PUT",headers,body:JSON.stringify({message:`Session backup ${stamp}`,content})});
+    if(putLatest.ok&&putDated.ok){BACKMETA={at:Date.now(),count:HISTORY.length,lastError:null};}
+    else{BACKMETA.lastError="Backup failed — check token permissions";}
+  }catch(e){BACKMETA.lastError="Backup failed — network error";}
+  await sset("backupMeta",BACKMETA);
 }
 async function discardSession(){if(!(await showConfirm("Discard this session? Logged sets won't be saved.")))return;removeExToast();CUR=null;sset("current",null);renderHome();}
 function saveCur(){sset("current",CUR);}
@@ -1487,7 +1546,7 @@ document.getElementById("profileBtn").onclick=openProfile;
 (async function init(){
   SETTINGS=await sget("settings",SETTINGS);SETTINGS.dayOrder=SETTINGS.dayOrder||{};
   applyTheme();
-  HISTORY=await sget("history",[]);NOTES=await sget("notes",{});BACKMETA=await sget("backupMeta",{at:0,count:0});PROFILE=await sget("profile",PROFILE);TENNIS=await sget("tennis",[]);CUSTOM_EX=await sget("customEx",[]);CUSTOM_EX.forEach(e=>{NAME_INDEX[e.n]=e;});updateProfileBtnState();
+  HISTORY=await sget("history",[]);NOTES=await sget("notes",{});BACKMETA=await sget("backupMeta",{at:0,count:0,lastError:null});PROFILE=await sget("profile",PROFILE);TENNIS=await sget("tennis",[]);CUSTOM_EX=await sget("customEx",[]);CUSTOM_EX.forEach(e=>{NAME_INDEX[e.n]=e;});updateProfileBtnState();
   CUR=await sget("current",null);
   if(CUR&&!CUR.order){
     // migrate a session started on the old index-keyed build (or discard if it doesn't match)
