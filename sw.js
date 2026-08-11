@@ -1,4 +1,4 @@
-const CACHE = "gym-buddy-v12";
+const CACHE = "gym-buddy-v13";
 const IMG_CACHE = "gym-buddy-exercise-img-v1";
 const IMG_HOST = "raw.githubusercontent.com";
 const ASSETS = ["./", "./index.html", "./manifest.json"];
