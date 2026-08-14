@@ -143,10 +143,12 @@
   .pr.top .val{color:var(--amber-bright)}
   .pr.vol .val{color:var(--teal)}
   .pr.e1 .val{color:var(--ink)}
-  .prfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px}
+  .prcaption{font-size:11px;color:var(--ink-faint);margin-top:2px}
   .nohist{font-size:12px;color:var(--ink-faint);margin-bottom:13px;padding-bottom:13px;border-bottom:1px solid var(--line)}
-  .trendbtn{background:none;border:1px solid var(--line);border-radius:9px;color:var(--teal);font-size:12px;font-weight:600;padding:7px 12px}
+  .trendbtn{background:none;border:1px solid var(--line);border-radius:9px;color:var(--teal);font-size:12px;font-weight:600;padding:7px 11px;flex:none}
   .trendbtn:hover{border-color:var(--teal)}
+  .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .btnrow .formtog,.btnrow .trendbtn{margin-top:0}
   .targetrow{margin-bottom:8px}
   .target-badge{display:inline-block;font-size:11px;font-weight:600;color:var(--teal);background:rgba(84,185,168,.12);border:1px solid rgba(84,185,168,.3);border-radius:20px;padding:3px 10px}
   .lasttime{font-size:12px;color:var(--ink-faint);margin-bottom:10px;line-height:1.4}
@@ -239,10 +241,17 @@
   .exnotes::placeholder{color:var(--ink-faint)}
 
   .formtog{margin-top:10px;background:none;border:1px solid var(--line);border-radius:9px;color:var(--ink-dim);font-size:12px;padding:7px 11px;display:inline-flex;align-items:center;gap:6px}
-  .cues{list-style:none;margin-top:9px;display:none;gap:7px}
-  .cues.show{display:grid}
+  .cues{margin-top:9px;display:none}
+  .cues.show{display:block}
+  .cuesub{margin-bottom:11px}
+  .cuesub:last-child{margin-bottom:0}
+  .cuelabel{font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:11px;margin-bottom:6px}
+  .cue-do .cuelabel{color:var(--green)}
+  .cue-dont .cuelabel{color:var(--red)}
+  .cues ul{list-style:none;margin:0;padding:0;display:grid;gap:7px}
   .cues li{position:relative;padding-left:17px;font-size:13.5px;color:var(--ink);line-height:1.5}
-  .cues li::before{content:"";position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:2px;background:var(--amber);transform:rotate(45deg)}
+  .cue-do li::before{content:"";position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:2px;background:var(--green);transform:rotate(45deg)}
+  .cue-dont li::before{content:"";position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:2px;background:var(--red);transform:rotate(45deg)}
 
   .cutline{display:flex;align-items:center;gap:10px;margin:4px 0 13px;padding-left:6px}
   .cutline .rule{flex:1;height:0;border-top:2px dashed rgba(242,135,46,.5)}
@@ -470,47 +479,47 @@ const REST={"90–120s":120,"90s":90,"75–90s":90,"60–90s":75,"60–75s":75,"
 function rs(l){return REST[l]||75;}
 const PLAN={
   A1:{name:"Push",ex:[
-    {n:"Dumbbell bench press",m:"Chest",equip:"dumbbell",main:1,sets:4,reps:"8–12",rest:"90–120s",cues:["Shoulder blades back and down, slight arch, planted into the bench.","Lower to mid-chest, elbows ~45° from the torso.","Press up and slightly together; stop short of lockout.","Control the descent — don't drift over your face."]},
-    {n:"Incline bench press",m:"Chest",equip:"dumbbell",main:1,sets:3,reps:"8–12",rest:"90–120s",cues:["~30° incline — steeper hits front delts.","Lower to the upper-chest line, elbows tucked ~45°.","Drive up and slightly back.","No bounce off the chest."]},
-    {n:"Dumbbell overhead press",m:"Front delts",equip:"dumbbell",sets:3,reps:"8–12",rest:"90s",cues:["Brace core and glutes; don't lean back.","Start at ear height, wrists over elbows.","Press without clashing the dumbbells.","Lower under control to ear level."]},
-    {n:"Lateral raises",m:"Side delts",equip:"dumbbell",sets:3,reps:"12–15",rest:"45–60s",cues:["Lead with the elbows, slight fixed bend.","Raise to shoulder height, pinkies a touch up.","No swing or shrug.","Slow negative."]},
-    {n:"Leg extension",m:"Quads",equip:"machine",leg:1,sets:3,reps:"10–15",rest:"90s",cues:["Knee aligned with the pivot.","Squeeze hard 1s at the top.","Control the lowering.","Lower back stays on the pad."]},
-    {n:"Calf raise",m:"Calves",equip:"machine",calf:1,sets:3,reps:"10–15",rest:"60–90s",cues:["Deep stretch at the bottom, full rise onto the toes.","Pause top and stretch.","No bouncing.","Knees mostly straight."]},
-    {n:"Machine crunch",m:"Abs",equip:"machine",abs:1,sets:3,reps:"10–15",rest:"60–75s",cues:["Pad across the chest/upper abs.","Round the spine — ribs to hips, not a hip bend.","Exhale and squeeze at the bottom.","Control the return."]},
-    {n:"Pec deck / butterfly",m:"Chest",equip:"machine",sets:2,reps:"12–15",rest:"60s",cues:["Handles level with the shoulders.","Push through the elbows, slight elbow bend.","Squeeze and pause at full contraction.","Slow stretch back."]},
-    {n:"Triceps rope extension",m:"Triceps",equip:"cable",sets:2,reps:"10–12",rest:"60s",cues:["Elbows pinned to the sides.","Push down and spread the rope.","Full lockout, 1s squeeze.","Control the way up."]},
-    {n:"Glute rear kick",m:"Glutes",equip:"machine",sets:3,reps:"12–15",rest:"60s",cues:["Slight hinge, soft knee bend.","Drive the heel back with the glute.","Squeeze at the top; don't over-arch.","Slow return."]}
+    {n:"Dumbbell bench press",m:"Chest",equip:"dumbbell",main:1,sets:4,reps:"8–12",rest:"90–120s",cues:{do:["Shoulder blades back and down, slight arch, planted into the bench.","Lower to mid-chest, elbows ~45° from the torso.","Press up and slightly together, stopping just short of lockout."],dont:["Don't let the dumbbells drift out over your face on the way down.","Don't flare the elbows to 90° — it overloads the front of the shoulder."]}},
+    {n:"Incline bench press",m:"Chest",equip:"dumbbell",main:1,sets:3,reps:"8–12",rest:"90–120s",cues:{do:["Set the bench to ~30° — steeper shifts it to front delts.","Lower to the upper-chest line, elbows tucked ~45°.","Drive up and slightly back toward the shoulders."],dont:["Don't bounce the dumbbells off the chest at the bottom.","Don't crank the incline past 45° — it stops being a chest press."]}},
+    {n:"Dumbbell overhead press",m:"Front delts",equip:"dumbbell",sets:3,reps:"8–12",rest:"90s",cues:{do:["Brace the core and glutes before you press.","Start at ear height with wrists stacked over elbows.","Press without clashing the dumbbells at the top."],dont:["Don't lean back to muscle the weight up — that's your lower back, not shoulders.","Don't lower past ear level if it flares the elbows out."]}},
+    {n:"Lateral raises",m:"Side delts",equip:"dumbbell",sets:3,reps:"12–15",rest:"45–60s",cues:{do:["Lead with the elbows, keeping a slight fixed bend.","Raise to shoulder height with pinkies a touch up.","Slow the negative down instead of dropping the weight."],dont:["Don't swing or use body momentum to sling the weight up.","Don't shrug the traps to finish the rep."]}},
+    {n:"Leg extension",m:"Quads",equip:"machine",leg:1,sets:3,reps:"10–15",rest:"90s",cues:{do:["Align the knee with the machine's pivot point.","Squeeze hard for a full second at the top.","Control the lowering all the way down."],dont:["Don't let the lower back lift off the pad.","Don't slam the weight stack between reps."]}},
+    {n:"Calf raise",m:"Calves",equip:"machine",calf:1,sets:3,reps:"10–15",rest:"60–90s",cues:{do:["Get a deep stretch at the bottom before rising.","Rise fully onto the toes and pause at the top.","Keep the knees mostly straight throughout."],dont:["Don't bounce out of the bottom stretch.","Don't cut the range short by only doing the top half."]}},
+    {n:"Machine crunch",m:"Abs",equip:"machine",abs:1,sets:3,reps:"10–15",rest:"60–75s",cues:{do:["Set the pad across the chest or upper abs.","Round the spine — curl ribs toward hips, not a hip hinge.","Exhale and squeeze hard at the bottom of the rep."],dont:["Don't just hinge at the hips — that's not a crunch.","Don't use momentum to yank the handles down."]}},
+    {n:"Pec deck / butterfly",m:"Chest",equip:"machine",sets:2,reps:"12–15",rest:"60s",cues:{do:["Set the handles level with the shoulders.","Push through with a slight, fixed elbow bend.","Squeeze and pause at full contraction."],dont:["Don't let the weight stack slam down on the return.","Don't let the shoulders round forward to reach further."]}},
+    {n:"Triceps rope extension",m:"Triceps",equip:"cable",sets:2,reps:"10–12",rest:"60s",cues:{do:["Pin the elbows to your sides throughout.","Push down and spread the rope apart at the bottom.","Hold the lockout with a 1-second squeeze."],dont:["Don't let the elbows drift forward as you push down.","Don't use body weight or a lean to move the rope."]}},
+    {n:"Glute rear kick",m:"Glutes",equip:"machine",sets:3,reps:"12–15",rest:"60s",cues:{do:["Set a slight hinge with a soft bend in the knee.","Drive the heel back using the glute, not momentum.","Squeeze hard at the top of the kick."],dont:["Don't over-arch the lower back to get more range.","Don't rush the tempo — control both directions."]}}
   ]},
   A2:{name:"Push",ex:[
-    {n:"Machine bench press",m:"Chest",equip:"machine",main:1,sets:3,reps:"6–8",rest:"90–120s",cues:["Handles at mid-chest height.","Shoulder blades pinned to the pad.","Smooth press, no hard lockout.","Drive with intent on the heavy top set."]},
-    {n:"Incline barbell press",m:"Chest",equip:"barbell",main:1,sets:4,reps:"6–10",rest:"90–120s",cues:["30° incline, grip just outside shoulders.","Lower to upper chest, elbows ~45–60°.","Blades retracted, feet planted.","Brief touch, no bounce."]},
-    {n:"Machine shoulder press",m:"Front delts",equip:"machine",sets:3,reps:"6–10",rest:"90s",cues:["Handles start near ear height.","Press without shrugging; stop short of lockout.","Back braced on the pad.","Lower under control."]},
-    {n:"Lateral raises",m:"Side delts",equip:"dumbbell",sets:3,reps:"12–20",rest:"45–60s",cues:["Lead with the elbows.","Only to shoulder height.","Strict, no momentum.","Slow negative."]},
-    {n:"Leg press",m:"Quads",equip:"machine",leg:1,sets:3,reps:"8–12",rest:"90–120s",cues:["Feet shoulder-width, mid-platform.","Lower to ~90° at the knee.","Lower back stays down.","Push through mid-foot; no hard lockout."]},
-    {n:"Calf press",m:"Calves",equip:"machine",calf:1,sets:3,reps:"10–15",rest:"60–90s",cues:["Balls of the feet on the edge.","Drop the heels deep, press to full extension.","Pause both ends.","Slow, no bounce."]},
-    {n:"Knee raise (parallel bars)",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:["Back flat to the pad, no swing.","Curl the pelvis up, not just the thighs.","Knees to chest, squeeze.","Lower slowly."]},
-    {n:"Triceps V-cable pushdown",m:"Triceps",equip:"cable",sets:3,reps:"8–12",rest:"60–90s",cues:["Tall, elbows pinned.","Full lockout, 1s squeeze.","Only forearms move.","Control back to ~90°."]},
-    {n:"Machine triceps extension",m:"Triceps",equip:"machine",sets:3,reps:"8–12",rest:"60–90s",cues:["Pivot in line with the elbows.","Extend fully, squeeze.","Upper arms still.","Slow return."]}
+    {n:"Machine bench press",m:"Chest",equip:"machine",main:1,sets:3,reps:"6–8",rest:"90–120s",cues:{do:["Set the handles at mid-chest height.","Pin the shoulder blades to the pad.","Drive with real intent on the heavy top set."],dont:["Don't hard-lock the elbows at the top — keep it smooth.","Don't let the shoulders roll forward off the pad."]}},
+    {n:"Incline barbell press",m:"Chest",equip:"barbell",main:1,sets:4,reps:"6–10",rest:"90–120s",cues:{do:["Set a 30° incline with a grip just outside shoulder width.","Lower to the upper chest, elbows ~45–60°.","Keep the blades retracted and feet planted."],dont:["Don't bounce the bar off the chest.","Don't flare the elbows out to 90° on the way down."]}},
+    {n:"Machine shoulder press",m:"Front delts",equip:"machine",sets:3,reps:"6–10",rest:"90s",cues:{do:["Start the handles near ear height.","Brace the back against the pad throughout.","Lower under control back to the start position."],dont:["Don't shrug the traps to help finish the press.","Don't lock out hard at the top — stop just short."]}},
+    {n:"Lateral raises",m:"Side delts",equip:"dumbbell",sets:3,reps:"12–20",rest:"45–60s",cues:{do:["Lead with the elbows on every rep.","Raise only to shoulder height, no higher.","Keep it strict — no momentum from the hips."],dont:["Don't let the weight swing you at the bottom of the rep.","Don't rush through partial reps to hit the target rep count."]}},
+    {n:"Leg press",m:"Quads",equip:"machine",leg:1,sets:3,reps:"8–12",rest:"90–120s",cues:{do:["Set feet shoulder-width on the mid-platform.","Lower to roughly a 90° knee bend.","Push through the mid-foot on the way up."],dont:["Don't let the lower back round off the pad.","Don't hard-lock the knees at the top."]}},
+    {n:"Calf press",m:"Calves",equip:"machine",calf:1,sets:3,reps:"10–15",rest:"60–90s",cues:{do:["Set the balls of the feet on the edge of the platform.","Drop the heels deep, then press to full extension.","Pause briefly at both the top and bottom."],dont:["Don't bounce out of the bottom stretch.","Don't shorten the range just to move more weight."]}},
+    {n:"Knee raise (parallel bars)",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:{do:["Keep the back flat against the pad, no swinging.","Curl the pelvis up, not just the thighs.","Bring the knees to the chest and squeeze."],dont:["Don't use momentum to swing the legs up.","Don't let the lower back arch away from the pad."]}},
+    {n:"Triceps V-cable pushdown",m:"Triceps",equip:"cable",sets:3,reps:"8–12",rest:"60–90s",cues:{do:["Stand tall with the elbows pinned to your sides.","Push to a full lockout with a 1-second squeeze.","Let only the forearms move."],dont:["Don't lean over the cable to add body weight to the push.","Don't let the elbows flare out or drift forward."]}},
+    {n:"Machine triceps extension",m:"Triceps",equip:"machine",sets:3,reps:"8–12",rest:"60–90s",cues:{do:["Align the pivot in line with your elbows.","Extend fully and squeeze at the bottom.","Keep the upper arms still throughout."],dont:["Don't let the elbows rise off the pad.","Don't rush the return — control it back up."]}}
   ]},
   B1:{name:"Pull",ex:[
-    {n:"Lat pulldown (machine)",m:"Back",equip:"machine",main:1,sets:4,reps:"8–12",rest:"90–120s",cues:["Grip a bit wider than shoulders.","Elbows down and back, bar to upper chest.","Drive with the lats, minimal lean.","Full stretch at the top."]},
-    {n:"Seated cable row (machine)",m:"Back",equip:"machine",main:1,sets:3,reps:"8–12",rest:"90s",cues:["Tall chest, slight stretch forward.","Row to the lower ribs, squeeze the blades.","Don't heave with the lower back.","Full stretch, flat back."]},
-    {n:"Rear delt reverse fly",m:"Rear delts",equip:"machine",sets:3,reps:"12–15",rest:"60s",cues:["Fixed slight elbow bend.","Open to shoulder height, lead with elbows.","Rear delts, not traps — shoulders down.","Light and slow."]},
-    {n:"Concentration curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60s",cues:["Elbow braced on the inner thigh.","Curl with the bicep, pinky up at the top.","Squeeze hard, full stretch.","No swing."]},
-    {n:"Incline dumbbell curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60–75s",cues:["Arms hang behind the torso — big stretch.","Elbows don't drift forward.","Supinate and squeeze at the top.","Slow to a full stretch."]},
-    {n:"Leg curl",m:"Hamstrings",equip:"machine",leg:1,sets:3,reps:"8–12",rest:"90s",cues:["Knees aligned, pad above the heels.","Curl fully, squeeze the hams.","Hips stay down.","Control the negative."]},
-    {n:"Captain knee raise",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:["Back flat, no swing.","Curl the pelvis up.","Squeeze at the top.","Lower slowly."]},
-    {n:"Back extension",m:"Lower back",equip:"machine",sets:3,reps:"10–12",rest:"75–90s",cues:["Pad at the hip crease, hinge at the hips.","Flat back down, rise to a straight line.","Squeeze glutes and hams.","Add load only when bodyweight is easy."]}
+    {n:"Lat pulldown (machine)",m:"Back",equip:"machine",main:1,sets:4,reps:"8–12",rest:"90–120s",cues:{do:["Grip a bit wider than shoulder width.","Drive the elbows down and back toward the upper chest.","Get a full stretch at the top of every rep."],dont:["Don't lean back excessively to muscle the bar down.","Don't let the shoulders shrug up toward the ears."]}},
+    {n:"Seated cable row (machine)",m:"Back",equip:"machine",main:1,sets:3,reps:"8–12",rest:"90s",cues:{do:["Sit tall with a slight forward stretch to start.","Row to the lower ribs and squeeze the shoulder blades.","Keep a flat back through the full stretch."],dont:["Don't heave with the lower back to move the weight.","Don't let the shoulders round forward at the stretch."]}},
+    {n:"Rear delt reverse fly",m:"Rear delts",equip:"machine",sets:3,reps:"12–15",rest:"60s",cues:{do:["Keep a fixed, slight bend in the elbows.","Open to shoulder height, leading with the elbows.","Keep the shoulders down — target the rear delts, not the traps."],dont:["Don't shrug the traps to finish the movement.","Don't use momentum to swing the weight open."]}},
+    {n:"Concentration curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60s",cues:{do:["Brace the elbow on the inner thigh.","Curl with the bicep and turn the pinky up at the top.","Squeeze hard and get a full stretch each rep."],dont:["Don't let the elbow drift off the thigh mid-rep.","Don't swing the torso to help the weight up."]}},
+    {n:"Incline dumbbell curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60–75s",cues:{do:["Let the arms hang behind the torso for a big stretch.","Supinate the wrist and squeeze at the top.","Slow the descent to a full stretch."],dont:["Don't let the elbows drift forward as you curl.","Don't rush the stretch at the bottom."]}},
+    {n:"Leg curl",m:"Hamstrings",equip:"machine",leg:1,sets:3,reps:"8–12",rest:"90s",cues:{do:["Align the knees with the machine's pivot, pad above the heels.","Curl fully and squeeze the hamstrings.","Control the negative on the way back."],dont:["Don't let the hips lift off the pad.","Don't use momentum to kick the weight up."]}},
+    {n:"Captain knee raise",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:{do:["Keep the back flat, no swinging.","Curl the pelvis up, not just the legs.","Squeeze hard at the top of the raise."],dont:["Don't use momentum to swing into the next rep.","Don't let the lower back arch away from the pads."]}},
+    {n:"Back extension",m:"Lower back",equip:"machine",sets:3,reps:"10–12",rest:"75–90s",cues:{do:["Set the pad at the hip crease and hinge at the hips.","Rise to a straight line, squeezing glutes and hamstrings.","Add load only once bodyweight reps feel easy."],dont:["Don't hyperextend past a straight line at the top.","Don't round the lower back on the way down."]}}
   ]},
   B2:{name:"Pull",ex:[
-    {n:"Lat pulldown",m:"Back",equip:"machine",main:1,sets:4,reps:"8–12",rest:"90–120s",cues:["Grip a bit wider than shoulders.","Elbows down and back to the upper chest.","Lead with the lats.","Controlled full stretch."]},
-    {n:"Seated cable row (V-grip)",m:"Back",equip:"machine",main:1,sets:3,reps:"8–12",rest:"90s",cues:["Neutral V-grip to the navel.","Squeeze the blades, brief hold.","Torso upright.","Control the stretch forward."]},
-    {n:"Rear delt reverse fly",m:"Rear delts",equip:"machine",sets:3,reps:"12–15",rest:"60s",cues:["Fixed slight elbow bend.","Open to shoulder height.","Target rear delts; traps down.","Light, controlled."]},
-    {n:"Leg curl",m:"Hamstrings",equip:"machine",leg:1,sets:3,reps:"10–12",rest:"90s",cues:["Knees aligned, pad above the heels.","Curl fully, squeeze.","Hips down on the pad.","Slow negative."]},
-    {n:"Hammer curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"8–10",rest:"60s",cues:["Neutral grip, elbows pinned.","No swing, wrists straight.","Squeeze at the top.","Lower under control."]},
-    {n:"Seated incline curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60–75s",cues:["Arms hang for a full stretch.","Elbows don't travel forward.","Squeeze at the top.","Slow on the way down."]},
-    {n:"Captain knee raise",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:["Back flat, no swing.","Curl the pelvis up.","Squeeze at the top.","Lower slowly."]},
-    {n:"Back extension",m:"Lower back",equip:"machine",sets:3,reps:"8–10",rest:"75–90s",cues:["Pad at the hip crease, hinge at the hips.","Flat back down, rise to a straight line.","Squeeze glutes and hams.","Controlled tempo."]}
+    {n:"Lat pulldown",m:"Back",equip:"machine",main:1,sets:4,reps:"8–12",rest:"90–120s",cues:{do:["Grip a bit wider than shoulder width.","Drive the elbows down and back to the upper chest.","Get a full, controlled stretch at the top."],dont:["Don't lean back excessively to muscle the bar down.","Don't let the shoulders shrug toward the ears."]}},
+    {n:"Seated cable row (V-grip)",m:"Back",equip:"machine",main:1,sets:3,reps:"8–12",rest:"90s",cues:{do:["Use a neutral V-grip and row to the navel.","Squeeze the shoulder blades with a brief hold.","Keep the torso upright through the row."],dont:["Don't let the torso rock to help move the weight.","Don't shortcut the stretch forward between reps."]}},
+    {n:"Rear delt reverse fly",m:"Rear delts",equip:"machine",sets:3,reps:"12–15",rest:"60s",cues:{do:["Keep a fixed, slight bend in the elbows.","Open to shoulder height, leading with the elbows.","Target the rear delts — keep the traps down."],dont:["Don't shrug the traps to finish the movement.","Don't use momentum to swing the weight open."]}},
+    {n:"Leg curl",m:"Hamstrings",equip:"machine",leg:1,sets:3,reps:"10–12",rest:"90s",cues:{do:["Align the knees with the pivot, pad above the heels.","Curl fully and squeeze at the top.","Control the negative all the way back."],dont:["Don't let the hips lift off the pad.","Don't use momentum to kick the weight up."]}},
+    {n:"Hammer curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"8–10",rest:"60s",cues:{do:["Use a neutral grip with elbows pinned to your sides.","Keep the wrists straight through the curl.","Squeeze hard at the top of the rep."],dont:["Don't swing the torso to sling the weight up.","Don't let the elbows drift forward mid-curl."]}},
+    {n:"Seated incline curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60–75s",cues:{do:["Let the arms hang for a full stretch at the bottom.","Squeeze hard at the top of each rep.","Control the descent all the way down."],dont:["Don't let the elbows travel forward as you curl.","Don't rush through the stretch at the bottom."]}},
+    {n:"Captain knee raise",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:{do:["Keep the back flat, no swinging.","Curl the pelvis up, not just the legs.","Squeeze hard at the top of the raise."],dont:["Don't use momentum to swing into the next rep.","Don't let the lower back arch away from the pads."]}},
+    {n:"Back extension",m:"Lower back",equip:"machine",sets:3,reps:"8–10",rest:"75–90s",cues:{do:["Set the pad at the hip crease and hinge at the hips.","Rise to a straight line, squeezing glutes and hamstrings.","Keep the tempo controlled throughout."],dont:["Don't hyperextend past a straight line at the top.","Don't round the lower back on the way down."]}}
   ]}
 };
 /* Extra exercises available as swap-in alternatives / "add exercise" picks,
@@ -518,9 +527,9 @@ const PLAN={
    small — mainly plugs equipment gaps (e.g. a machine option for a muscle
    that's currently only trained with dumbbells). */
 const EXTRA_EX=[
-  {n:"Machine lateral raise",m:"Side delts",equip:"machine",sets:3,reps:"12–15",rest:"45–60s",cues:["Set the seat so the pivot lines up with your shoulder.","Lead with the elbows, raise to shoulder height.","No shrugging — keep traps relaxed.","Slow, controlled negative."]},
-  {n:"Machine bicep curl",m:"Biceps",equip:"machine",sets:3,reps:"10–12",rest:"60s",cues:["Elbows pinned against the pad.","Curl through the full range without swinging.","Squeeze hard at the top.","Slow negative back to a full stretch."]},
-  {n:"Decline crunch (weighted)",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"12–15",rest:"60–75s",cues:["Hook feet under the pads, hands or plate at your chest.","Curl the ribs toward the hips — round the spine, don't just hinge at the hips.","Exhale and squeeze hard at the top.","Lower slow and controlled, no swinging."]}
+  {n:"Machine lateral raise",m:"Side delts",equip:"machine",sets:3,reps:"12–15",rest:"45–60s",cues:{do:["Set the seat so the pivot lines up with your shoulder.","Lead with the elbows, raising to shoulder height.","Slow the negative instead of dropping the weight."],dont:["Don't shrug the traps to help lift the weight.","Don't let momentum carry the weight above shoulder height."]}},
+  {n:"Machine bicep curl",m:"Biceps",equip:"machine",sets:3,reps:"10–12",rest:"60s",cues:{do:["Pin the elbows against the pad.","Curl through the full range without swinging.","Squeeze hard at the top of every rep."],dont:["Don't let the elbows lift off the pad.","Don't rush the negative back to the stretch."]}},
+  {n:"Decline crunch (weighted)",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"12–15",rest:"60–75s",cues:{do:["Hook the feet under the pads, hands or plate at your chest.","Curl the ribs toward the hips — round the spine, not just the hips.","Exhale and squeeze hard at the top."],dont:["Don't swing to build momentum into the next rep.","Don't yank with the neck to initiate the curl."]}}
 ];
 /* cross-day exercise index — lets an exercise be looked up by name regardless
    of which day it's originally defined under. This is what makes swapping
@@ -825,7 +834,7 @@ function renderSession(){
     if(uskip)cls.push("uskip");else if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
     const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(ex.calf)tags.push('<span class="tg pair">⟂ Pair with legs</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(absSeen)tags.push('<span class="tg sk">Cut first</span>');if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
-    const prs=exPRs(name);let topHtml="",statsHtml="";
+    const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
     if(exp){
       const prevSets=lastLog(name);
@@ -833,17 +842,20 @@ function renderSession(){
       const lastTimeHtml=lastTimeStr?`<div class="lasttime">Last time: <b>${lastTimeStr}</b></div>`:"";
       topHtml=`${targetBadge?`<div class="targetrow">${targetBadge}</div>`:""}${lastTimeHtml}`;
       if(!prs.hasData){statsHtml=`<div class="nohist" style="margin-bottom:0;padding-bottom:0;border-bottom:none">No history yet — your first logged session sets the baseline.</div>`;}
-      else if(prs.bw){statsHtml=`<div class="prstrip"><div class="pr top"><div class="lab">Best set total</div><div class="val">${prs.reps} <small>reps</small></div></div></div><div class="prfoot"><span style="font-size:11px;color:var(--ink-faint)">Bodyweight — tracking total reps</span><button class="trendbtn" onclick="openTrend('${name.replace(/'/g,"\\'")}')">View trend ›</button></div>`;}
-      else{statsHtml=`<div class="prstrip"><div class="pr top"><div class="lab">Top weight</div><div class="val">${prs.top} <small>kg</small></div></div><div class="pr vol"><div class="lab">Best volume</div><div class="val">${prs.vol} <small>kg</small></div></div><div class="pr e1"><div class="lab">est 1RM</div><div class="val">${prs.e1} <small>kg</small></div></div></div><div class="prfoot"><span style="font-size:11px;color:var(--ink-faint)">past best</span><button class="trendbtn" onclick="openTrend('${name.replace(/'/g,"\\'")}')">View trend ›</button></div>`;}
+      else{
+        trendBtnHtml=`<button class="trendbtn" onclick="openTrend('${name.replace(/'/g,"\\'")}')">View trend ›</button>`;
+        if(prs.bw){statsHtml=`<div class="prstrip"><div class="pr top"><div class="lab">Best set total</div><div class="val">${prs.reps} <small>reps</small></div></div></div><div class="prcaption">Bodyweight — tracking total reps</div>`;}
+        else{statsHtml=`<div class="prstrip"><div class="pr top"><div class="lab">Top weight</div><div class="val">${prs.top} <small>kg</small></div></div><div class="pr vol"><div class="lab">Best volume</div><div class="val">${prs.vol} <small>kg</small></div></div><div class="pr e1"><div class="lab">est 1RM</div><div class="val">${prs.e1} <small>kg</small></div></div></div>`;}
+      }
     }
     let rows=`<div class="setrow head"><span></span><span>Weight (kg)</span><span>${SETTINGS.logReps?"Reps":""}</span><span></span></div>`;
     log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${extra?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>`;});
-    const cues=ex.cues.map(c=>`<li>${c}</li>`).join("");
+    const cues=`${ex.cues.do&&ex.cues.do.length?`<div class="cuesub cue-do"><div class="cuelabel">✓ Do</div><ul>${ex.cues.do.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}${ex.cues.dont&&ex.cues.dont.length?`<div class="cuesub cue-dont"><div class="cuelabel">✕ Don't</div><ul>${ex.cues.dont.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}`;
     const nVal=(NOTES[name]||"");const nOpen=nVal.trim()?" show":"";
     const noteBlock=`<div class="notesblock"><button class="formtog notetog" onclick="toggleNotes(this)">Notes ${nOpen?"\u25b4":"\u25be"}</button><div class="notewrap${nOpen}"><textarea class="exnotes" placeholder="Seat height, pin number, grip, machine #\u2026" oninput="setNote('${name.replace(/'/g,"\\'")}',this.value)">${esc(nVal)}</textarea></div></div>`;
     const swapOpts=getSwapOptions(name);
     const hlHtml=renderHighlightBadge(log.highlight);
-    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}${effortHtml(i)}<button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="sethint">A set logs once you enter reps. Weight is optional. Clear reps to unlog.</div><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo skip":"⤼ Mark as skipped"}</button><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button><ul class="cues">${cues}</ul>${noteBlock}</div></div></div></div>`;
+    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}${effortHtml(i)}<button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="sethint">A set logs once you enter reps. Weight is optional. Clear reps to unlog.</div><div class="btnrow"><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo skip":"⤼ Mark as skipped"}</button><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button>${trendBtnHtml}</div><div class="cues">${cues}</div>${noteBlock}</div></div></div></div>`;
     if(ex.abs&&!absSeen){absSeen=true;html+=`<div class="cutline"><span class="txt">Cut from here ↓</span><span class="rule"></span></div>`;}
   });
   html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button><div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
@@ -1043,7 +1055,7 @@ function openSession(){openIdx=0;if(CUR&&!CUR.order){CUR.order=getDayOrderNames(
 function lastLog(name){for(let i=HISTORY.length-1;i>=0;i--){const log=sessionLog(HISTORY[i],name);if(log)return log.sets;}return null;}
 function toggleEx(i){openIdx=(openIdx===i?-1:i);renderSession();if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}}
 function toggleNotes(b){const w=b.nextElementSibling;w.classList.toggle("show");b.textContent=w.classList.contains("show")?"Notes \u25b4":"Notes \u25be";}
-function toggleCues(b){const ul=b.nextElementSibling;ul.classList.toggle("show");b.textContent=ul.classList.contains("show")?"Form cues ▴":"Form cues ▾";}
+function toggleCues(b){const ul=b.closest(".btnrow").nextElementSibling;ul.classList.toggle("show");b.textContent=ul.classList.contains("show")?"Form cues ▴":"Form cues ▾";}
 function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;const s=sets[j];const was=setComplete(ex,s);s[f]=v;const now=setComplete(ex,s);
   sets.forEach((st,k)=>{const r=document.getElementById("row-"+i+"-"+k);if(r)r.classList.toggle("set-done",setComplete(ex,st));});
   refreshExHead(i);updateProgress();scheduleSave();
@@ -1331,7 +1343,7 @@ async function saveCustomExercise(){
   const sets=Math.max(1,parseInt(document.getElementById("ceSets").value,10)||3);
   const reps=(document.getElementById("ceReps").value||"8–12").trim();
   const rest=(document.getElementById("ceRest").value||"60–90s").trim();
-  const def={n:name,m:muscle,equip,sets,reps,rest,cues:[],custom:1};
+  const def={n:name,m:muscle,equip,sets,reps,rest,cues:{do:[],dont:[]},custom:1};
   CUSTOM_EX.push(def);NAME_INDEX[name]=def;
   await sset("customEx",CUSTOM_EX);
   addFromLibrary(name);
