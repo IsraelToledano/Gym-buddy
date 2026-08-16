@@ -42,6 +42,7 @@
   .profile-btn svg{width:19px;height:19px}
   .profile-btn.has-data{border-color:var(--teal);color:var(--teal)}
   .kicker{font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:.22em;text-transform:uppercase;font-size:12px;color:var(--amber)}
+  .ver{font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:.04em;text-transform:none;font-size:11px;color:var(--ink-faint);background:var(--card);border:1px solid var(--line);border-radius:20px;padding:1px 8px;vertical-align:1px}
   .mast h1{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:38px;line-height:.95;text-transform:uppercase;margin-top:3px}
   .mast .sub{color:var(--ink-dim);font-size:13px;margin-top:6px}
   .section-h{font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:13px;color:var(--ink-faint);margin:22px 2px 10px}
@@ -419,7 +420,7 @@
     <button class="profile-btn" id="profileBtn" aria-label="Profile">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     </button>
-    <div class="kicker" id="kicker">Push / Pull · Tracker</div>
+    <div class="kicker"><span id="kicker">Push / Pull · Tracker</span> <span class="ver" id="verBadge">v18</span></div>
     <h1 id="title">Training</h1>
     <p class="sub" id="subtitle">Pick a day to start. Sets, weights and rest are tracked here.</p>
   </header>
@@ -583,6 +584,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
+const APP_VERSION="v18";
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
 let TENNIS=[];
 let CUSTOM_EX=[];
@@ -1661,6 +1663,7 @@ function launchConfetti(){
 
 /* ---------------- init ---------------- */
 document.getElementById("profileBtn").onclick=openProfile;
+const verEl=document.getElementById("verBadge");if(verEl)verEl.textContent=APP_VERSION;
 (async function init(){
   SETTINGS=await sget("settings",SETTINGS);SETTINGS.dayOrder=SETTINGS.dayOrder||{};
   applyTheme();
