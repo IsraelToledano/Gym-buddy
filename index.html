@@ -584,7 +584,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v18";
+const APP_VERSION="v19";
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
 let TENNIS=[];
 let CUSTOM_EX=[];
@@ -1106,21 +1106,41 @@ function toggleSkipEx(i){
   saveCur();
   if(log.skipped)collapseAndAdvance(i,"skip");else renderSession();
 }
-function nextOpenIdx(from){
-  for(let k=from+1;k<CUR.order.length;k++){
-    const nm=CUR.order[k];const lg=CUR.ex[nm];const d=NAME_INDEX[nm];
+function isHandledEx(name){
+  const lg=CUR.ex[name];if(!lg)return true;
+  if(lg.skipped)return true;
+  const d=NAME_INDEX[name];
+  return lg.sets.length>0&&lg.sets.filter(s=>setComplete(d,s)).length===lg.sets.length;
+}
+/* Keeps completed/skipped exercises grouped at the front, in the order you
+   actually did them, and bumps anything you jump over so it lands right
+   after whatever you just finished — the next incomplete exercise is
+   always the very next card, so nothing gets buried mid-session. */
+function reorderAfterComplete(name){
+  const arr=CUR.order;const idx=arr.indexOf(name);if(idx<0)return;
+  arr.splice(idx,1);
+  let pos=0;
+  while(pos<arr.length&&isHandledEx(arr[pos]))pos++;
+  arr.splice(pos,0,name);
+}
+function nextOpenIdx(){
+  for(let k=0;k<CUR.order.length;k++){
+    const nm=CUR.order[k];const lg=CUR.ex[nm];
     if(lg.skipped)continue;
-    const dn=lg.sets.filter(s=>setComplete(d,s)).length;
-    if(dn<lg.sets.length)return k;
+    const d=NAME_INDEX[nm];
+    if(lg.sets.filter(s=>setComplete(d,s)).length<lg.sets.length)return k;
   }
   return -1;
 }
 function collapseAndAdvance(i,kind){
   const els=app.querySelectorAll(".ex");const btn=els[i]&&els[i].querySelector(".ex-btn");
   if(btn)btn.classList.add(kind==="skip"?"skip-celebrate":"celebrate");
-  if(kind==="done"){const name=CUR.order[i];const h=computeExVolumeInsight(name);if(h){const toastText=h.prText||(h.pct!=null?`Volume ${h.pct>=0?"+":""}${h.pct}% vs last time`:"Logged");showExToast({icon:h.icon,text:toastText});CUR.ex[name].highlight=h;saveCur();}}
+  const name=CUR.order[i];
+  if(kind==="done"){const h=computeExVolumeInsight(name);if(h){const toastText=h.prText||(h.pct!=null?`Volume ${h.pct>=0?"+":""}${h.pct}% vs last time`:"Logged");showExToast({icon:h.icon,text:toastText});CUR.ex[name].highlight=h;saveCur();}}
   setTimeout(()=>{
-    openIdx=nextOpenIdx(i);
+    reorderAfterComplete(name);
+    saveCur();
+    openIdx=nextOpenIdx();
     renderSession();
     if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}
   },kind==="skip"?360:520);
