@@ -584,7 +584,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v19";
+const APP_VERSION="v20";
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
 let TENNIS=[];
 let CUSTOM_EX=[];
@@ -1574,6 +1574,21 @@ function cancelBgAlert(){if(!swReady())return;navigator.serviceWorker.controller
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("sw.js").catch(()=>{});
   navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="rest-alert-fired"&&restActive&&!restFired){restFired=true;fireAlert();}});
+  // iOS often just suspends (rather than fully reloads) a Home Screen web
+  // app when it's closed/reopened, so a newly-activated service worker can
+  // sit ready without the on-screen page ever picking up the new code.
+  // Explicitly re-check for updates whenever the app comes back into view,
+  // and force one reload if a new version has taken over — this is what
+  // actually makes deploys show up reliably after a close/reopen.
+  let swRefreshing=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(swRefreshing)return;swRefreshing=true;location.reload();
+  });
+  document.addEventListener("visibilitychange",()=>{
+    if(document.visibilityState==="visible"){
+      navigator.serviceWorker.getRegistration().then(reg=>reg&&reg.update());
+    }
+  });
 }
 
 /* ---------------- alert ---------------- */
