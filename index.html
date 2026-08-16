@@ -318,7 +318,10 @@
   .field .unit{font-size:12px;color:var(--ink-faint);margin-top:5px}
   .tokwrap{position:relative}
   .tokwrap input{padding-right:44px!important}
-  .eyebtn{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:34px;height:34px;border:none;background:none;display:grid;place-items:center;color:var(--ink-faint);border-radius:8px;padding:0}
+  .tok-ta{width:100%;min-height:100px;background:var(--card);border:1px solid var(--teal);border-radius:10px;color:var(--ink);font-size:15px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;padding:11px 44px 11px 12px;line-height:1.5;word-break:break-all;white-space:pre-wrap;resize:vertical;box-sizing:border-box}
+  .tok-ta:focus{outline:none}
+  .tokhint{font-size:11.5px;color:var(--ink-faint);margin-top:6px;line-height:1.4}
+  .eyebtn{position:absolute;right:6px;top:8px;width:34px;height:34px;border:none;background:none;display:grid;place-items:center;color:var(--ink-faint);border-radius:8px;padding:0}
   .eyebtn:active{background:var(--bg)}
   .eyebtn svg{width:20px;height:20px}
   .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -580,7 +583,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null};
+let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
 let TENNIS=[];
 let CUSTOM_EX=[];
 let PROFILE={heightCm:"",weightKg:"",age:"",goal:""};
@@ -810,9 +813,13 @@ function renderHome(summary){
   html+=`<div class="wk-note">Resets Monday. Bars track sets actually completed — skipping low-priority work is fine; the tracker only nudges when a muscle this day trains is genuinely behind.</div></div>`;
   html+=`<div class="section-h">Progress analysis</div><button class="tool-btn analyze-btn" onclick="openProgressReport()" style="width:100%">📊 Run progress analysis</button>`;
   // backup
-  const lastBk=BACKMETA.at?("Last backup: "+fmtDate(BACKMETA.at)):"Not backed up yet";
-  const bkStatus=BACKMETA.lastError?`<b style="color:var(--red)">${esc(BACKMETA.lastError)}</b>`:`<b style="color:var(--ink-faint)">${lastBk}</b>`;
-  html+=`<div class="section-h">Backup (optional)</div><p style="font-size:12px;color:var(--ink-dim);margin:-4px 2px 10px">Your workouts save automatically as you log them — no button needed. If a GitHub token is set in your profile, a copy also auto-pushes to your repo at the end of every session. ${bkStatus}</p><div class="tools"><button class="tool-btn" onclick="toggleExport()">⬇ Export to file</button><button class="tool-btn" onclick="toggleImport()">⬆ Restore from file</button></div>`;
+  const lastAttemptStr=BACKMETA.lastAttempt?fmtDate(BACKMETA.lastAttempt):null;
+  const lastSuccessStr=BACKMETA.at?fmtDate(BACKMETA.at):null;
+  let bkStatus;
+  if(!lastAttemptStr){bkStatus=`<b style="color:var(--ink-faint)">Not backed up yet</b>`;}
+  else if(BACKMETA.lastError){bkStatus=`<b style="color:var(--red)">Last attempt ${lastAttemptStr} — ${esc(BACKMETA.lastError)}</b>${lastSuccessStr&&lastSuccessStr!==lastAttemptStr?`<br><span style="color:var(--ink-faint)">Last successful backup: ${lastSuccessStr}</span>`:""}`;}
+  else{bkStatus=`<b style="color:var(--ink-faint)">Last backup: ${lastAttemptStr}</b>`;}
+  html+=`<div class="section-h">Backup (optional)</div><p style="font-size:12px;color:var(--ink-dim);margin:-4px 2px 10px">Your workouts save automatically as you log them — no button needed. If a GitHub token is set in your profile, a copy also auto-pushes to your repo at the end of every session. ${bkStatus}</p><div class="tools"><button class="tool-btn" onclick="manualBackup(this)">🔄 Backup now</button><button class="tool-btn" onclick="toggleExport()">⬇ Export to file</button><button class="tool-btn" onclick="toggleImport()">⬆ Restore from file</button></div>`;
   if(showExport){const blob=JSON.stringify({v:2,exportedAt:Date.now(),settings:SETTINGS,notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});
     html+=`<div class="panel-box"><h4>Export</h4><p>${HISTORY.length} session${HISTORY.length===1?"":"s"} + your notes. Copy this text (or download) and keep it safe — paste it into Restore later, or hand it to Claude to save in Google Drive.</p><textarea id="expArea" readonly>${blob}</textarea><div class="pb-row"><button class="primary" onclick="copyExport(this)">Copy</button><button onclick="downloadExport()">Download .json</button></div></div>`;}
   if(showImport){html+=`<div class="panel-box"><h4>Restore from file</h4><p>Paste a backup here and restore. This replaces your current saved history and notes.</p><textarea id="impArea" placeholder="Paste backup JSON..."></textarea><div class="pb-row"><button class="primary" onclick="doImport()">Restore</button></div></div>`;}
@@ -886,20 +893,27 @@ function openProfile(){
     <div class="field"><label>Goal</label><textarea id="pGoal" placeholder="e.g. Lean bulk, prioritize chest and shoulder width while keeping strength progressing on the big lifts." oninput="setProfileField('goal',this.value)">${esc(p.goal)}</textarea></div>
     <div class="prof-saved hidden" id="profSaved">✓ Saved</div>
     <div class="theme-row"><div><div class="tl">Appearance</div><div class="td">${SETTINGS.theme==="light"?"Light":"Dark"} mode</div></div><button class="theme-switch" onclick="toggleTheme()" aria-label="toggle theme"><div class="knob"></div></button></div>
-    <div class="field" style="margin-top:14px"><label>GitHub backup token</label><div class="tokwrap"><input id="pGhToken" type="password" autocomplete="off" placeholder="Fine-grained PAT, Contents read/write" value="${esc(SETTINGS.ghToken||"")}" oninput="setGhToken(this.value)"><button type="button" class="eyebtn" id="ghTokenEye" aria-label="show token" onclick="toggleGhTokenVis()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+    <div class="field" style="margin-top:14px"><label>GitHub backup token</label><div class="tokwrap"><input id="pGhToken" type="password" autocomplete="off" placeholder="Fine-grained PAT, Contents read/write" value="${esc(SETTINGS.ghToken||"")}" oninput="setGhToken(this.value)"><textarea id="pGhTokenTa" class="tok-ta" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off" style="display:none" oninput="setGhToken(this.value)">${esc(SETTINGS.ghToken||"")}</textarea><button type="button" class="eyebtn" id="ghTokenEye" aria-label="show token" onclick="toggleGhTokenVis()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div><div class="tokhint" id="ghTokenHint" style="display:none">Full token shown above — check carefully for missing/extra characters, especially at the start and end.</div></div>
     <div class="prof-saved hidden" id="ghTokenSaved">✓ Saved — will auto-backup at end of each session</div>
   </div></div>`;
   document.getElementById("overlayMount").innerHTML=html;
 }
 function toggleGhTokenVis(){
-  const inp=document.getElementById("pGhToken");const btn=document.getElementById("ghTokenEye");
-  if(!inp||!btn)return;
-  const showing=inp.type==="text";
-  inp.type=showing?"password":"text";
-  btn.setAttribute("aria-label",showing?"show token":"hide token");
-  btn.innerHTML=showing?
-    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`:
-    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.86 21.86 0 015.06-6.06M9.9 4.24A10.94 10.94 0 0112 4c7 0 11 8 11 8a21.86 21.86 0 01-3.22 4.44"/><path d="M14.12 14.12a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+  const inp=document.getElementById("pGhToken");const ta=document.getElementById("pGhTokenTa");
+  const btn=document.getElementById("ghTokenEye");const hint=document.getElementById("ghTokenHint");
+  if(!inp||!ta||!btn)return;
+  const revealing=inp.style.display!=="none";
+  if(revealing){
+    ta.value=inp.value;
+    inp.style.display="none";ta.style.display="block";if(hint)hint.style.display="block";
+  }else{
+    inp.value=ta.value;
+    ta.style.display="none";inp.style.display="block";if(hint)hint.style.display="none";
+  }
+  btn.setAttribute("aria-label",revealing?"hide token":"show token");
+  btn.innerHTML=revealing?
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.86 21.86 0 015.06-6.06M9.9 4.24A10.94 10.94 0 0112 4c7 0 11 8 11 8a21.86 21.86 0 01-3.22 4.44"/><path d="M14.12 14.12a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`:
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
 }
 let ghTokenSaveT=null;
 function setGhToken(val){
@@ -1400,21 +1414,33 @@ const BACKUP_REPO="IsraelToledano/Gym-buddy";
 function b64utf8(str){return btoa(unescape(encodeURIComponent(str)));}
 async function githubBackup(){
   const token=SETTINGS.ghToken;
-  if(!token){BACKMETA.lastError="No token set — add one in Profile";await sset("backupMeta",BACKMETA);return;}
+  BACKMETA.lastAttempt=Date.now();
+  if(!token){BACKMETA.lastError="No token set — add one in Profile";await sset("backupMeta",BACKMETA);return false;}
   const blob=JSON.stringify({v:2,exportedAt:Date.now(),settings:SETTINGS,notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});
   const content=b64utf8(blob);
   const d=new Date();const stamp=d.toISOString().replace(/[:T]/g,"-").slice(0,16);
   const headers={Authorization:`token ${token}`,"Content-Type":"application/json"};
+  let ok=false;
   try{
     let sha=null;
     const getRes=await fetch(`https://api.github.com/repos/${BACKUP_REPO}/contents/backups/latest.json`,{headers});
     if(getRes.ok){const j=await getRes.json();sha=j.sha;}
     const putLatest=await fetch(`https://api.github.com/repos/${BACKUP_REPO}/contents/backups/latest.json`,{method:"PUT",headers,body:JSON.stringify({message:`Auto-backup ${stamp}`,content,sha:sha||undefined})});
     const putDated=await fetch(`https://api.github.com/repos/${BACKUP_REPO}/contents/backups/${stamp}.json`,{method:"PUT",headers,body:JSON.stringify({message:`Session backup ${stamp}`,content})});
-    if(putLatest.ok&&putDated.ok){BACKMETA={at:Date.now(),count:HISTORY.length,lastError:null};}
-    else{BACKMETA.lastError="Backup failed — check token permissions";}
+    if(putLatest.ok&&putDated.ok){BACKMETA.at=BACKMETA.lastAttempt;BACKMETA.count=HISTORY.length;BACKMETA.lastError=null;ok=true;}
+    else{
+      let detail="";
+      try{const errJson=await(putLatest.ok?putDated:putLatest).json();if(errJson&&errJson.message)detail=" — "+errJson.message;}catch(_e){}
+      BACKMETA.lastError=`Backup failed (HTTP ${putLatest.status}/${putDated.status})${detail}`;
+    }
   }catch(e){BACKMETA.lastError="Backup failed — network error";}
   await sset("backupMeta",BACKMETA);
+  return ok;
+}
+async function manualBackup(btn){
+  if(btn){btn.disabled=true;btn.textContent="⏳ Backing up…";}
+  await githubBackup();
+  renderHome();
 }
 async function discardSession(){if(!(await showConfirm("Discard this session? Logged sets won't be saved.")))return;removeExToast();CUR=null;sset("current",null);renderHome();}
 function saveCur(){sset("current",CUR);}
@@ -1638,7 +1664,7 @@ document.getElementById("profileBtn").onclick=openProfile;
 (async function init(){
   SETTINGS=await sget("settings",SETTINGS);SETTINGS.dayOrder=SETTINGS.dayOrder||{};
   applyTheme();
-  HISTORY=await sget("history",[]);NOTES=await sget("notes",{});BACKMETA=await sget("backupMeta",{at:0,count:0,lastError:null});PROFILE=await sget("profile",PROFILE);TENNIS=await sget("tennis",[]);CUSTOM_EX=await sget("customEx",[]);CUSTOM_EX.forEach(e=>{NAME_INDEX[e.n]=e;});updateProfileBtnState();
+  HISTORY=await sget("history",[]);NOTES=await sget("notes",{});BACKMETA=await sget("backupMeta",{at:0,count:0,lastError:null,lastAttempt:0});PROFILE=await sget("profile",PROFILE);TENNIS=await sget("tennis",[]);CUSTOM_EX=await sget("customEx",[]);CUSTOM_EX.forEach(e=>{NAME_INDEX[e.n]=e;});updateProfileBtnState();
   CUR=await sget("current",null);
   if(CUR&&!CUR.order){
     // migrate a session started on the old index-keyed build (or discard if it doesn't match)
