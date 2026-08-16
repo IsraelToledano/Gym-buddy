@@ -584,7 +584,9 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v20";
+const APP_VERSION="v21";
+function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
+function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
 let TENNIS=[];
 let CUSTOM_EX=[];
@@ -822,7 +824,7 @@ function renderHome(summary){
   else if(BACKMETA.lastError){bkStatus=`<b style="color:var(--red)">Last attempt ${lastAttemptStr} — ${esc(BACKMETA.lastError)}</b>${lastSuccessStr&&lastSuccessStr!==lastAttemptStr?`<br><span style="color:var(--ink-faint)">Last successful backup: ${lastSuccessStr}</span>`:""}`;}
   else{bkStatus=`<b style="color:var(--ink-faint)">Last backup: ${lastAttemptStr}</b>`;}
   html+=`<div class="section-h">Backup (optional)</div><p style="font-size:12px;color:var(--ink-dim);margin:-4px 2px 10px">Your workouts save automatically as you log them — no button needed. If a GitHub token is set in your profile, a copy also auto-pushes to your repo at the end of every session. ${bkStatus}</p><div class="tools"><button class="tool-btn" onclick="manualBackup(this)">🔄 Backup now</button><button class="tool-btn" onclick="toggleExport()">⬇ Export to file</button><button class="tool-btn" onclick="toggleImport()">⬆ Restore from file</button></div>`;
-  if(showExport){const blob=JSON.stringify({v:2,exportedAt:Date.now(),settings:SETTINGS,notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});
+  if(showExport){const blob=backupBlob();
     html+=`<div class="panel-box"><h4>Export</h4><p>${HISTORY.length} session${HISTORY.length===1?"":"s"} + your notes. Copy this text (or download) and keep it safe — paste it into Restore later, or hand it to Claude to save in Google Drive.</p><textarea id="expArea" readonly>${blob}</textarea><div class="pb-row"><button class="primary" onclick="copyExport(this)">Copy</button><button onclick="downloadExport()">Download .json</button></div></div>`;}
   if(showImport){html+=`<div class="panel-box"><h4>Restore from file</h4><p>Paste a backup here and restore. This replaces your current saved history and notes.</p><textarea id="impArea" placeholder="Paste backup JSON..."></textarea><div class="pb-row"><button class="primary" onclick="doImport()">Restore</button></div></div>`;}
   app.innerHTML=html;
@@ -1438,7 +1440,7 @@ async function githubBackup(){
   const token=SETTINGS.ghToken;
   BACKMETA.lastAttempt=Date.now();
   if(!token){BACKMETA.lastError="No token set — add one in Profile";await sset("backupMeta",BACKMETA);return false;}
-  const blob=JSON.stringify({v:2,exportedAt:Date.now(),settings:SETTINGS,notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});
+  const blob=backupBlob();
   const content=b64utf8(blob);
   const d=new Date();const stamp=d.toISOString().replace(/[:T]/g,"-").slice(0,16);
   const headers={Authorization:`token ${token}`,"Content-Type":"application/json"};
@@ -1474,7 +1476,7 @@ function copyExport(btn){const ta=document.getElementById("expArea");if(!ta)retu
   const txt=ta.value;const done=()=>{markBackup();if(btn){const o=btn.textContent;btn.textContent="Copied ✓";setTimeout(()=>{btn.textContent=o;renderHome();},1200);}};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done).catch(()=>{try{document.execCommand("copy");done();}catch(e){}});}
   else{try{document.execCommand("copy");done();}catch(e){}}}
-function downloadExport(){const blob=JSON.stringify({v:2,exportedAt:Date.now(),settings:SETTINGS,notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});
+function downloadExport(){const blob=backupBlob();
   try{const b=new Blob([blob],{type:"application/json"});const url=URL.createObjectURL(b);const a=document.createElement("a");const d=new Date();a.href=url;a.download="workout-backup-"+d.toISOString().slice(0,10)+".json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);markBackup();}catch(e){showAlert("Download blocked here — use Copy instead.");}}
 
 /* ---------------- custom modals (native confirm/alert silently no-op in an
