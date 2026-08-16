@@ -316,6 +316,11 @@
   .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--teal)}
   .field textarea{min-height:90px;resize:vertical;line-height:1.5}
   .field .unit{font-size:12px;color:var(--ink-faint);margin-top:5px}
+  .tokwrap{position:relative}
+  .tokwrap input{padding-right:44px!important}
+  .eyebtn{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:34px;height:34px;border:none;background:none;display:grid;place-items:center;color:var(--ink-faint);border-radius:8px;padding:0}
+  .eyebtn:active{background:var(--bg)}
+  .eyebtn svg{width:20px;height:20px}
   .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .prof-saved{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--green);margin-top:4px;min-height:18px}
   .prof-saved.hidden{visibility:hidden}
@@ -881,10 +886,20 @@ function openProfile(){
     <div class="field"><label>Goal</label><textarea id="pGoal" placeholder="e.g. Lean bulk, prioritize chest and shoulder width while keeping strength progressing on the big lifts." oninput="setProfileField('goal',this.value)">${esc(p.goal)}</textarea></div>
     <div class="prof-saved hidden" id="profSaved">✓ Saved</div>
     <div class="theme-row"><div><div class="tl">Appearance</div><div class="td">${SETTINGS.theme==="light"?"Light":"Dark"} mode</div></div><button class="theme-switch" onclick="toggleTheme()" aria-label="toggle theme"><div class="knob"></div></button></div>
-    <div class="field" style="margin-top:14px"><label>GitHub backup token</label><input id="pGhToken" type="password" autocomplete="off" placeholder="Fine-grained PAT, Contents read/write" value="${esc(SETTINGS.ghToken||"")}" oninput="setGhToken(this.value)"></div>
+    <div class="field" style="margin-top:14px"><label>GitHub backup token</label><div class="tokwrap"><input id="pGhToken" type="password" autocomplete="off" placeholder="Fine-grained PAT, Contents read/write" value="${esc(SETTINGS.ghToken||"")}" oninput="setGhToken(this.value)"><button type="button" class="eyebtn" id="ghTokenEye" aria-label="show token" onclick="toggleGhTokenVis()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
     <div class="prof-saved hidden" id="ghTokenSaved">✓ Saved — will auto-backup at end of each session</div>
   </div></div>`;
   document.getElementById("overlayMount").innerHTML=html;
+}
+function toggleGhTokenVis(){
+  const inp=document.getElementById("pGhToken");const btn=document.getElementById("ghTokenEye");
+  if(!inp||!btn)return;
+  const showing=inp.type==="text";
+  inp.type=showing?"password":"text";
+  btn.setAttribute("aria-label",showing?"show token":"hide token");
+  btn.innerHTML=showing?
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`:
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.86 21.86 0 015.06-6.06M9.9 4.24A10.94 10.94 0 0112 4c7 0 11 8 11 8a21.86 21.86 0 01-3.22 4.44"/><path d="M14.12 14.12a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
 }
 let ghTokenSaveT=null;
 function setGhToken(val){
