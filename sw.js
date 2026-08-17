@@ -1,6 +1,6 @@
-const CACHE = "gym-buddy-v21";
-const IMG_CACHE = "gym-buddy-exercise-img-v1";
-const IMG_HOST = "raw.githubusercontent.com";
+const CACHE = "gym-buddy-v22";
+const IMG_CACHE = "gym-buddy-exercise-img-v2";
+const IMG_PATH = "/Gym-buddy/img/exercises/";
 const ASSETS = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", (e) => {
@@ -29,7 +29,7 @@ self.addEventListener("fetch", (e) => {
   // in their own cache so an app-shell version bump doesn't force a
   // re-download of every image on the next gym session.
   const url = new URL(e.request.url);
-  if (url.hostname === IMG_HOST) {
+  if (url.pathname.includes(IMG_PATH)) {
     e.respondWith(
       caches.open(IMG_CACHE).then((c) =>
         c.match(e.request).then((hit) => {
