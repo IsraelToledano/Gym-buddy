@@ -614,7 +614,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v24";
+const APP_VERSION="v25";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1254,6 +1254,14 @@ function toggleEx(i){openIdx=(openIdx===i?-1:i);renderSession();if(openIdx>=0){c
 function toggleNotes(b){const w=b.nextElementSibling;w.classList.toggle("show");b.textContent=w.classList.contains("show")?"Notes \u25b4":"Notes \u25be";}
 function toggleCues(b){const ul=b.closest(".btnrow").nextElementSibling;ul.classList.toggle("show");b.textContent=ul.classList.contains("show")?"Form cues ▴":"Form cues ▾";}
 function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;const s=sets[j];const was=setComplete(ex,s);s[f]=v;const now=setComplete(ex,s);
+  // If a set completes via reps while weight was left blank, fall back to the
+  // shown placeholder (last time's weight) rather than silently logging 0kg —
+  // the grey hint implies "same as last time" and volume math shouldn't punish
+  // someone for not retyping an unchanged number.
+  if(now&&!was&&f==="reps"&&(s.weight===""||s.weight==null)&&s.ph&&s.ph!=="–"){
+    s.weight=s.ph;
+    const wIn=document.getElementById("w-"+i+"-"+j);if(wIn)wIn.value=s.weight;
+  }
   sets.forEach((st,k)=>{const r=document.getElementById("row-"+i+"-"+k);if(r)r.classList.toggle("set-done",setComplete(ex,st));});
   refreshExHead(i);updateProgress();scheduleSave();
   if(now&&!was){
