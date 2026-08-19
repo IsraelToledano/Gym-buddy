@@ -80,6 +80,36 @@
   .week .num{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;text-align:right;color:var(--ink-dim)}
   .week .wk-note{font-size:11.5px;color:var(--ink-faint);margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 
+  .hist-list{display:flex;flex-direction:column;gap:9px}
+  .hist-item{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;text-align:left;width:100%}
+  .hist-item:hover{border-color:#473e33}
+  .hist-day{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;color:var(--amber);text-align:center;line-height:1}
+  .hist-mid .nm{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:15.5px;text-transform:uppercase}
+  .hist-mid .dt{font-size:12px;color:var(--ink-dim);margin-top:2px}
+  .hist-right{text-align:right}
+  .hist-comp{font-size:12px;color:var(--ink-dim)}
+  .hist-delta{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;margin-top:2px}
+  .hist-delta.up,.ex-stat.up{color:var(--green)}
+  .hist-delta.down,.ex-stat.down{color:var(--red)}
+  .hist-delta.flat,.ex-stat.flat{color:var(--ink-faint)}
+
+  .overall-card{background:var(--card-hi);border:1px solid var(--amber);border-radius:var(--r);padding:14px 16px;margin-bottom:18px;box-shadow:0 8px 24px -14px var(--amber)}
+  .overall-card .oh{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;text-transform:uppercase;color:var(--amber);margin-bottom:6px}
+  .overall-row{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-dim);padding:4px 0}
+  .overall-row b{color:var(--ink)}
+  .overall-row b.up{color:var(--green)}
+  .overall-row b.down{color:var(--red)}
+  .overall-note{font-size:12px;color:var(--ink-dim);margin-top:8px;line-height:1.5;border-top:1px solid var(--line);padding-top:8px}
+
+  .ex-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
+  .ex-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .ex-head .ex-name{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:16.5px}
+  .ex-stat{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;white-space:nowrap}
+  .ex-sets{font-size:12.5px;color:var(--ink-dim);margin-top:5px;display:flex;flex-wrap:wrap;gap:6px}
+  .set-chip{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:3px 8px}
+  .ex-insight{font-size:12px;color:var(--ink-faint);margin-top:7px;padding-top:7px;border-top:1px solid var(--line)}
+  .pr-tag{color:var(--amber-bright)}
+
   .tools{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .tool-btn{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:13px;text-align:center;font-weight:600;font-size:14px;color:var(--ink-dim)}
   .tool-btn:hover{border-color:#473e33}
@@ -584,7 +614,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v22";
+const APP_VERSION="v23";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -758,6 +788,134 @@ function buildMuscleSummary(highlights){
   });
 }
 
+/* ---------------- workout history (list + per-session detail) ---------------- */
+function sessionOverallStats(rec){
+  let done=0,total=0,vol=0;
+  sessionExNames(rec).forEach(n=>{const ex=NAME_INDEX[n];if(!ex)return;const log=sessionLog(rec,n);if(!log)return;
+    const st=sessStats(ex,log);done+=log.sets.filter(s=>setComplete(ex,s)).length;total+=log.sets.length;vol+=st.vol;});
+  return{done,total,vol:round1(vol)};
+}
+function skipStreak(idx,name){
+  let streak=0;
+  for(let i=idx-1;i>=0;i--){
+    const s=HISTORY[i];if(!sessionExNames(s).includes(name))continue;
+    const ex=NAME_INDEX[name];const log=sessionLog(s,name);
+    const missed=!log||log.skipped||!log.sets.some(x=>setComplete(ex,x));
+    if(missed)streak++;else break;
+  }
+  return streak;
+}
+// how this exercise went in a given past session, vs the last time it was logged before that session
+function sessionExInsight(rec,name){
+  const ex=NAME_INDEX[name];const log=sessionLog(rec,name);
+  if(!log||log.skipped||!log.sets.some(s=>setComplete(ex,s))){
+    const idx=HISTORY.indexOf(rec);
+    return{skipped:true,priorMissedStreak:idx>=0?skipStreak(idx,name):0};
+  }
+  const bw=isBodyweight(name);
+  const st=sessStats(ex,log);
+  const ser=exSeries(name,false); // chronological, completed sessions only (this one included)
+  const pos=ser.findIndex(s=>s.date===rec.date);
+  const prior=pos>0?ser.slice(0,pos):[];
+  const metric=bw?"reps":"e1";
+  let pct=null,dir="flat";
+  if(prior.length){
+    const prevVal=prior[prior.length-1][metric]||0,curVal=st[metric]||0;
+    if(prevVal>0){pct=Math.round((curVal-prevVal)/prevVal*100);dir=pct>0?"up":(pct<0?"down":"flat");}
+  }
+  const isPR=prior.length>0&&st[metric]>=Math.max(...prior.map(p=>p[metric]||0));
+  return{skipped:false,bw,st,pct,dir,isPR,hasPrior:prior.length>0,
+    setDetail:log.sets.filter(s=>setComplete(ex,s)).map(s=>({w:s.weight,r:s.reps}))};
+}
+function exCardHtml(rec,name){
+  const ex=NAME_INDEX[name];if(!ex)return"";
+  const ins=sessionExInsight(rec,name);
+  const nm=esc(name);
+  if(ins.skipped){
+    const missedAgain=ins.priorMissedStreak>=1;
+    const txt=missedAgain?`Skipped ${ins.priorMissedStreak+1} sessions in a row.`:"Not logged this session.";
+    return`<div class="ex-card"><div class="ex-head"><span class="ex-name">${nm}</span><span class="ex-stat" style="color:var(--ink-faint)">skipped</span></div><div class="ex-sets"><span class="set-chip" style="opacity:.5">no sets logged</span></div><div class="ex-insight" style="color:${missedAgain?"var(--red)":"var(--ink-faint)"}">${txt}</div></div>`;
+  }
+  const chips=ins.setDetail.map(d=>{const w=parseFloat(d.w);const r=d.r!==""&&d.r!=null?d.r:"";if(ins.bw)return r?`${r} reps`:"";return(w?w+"kg":"–")+(r?"×"+r:"");}).filter(Boolean).map(s=>`<span class="set-chip">${s}</span>`).join("");
+  let statHtml,insightTxt;
+  if(!ins.hasPrior){
+    statHtml=`<span style="color:var(--ink-faint)">first log</span>`;
+    insightTxt="First time logging this exercise.";
+  }else if(ins.isPR){
+    statHtml=`<span class="pr-tag">🔥 PR</span>`;
+    insightTxt=`New best ${ins.bw?"total reps":"estimated 1RM"}: ${ins.bw?ins.st.reps+" reps":ins.st.e1+"kg"}.`;
+  }else{
+    statHtml=`<span class="ex-stat ${ins.dir}">${ins.pct!=null?(ins.pct>=0?"+":"")+ins.pct+"%":""}</span>`;
+    insightTxt=ins.pct!=null?`${ins.pct>=0?"Up":"Down"} ${Math.abs(ins.pct)}% vs your last logged session for this exercise.`:"";
+  }
+  return`<div class="ex-card"><div class="ex-head"><span class="ex-name">${nm}</span>${statHtml}</div><div class="ex-sets">${chips}</div>${insightTxt?`<div class="ex-insight">${insightTxt}</div>`:""}</div>`;
+}
+function historySorted(){return HISTORY.map((rec,idx)=>({rec,idx})).sort((a,b)=>b.rec.date-a.rec.date);}
+function historyRowHtml(rec,idx){
+  const p=PLAN[rec.day];const st=sessionOverallStats(rec);
+  let deltaHtml="";
+  if(idx>0){
+    const prevSt=sessionOverallStats(HISTORY[idx-1]);
+    if(prevSt.vol>0){
+      const pct=Math.round((st.vol-prevSt.vol)/prevSt.vol*100);
+      const dir=pct>0?"up":(pct<0?"down":"flat");
+      const arrow=dir==="up"?"▲":(dir==="down"?"▼":"▬");
+      deltaHtml=`<div class="hist-delta ${dir}">${arrow} ${pct>=0?"+":""}${pct}%</div>`;
+    }
+  }
+  return`<button class="hist-item" onclick="openHistorySession(${idx})"><div class="hist-day">${rec.day}</div><div class="hist-mid"><div class="nm">${p?esc(p.name):esc(rec.day)}</div><div class="dt">${fmtDate(rec.date)}</div></div><div class="hist-right"><div class="hist-comp">${st.done}/${st.total} sets</div>${deltaHtml}</div></button>`;
+}
+function renderHistorySection(){
+  if(!HISTORY.length)return"";
+  const sorted=historySorted();
+  const show=sorted.slice(0,6);
+  let html=`<div class="section-h">Workout history</div><div class="hist-list">`;
+  show.forEach(({rec,idx})=>{html+=historyRowHtml(rec,idx);});
+  html+=`</div>`;
+  if(sorted.length>6)html+=`<button class="linkbtn" style="width:100%;text-align:center;margin-top:8px" onclick="openHistoryFull()">See all ${sorted.length} sessions</button>`;
+  return html;
+}
+const BACK_BTN='<button class="bk" onclick="closeOverlay()" aria-label="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>';
+function openHistoryFull(){
+  const sorted=historySorted();
+  let html=`<div class="overlay"><div class="ov-head">${BACK_BTN}<div class="ti"><span>${sorted.length} logged</span>All sessions</div></div><div class="ov-body"><div class="hist-list">`;
+  sorted.forEach(({rec,idx})=>{html+=historyRowHtml(rec,idx);});
+  html+=`</div></div></div>`;
+  document.getElementById("overlayMount").innerHTML=html;
+}
+function openHistorySession(idx){
+  const rec=HISTORY[idx];if(!rec)return;
+  const p=PLAN[rec.day];
+  const st=sessionOverallStats(rec);
+  let deltaRow="";const noteBits=[];
+  if(idx>0){
+    const prevSt=sessionOverallStats(HISTORY[idx-1]);
+    if(prevSt.vol>0){
+      const pct=Math.round((st.vol-prevSt.vol)/prevSt.vol*100);
+      const dir=pct>0?"up":(pct<0?"down":"flat");
+      deltaRow=`<div class="overall-row"><span>vs previous session (${fmtDate(HISTORY[idx-1].date)})</span><b class="${dir}">${pct>=0?"+":""}${pct}% volume</b></div>`;
+    }
+  }
+  let prCount=0;
+  const exCards=sessionExNames(rec).map(n=>{
+    const ins=sessionExInsight(rec,n);
+    if(!ins.skipped&&ins.isPR&&ins.hasPrior)prCount++;
+    if(ins.skipped){const streak=skipStreak(idx,n);if(streak>=1)noteBits.push(`${n} skipped ${streak+1} sessions running`);}
+    return exCardHtml(rec,n);
+  }).join("");
+  if(prCount)noteBits.unshift(`${prCount} new PR${prCount>1?"s":""} this session`);
+  const note=noteBits.length?`<div class="overall-note">${esc(noteBits.join(" · "))}.</div>`:"";
+  const html=`<div class="overlay"><div class="ov-head">${BACK_BTN}<div class="ti"><span>${fmtDate(rec.date)}</span>${rec.day} · ${p?esc(p.name):""}</div></div><div class="ov-body">
+    <div class="overall-card"><div class="oh">Session overview</div>
+    <div class="overall-row"><span>Sets completed</span><b>${st.done} / ${st.total}</b></div>
+    <div class="overall-row"><span>Total volume</span><b>${st.vol}kg</b></div>
+    ${deltaRow}${note}</div>
+    <div class="section-h">Exercises</div>
+    ${exCards}
+  </div></div>`;
+  document.getElementById("overlayMount").innerHTML=html;
+}
+
 /* ---------------- views ---------------- */
 const app=document.getElementById("app");
 const titleEl=document.getElementById("title"),subEl=document.getElementById("subtitle"),kickEl=document.getElementById("kicker");
@@ -815,6 +973,7 @@ function renderHome(summary){
   html+=`<div class="section-h">This week</div><div class="week">`;
   DASH_ORDER.forEach(m=>{const t=MUSCLES[m].t,v=vol[m]||0,r=Math.min(v/t,1);html+=`<div class="wrow"><div class="ml">${m}</div><div class="track"><div class="fill" style="width:${r*100}%;background:${muscleColor(v/t)}"></div></div><div class="num" style="color:${v>=t?'var(--green)':'var(--ink-dim)'}">${v}/${t}</div></div>`;});
   html+=`<div class="wk-note">Resets Monday. Bars track sets actually completed — skipping low-priority work is fine; the tracker only nudges when a muscle this day trains is genuinely behind.</div></div>`;
+  html+=renderHistorySection();
   html+=`<div class="section-h">Progress analysis</div><button class="tool-btn analyze-btn" onclick="openProgressReport()" style="width:100%">📊 Run progress analysis</button>`;
   // backup
   const lastAttemptStr=BACKMETA.lastAttempt?fmtDate(BACKMETA.lastAttempt):null;
