@@ -614,7 +614,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v23";
+const APP_VERSION="v24";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -644,13 +644,18 @@ function sessionLog(s,name){
 function isBodyweight(name,hist){const pe=getPlanEx(name);const flag=pe&&(pe.abs||pe.reps==="to failure");if(hist&&hist.length)return hist.every(h=>!h.anyW);return!!flag;}
 function setComplete(ex,s){const wOk=s.weight!==""&&s.weight!=null;const rOk=s.reps!==""&&s.reps!=null;return SETTINGS.logReps?rOk:wOk;}
 
-function weeklyVolume(){return weeklyVolumeForWeek(thisWeek());}
+function weeklyVolume(){return volumeSince(Date.now()-7*86400000);}
+function volumeSince(fromTs){const vol={};for(const m in MUSCLES)vol[m]=0;
+  const add=(s)=>{sessionExNames(s).forEach(n=>{const def=NAME_INDEX[n];if(!def)return;const l=sessionLog(s,n);if(!l)return;vol[def.m]=(vol[def.m]||0)+l.sets.filter(x=>setComplete(def,x)).length;});};
+  HISTORY.forEach(s=>{if(s.date>=fromTs)add(s);});
+  if(CUR&&CUR.start>=fromTs)add({day:CUR.day,exOrder:CUR.order,ex:CUR.ex});
+  return vol;}
 function weeklyVolumeForWeek(ws){const vol={};for(const m in MUSCLES)vol[m]=0;
   const add=(s)=>{sessionExNames(s).forEach(n=>{const def=NAME_INDEX[n];if(!def)return;const l=sessionLog(s,n);if(!l)return;vol[def.m]=(vol[def.m]||0)+l.sets.filter(x=>setComplete(def,x)).length;});};
   HISTORY.forEach(s=>{if(weekStart(s.date)===ws)add(s);});
   if(CUR&&weekStart(CUR.start)===ws)add({day:CUR.day,exOrder:CUR.order,ex:CUR.ex});
   return vol;}
-function priorSessionThisWeek(){const ws=thisWeek();return HISTORY.some(s=>weekStart(s.date)===ws);}
+function priorSessionThisWeek(){const from=Date.now()-7*86400000;return HISTORY.some(s=>s.date>=from);}
 /* ---- session suggestion ----------------------------------------------
    Scores all four days instead of following a blind rotation. Inputs:
    how long since that specific day was last trained, whether it keeps the
@@ -970,9 +975,9 @@ function renderHome(summary){
   }
   html+=`</div>`;
   const vol=weeklyVolume();
-  html+=`<div class="section-h">This week</div><div class="week">`;
+  html+=`<div class="section-h">Last 7 days</div><div class="week">`;
   DASH_ORDER.forEach(m=>{const t=MUSCLES[m].t,v=vol[m]||0,r=Math.min(v/t,1);html+=`<div class="wrow"><div class="ml">${m}</div><div class="track"><div class="fill" style="width:${r*100}%;background:${muscleColor(v/t)}"></div></div><div class="num" style="color:${v>=t?'var(--green)':'var(--ink-dim)'}">${v}/${t}</div></div>`;});
-  html+=`<div class="wk-note">Resets Monday. Bars track sets actually completed — skipping low-priority work is fine; the tracker only nudges when a muscle this day trains is genuinely behind.</div></div>`;
+  html+=`<div class="wk-note">Rolling 7-day window, not the calendar week. Bars track sets actually completed — skipping low-priority work is fine; the tracker only nudges when a muscle this day trains is genuinely behind.</div></div>`;
   html+=renderHistorySection();
   html+=`<div class="section-h">Progress analysis</div><button class="tool-btn analyze-btn" onclick="openProgressReport()" style="width:100%">📊 Run progress analysis</button>`;
   // backup
