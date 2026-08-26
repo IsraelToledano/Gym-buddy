@@ -330,6 +330,7 @@
   .recent .rh{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:8px}
   .rsess{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:10px;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:7px;font-size:13px}
   .rsess .rd{color:var(--ink-dim)}
+  .rsess .rday{color:var(--ink-faint);font-size:11px;margin-top:1px}
   .rsess .rv{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;color:var(--ink);text-align:right}
   .rsess .rsets{grid-column:1/-1;color:var(--ink-faint);font-size:12px;margin-top:3px;line-height:1.4}
   .rsess.best{border-color:rgba(242,135,46,.4)}
@@ -614,7 +615,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v25";
+const APP_VERSION="v26";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -711,7 +712,7 @@ function sessStats(planEx,log){let top=0,vol=0,e1=0,reps=0,anyW=false;
   return{top:round1(top),vol:round1(vol),e1:round1(e1),reps,anyW};}
 // history series for an exercise (completed sessions + live current)
 function exSeries(name,includeCur){const out=[];
-  const grab=(s,date)=>{const pe=NAME_INDEX[name];if(!pe)return;const log=sessionLog(s,name);if(!log)return;if(!log.sets.some(x=>setComplete(pe,x)))return;const st=sessStats(pe,log);const setDetail=log.sets.filter(x=>setComplete(pe,x)).map(x=>({w:x.weight,r:x.reps}));out.push({date,...st,setDetail});};
+  const grab=(s,date)=>{const pe=NAME_INDEX[name];if(!pe)return;const log=sessionLog(s,name);if(!log)return;if(!log.sets.some(x=>setComplete(pe,x)))return;const st=sessStats(pe,log);const setDetail=log.sets.filter(x=>setComplete(pe,x)).map(x=>({w:x.weight,r:x.reps}));out.push({date,day:s.day,...st,setDetail});};
   HISTORY.forEach(s=>grab(s,s.date));
   if(includeCur&&CUR)grab({day:CUR.day,exOrder:CUR.order,ex:CUR.ex},CUR.start);
   out.sort((a,b)=>a.date-b.date);return out;}
@@ -1185,7 +1186,8 @@ function renderTrend(){
   let recent=`<div class="recent"><div class="rh">Recent sessions</div>`;
   ser.slice().reverse().slice(0,8).forEach(s=>{const v=s[trendMetric]||0;
     const setsStr=(s.setDetail||[]).map(d=>{const w=parseFloat(d.w);const r=d.r!==""&&d.r!=null?d.r:"";if(bw)return r?`${r} reps`:"";return (w?w+"kg":"–")+(r?"×"+r:"");}).filter(Boolean).join(" · ");
-    recent+=`<div class="rsess ${v===best&&best>0?"best":""}"><div class="rd">${fmtDate(s.date)}</div><div class="rv">${v}${unit?" "+unit:bw?" reps":""}</div>${setsStr?`<div class="rsets">${setsStr}</div>`:""}</div>`;});
+    const rp=s.day&&PLAN[s.day]?`<div class="rday">${s.day} · ${PLAN[s.day].name}</div>`:"";
+    recent+=`<div class="rsess ${v===best&&best>0?"best":""}"><div class="rd">${fmtDate(s.date)}${rp}</div><div class="rv">${v}${unit?" "+unit:bw?" reps":""}</div>${setsStr?`<div class="rsets">${setsStr}</div>`:""}</div>`;});
   recent+=`</div>`;
   const html=`<div class="overlay"><div class="ov-head"><button class="bk" onclick="closeOverlay()" aria-label="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><div class="ti"><span>Last 3 months</span>${name}</div></div><div class="ov-body">${toggle}${chart}${recent}</div></div>`;
   document.getElementById("overlayMount").innerHTML=html;
@@ -1249,7 +1251,19 @@ function startSession(day){
   order.forEach(name=>{const def=NAME_INDEX[name];const prev=lastLog(name);CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};});
   openIdx=0;saveCur();initAudio();requestWake();renderSession();}
 function openSession(){openIdx=0;if(CUR&&!CUR.order){CUR.order=getDayOrderNames(CUR.day);CUR.defaultOrder=CUR.order.slice();}renderSession();requestWake();}
-function lastLog(name){for(let i=HISTORY.length-1;i>=0;i--){const log=sessionLog(HISTORY[i],name);if(!log||log.skipped)continue;const hasData=log.sets&&log.sets.some(s=>s.reps!==""&&s.reps!=null);if(hasData)return log.sets;}return null;}
+function lastLog(name){
+  const def=NAME_INDEX[name];const bwEx=def&&(def.abs||def.reps==="to failure");
+  for(let i=HISTORY.length-1;i>=0;i--){
+    const log=sessionLog(HISTORY[i],name);if(!log||log.skipped)continue;
+    const hasReps=log.sets&&log.sets.some(s=>s.reps!==""&&s.reps!=null);
+    if(!hasReps)continue; // fully skipped (no weight, no reps) — not useful as "last time"
+    if(bwEx)return log.sets; // bodyweight lifts: reps alone are the data
+    const hasWeight=log.sets.some(s=>s.weight!==""&&s.weight!=null&&parseFloat(s.weight)>0);
+    if(hasWeight)return log.sets; // only treat as "last time" once weight was actually logged
+    // reps-only entry (weight never got recorded, e.g. an old logging glitch) — keep looking further back
+  }
+  return null;
+}
 function toggleEx(i){openIdx=(openIdx===i?-1:i);renderSession();if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}}
 function toggleNotes(b){const w=b.nextElementSibling;w.classList.toggle("show");b.textContent=w.classList.contains("show")?"Notes \u25b4":"Notes \u25be";}
 function toggleCues(b){const ul=b.closest(".btnrow").nextElementSibling;ul.classList.toggle("show");b.textContent=ul.classList.contains("show")?"Form cues ▴":"Form cues ▾";}
