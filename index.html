@@ -615,7 +615,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v26";
+const APP_VERSION="v27";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1760,7 +1760,7 @@ function swReady(){return navigator.serviceWorker&&navigator.serviceWorker.contr
 function scheduleBgAlert(sec,label){if(!swReady())return;navigator.serviceWorker.controller.postMessage({type:"schedule-rest-alert",ms:sec*1000,label});}
 function cancelBgAlert(){if(!swReady())return;navigator.serviceWorker.controller.postMessage({type:"cancel-rest-alert"});}
 if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("sw.js").catch(()=>{});
+  navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).catch(()=>{});
   navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="rest-alert-fired"&&restActive&&!restFired){restFired=true;fireAlert();}});
   // iOS often just suspends (rather than fully reloads) a Home Screen web
   // app when it's closed/reopened, so a newly-activated service worker can
