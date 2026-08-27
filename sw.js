@@ -1,4 +1,4 @@
-const CACHE = "gym-buddy-v26";
+const CACHE = "gym-buddy-v27";
 const IMG_CACHE = "gym-buddy-exercise-img-v2";
 const IMG_PATH = "/Gym-buddy/img/exercises/";
 const ASSETS = ["./", "./index.html", "./manifest.json"];
@@ -46,8 +46,14 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
+  // cache: "no-store" is required here — iOS's WKWebView disk cache for
+  // Home Screen (standalone) PWAs is known to ignore standard Cache-Control
+  // headers and can silently serve a stale cached response to a plain
+  // fetch(), even though this handler is "network-first" in principle.
+  // Explicitly bypassing HTTP cache is what actually guarantees a fresh
+  // fetch on every load.
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request,{cache:"no-store"})
       .then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));
