@@ -615,7 +615,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v27";
+const APP_VERSION="v28";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1005,7 +1005,7 @@ function renderSession(){
   const pct=totSets?Math.round(doneSets/totSets*100):0;
   let html=`<div class="shead"><div class="row1"><h2><b>${CUR.day}</b> · ${p.name}</h2><div class="clock" id="clock">0:00</div></div><div class="row2"><div class="prog" id="prog">${doneSets}/${totSets} sets · ${pct}%</div><button class="linkbtn" onclick="renderHome()">Back</button></div><div class="pbar"><div class="pbar-fill" id="progFill" style="width:${pct}%"></div></div></div>`;
   const n=computeNudge();
-  if(n&&!CUR.nudgeDismissed){html+=`<div class="nudge"><span>⚠️</span><div><b>${n.muscle} is behind this week</b> (${n.v}/${n.t} sets). Try to keep ${n.exNames} in today.</div><button class="x" onclick="dismissNudge()">×</button></div>`;}
+  if(n&&!CUR.nudgeDismissed){html+=`<div class="nudge"><span>⚠️</span><div>Try to keep <b>${n.exNames}</b> in today — ${n.muscle.toLowerCase()} is behind this week (${n.v}/${n.t} sets).</div><button class="x" onclick="dismissNudge()">×</button></div>`;}
   html+=`<div class="list" id="exList">`;
   names.forEach((name,i)=>{
     const ex=NAME_INDEX[name];
