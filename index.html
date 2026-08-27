@@ -615,7 +615,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v29";
+const APP_VERSION="v30";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1035,7 +1035,7 @@ function renderSession(){
     const nVal=(NOTES[name]||"");const nOpen=nVal.trim()?" show":"";
     const noteBlock=`<div class="notesblock"><button class="formtog notetog" onclick="toggleNotes(this)">Notes ${nOpen?"\u25b4":"\u25be"}</button><div class="notewrap${nOpen}"><textarea class="exnotes" placeholder="Seat height, pin number, grip, machine #\u2026" oninput="setNote('${name.replace(/'/g,"\\'")}',this.value)">${esc(nVal)}</textarea></div></div>`;
     const swapOpts=getSwapOptions(name);
-    const hlHtml=renderHighlightBadge(log.highlight);
+    const hlHtml=`<div id="hl-${i}">${renderHighlightBadge(log.highlight)}</div>`;
     html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}${effortHtml(i)}<button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="sethint">A set logs once you enter reps. Weight is optional. Clear reps to unlog.</div><div class="btnrow"><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo skip":"⤼ Mark as skipped"}</button><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button>${trendBtnHtml}</div><div class="cues">${cues}</div>${noteBlock}</div></div></div></div>`;
     if(ex.abs&&!absSeen){absSeen=true;html+=`<div class="cutline"><span class="txt">Cut from here ↓</span><span class="rule"></span></div>`;}
   });
@@ -1282,6 +1282,16 @@ function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const
     startTimer(rs(ex.rest),ex,i,j);
     const doneCount=sets.filter(x=>setComplete(ex,x)).length;
     if(!CUR.ex[name].skipped&&doneCount===sets.length)collapseAndAdvance(i,"done");
+  }else if(was&&now&&!CUR.ex[name].skipped&&CUR.ex[name].highlight){
+    // Editing a set that was already complete (e.g. bumping reps up after the
+    // exercise was marked done) — silently refresh the persisted volume/PR
+    // badge so it never shows stale numbers from the moment it first
+    // completed. No toast here since this isn't a fresh finish.
+    const doneCount=sets.filter(x=>setComplete(ex,x)).length;
+    if(doneCount===sets.length){
+      const h=computeExVolumeInsight(name);
+      if(h){CUR.ex[name].highlight=h;saveCur();const hlEl=document.getElementById("hl-"+i);if(hlEl)hlEl.innerHTML=renderHighlightBadge(h);}
+    }
   }
 }
 function refreshExHead(i){const name=CUR.order[i];const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;const dn=sets.filter(s=>setComplete(ex,s)).length;const total=sets.length;const el=document.getElementById("ex-"+i);if(!el)return;el.classList.toggle("done",dn===total&&total>0);el.classList.toggle("partial",dn>0&&dn<total);const sc=el.querySelector(".setcount");if(sc)sc.innerHTML=`<b>${dn}</b>/${total}`;if(!ex.abs){const rk=el.querySelector(".rank");if(rk)rk.textContent=(dn===total&&total>0)?"✓":(i+1);}}
