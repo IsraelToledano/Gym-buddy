@@ -620,7 +620,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v34";
+const APP_VERSION="v35";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -754,9 +754,12 @@ function analyzeVolume(){
 function analyzeStrengthTrends(){
   const out=[];
   allPlanExercises().forEach(ex=>{
-    const ser=exSeries(ex.n,true).slice(-3); // last up to 3 logged sessions
-    if(ser.length<2)return; // need at least 2 points to call a trend
-    const bw=isBodyweight(ex.n,ser);
+    const fullSer=exSeries(ex.n,true);
+    const bw=isBodyweight(ex.n,fullSer); // detect off the full series before filtering it down
+    // Ignore sessions where reps were logged but weight never got recorded — same
+    // "not a fair comparison point" rule as computeExVolumeInsight/sessionExInsight.
+    const ser=(bw?fullSer:fullSer.filter(s=>s.anyW)).slice(-3);
+    if(ser.length<2)return; // need at least 2 usable points to call a trend
     const metric=bw?"reps":"e1";
     const first=ser[0][metric],last=ser[ser.length-1][metric];
     if(!first&&!last)return;
