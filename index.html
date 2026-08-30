@@ -615,7 +615,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v30";
+const APP_VERSION="v31";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -719,6 +719,15 @@ function exSeries(name,includeCur){const out=[];
 function exPRs(name){const ser=exSeries(name,true);if(!ser.length)return{hasData:false};
   const bw=isBodyweight(name,ser);
   return{hasData:true,bw,top:Math.max(...ser.map(s=>s.top)),vol:Math.max(...ser.map(s=>s.vol)),e1:Math.max(...ser.map(s=>s.e1)),reps:Math.max(...ser.map(s=>s.reps)),series:ser};}
+// Walks a chronological exSeries backward to find the last entry that's actually
+// usable as a "last time" baseline. For weighted exercises, a session where reps
+// were logged but weight never got recorded (anyW===false) reads as 0kg volume and
+// isn't a fair comparison — skip past it, same way lastLog() already does for the
+// "Last time:" line. Bodyweight exercises always qualify since reps alone are the data.
+function lastValidEntry(series,bw){
+  for(let i=series.length-1;i>=0;i--){if(bw||series[i].anyW)return series[i];}
+  return null;
+}
 
 /* ---------------- progress analysis (rule-based, no AI call, no network) ---------------- */
 function allPlanExercises(){const out=[];const seen=new Set();for(const k in PLAN){PLAN[k].ex.forEach(e=>{if(!seen.has(e.n)){seen.add(e.n);out.push(e);}});}return out;}
@@ -822,15 +831,16 @@ function sessionExInsight(rec,name){
   const st=sessStats(ex,log);
   const ser=exSeries(name,false); // chronological, completed sessions only (this one included)
   const pos=ser.findIndex(s=>s.date===rec.date);
-  const prior=pos>0?ser.slice(0,pos):[];
+  const priorAll=pos>0?ser.slice(0,pos):[];
+  const prior=lastValidEntry(priorAll,bw); // skip reps-only entries with no weight recorded, same as lastLog()
   const metric=bw?"reps":"e1";
   let pct=null,dir="flat";
-  if(prior.length){
-    const prevVal=prior[prior.length-1][metric]||0,curVal=st[metric]||0;
+  if(prior){
+    const prevVal=prior[metric]||0,curVal=st[metric]||0;
     if(prevVal>0){pct=Math.round((curVal-prevVal)/prevVal*100);dir=pct>0?"up":(pct<0?"down":"flat");}
   }
-  const isPR=prior.length>0&&st[metric]>=Math.max(...prior.map(p=>p[metric]||0));
-  return{skipped:false,bw,st,pct,dir,isPR,hasPrior:prior.length>0,
+  const isPR=priorAll.length>0&&st[metric]>=Math.max(...priorAll.map(p=>p[metric]||0));
+  return{skipped:false,bw,st,pct,dir,isPR,hasPrior:!!prior,
     setDetail:log.sets.filter(s=>setComplete(ex,s)).map(s=>({w:s.weight,r:s.reps}))};
 }
 function exCardHtml(rec,name){
@@ -1350,7 +1360,8 @@ function computeExVolumeInsight(name){
   const priorSeries=exSeries(name,false); // HISTORY only, excludes the session in progress
   if(!priorSeries.length)return null; // first time logging this exercise — no baseline to compare, stay quiet
   const bw=isBodyweight(name,priorSeries);
-  const prior=priorSeries[priorSeries.length-1]; // last time this exercise was logged
+  const prior=lastValidEntry(priorSeries,bw); // skip reps-only entries with no weight recorded, same as lastLog()
+  if(!prior)return null; // only unusable (no-weight) history so far — nothing fair to compare to yet
   if(bw){
     const priorReps=prior.reps;
     const priorBestReps=Math.max(...priorSeries.map(s=>s.reps));
