@@ -184,6 +184,9 @@
   .target-badge{display:inline-block;font-size:11px;font-weight:600;color:var(--teal);background:rgba(84,185,168,.12);border:1px solid rgba(84,185,168,.3);border-radius:20px;padding:3px 10px}
   .lasttime{font-size:12px;color:var(--ink-faint);margin-bottom:10px;line-height:1.4}
   .lasttime b{color:var(--ink-dim);font-weight:600}
+  .pinned-note{display:flex;gap:9px;align-items:flex-start;background:rgba(84,185,168,.10);border:1px solid rgba(84,185,168,.35);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+  .pinned-note .ic{font-size:14px;line-height:1.35}
+  .pinned-note .tx{font-size:13px;color:var(--ink);line-height:1.4;flex:1;white-space:pre-wrap;word-break:break-word}
   .ex-toast{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);max-width:460px;margin:0 auto;background:var(--card-hi);border:1px solid rgba(242,135,46,.4);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:60;opacity:0;transform:translateY(12px);transition:opacity .22s ease,transform .22s ease;overflow:hidden}
   .ex-toast.show{opacity:1;transform:translateY(0)}
   .ex-toast.paused{border-color:var(--teal)}
@@ -617,7 +620,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v32";
+const APP_VERSION="v33";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1029,11 +1032,16 @@ function renderSession(){
     const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
+    const nVal=(NOTES[name]||"");
     if(exp){
       const prevSets=lastLog(name);
       const lastTimeStr=prevSets?prevSets.filter(s=>s.reps!==""&&s.reps!=null).map(s=>{const w=parseFloat(s.weight);return prs.bw?`${s.reps} reps`:(w?`${w}kg×${s.reps}`:`${s.reps} reps`);}).join(" · "):"";
       const lastTimeHtml=lastTimeStr?`<div class="lasttime">Last time: <b>${lastTimeStr}</b></div>`:"";
-      topHtml=`${targetBadge?`<div class="targetrow">${targetBadge}</div>`:""}${lastTimeHtml}`;
+      // A filled note is useful gear/setup info (seat height, pin number...) — surface
+      // it right at the top of the expanded card instead of making the person scroll
+      // past sets and cues to find it. The editor down in noteBlock is untouched.
+      const pinnedNoteHtml=nVal.trim()?`<div class="pinned-note"><span class="ic">📝</span><div class="tx">${esc(nVal)}</div></div>`:"";
+      topHtml=`${pinnedNoteHtml}${targetBadge?`<div class="targetrow">${targetBadge}</div>`:""}${lastTimeHtml}`;
       if(!prs.hasData){statsHtml=`<div class="nohist" style="margin-bottom:0;padding-bottom:0;border-bottom:none">No history yet — your first logged session sets the baseline.</div>`;}
       else{
         trendBtnHtml=`<button class="trendbtn" onclick="openTrend('${name.replace(/'/g,"\\'")}')">View trend ›</button>`;
@@ -1044,7 +1052,7 @@ function renderSession(){
     let rows=`<div class="setrow head"><span></span><span>Weight (kg)</span><span>${SETTINGS.logReps?"Reps":""}</span><span></span></div>`;
     log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${extra?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>`;});
     const cues=`${ex.cues.do&&ex.cues.do.length?`<div class="cuesub cue-do"><div class="cuelabel">✓ Do</div><ul>${ex.cues.do.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}${ex.cues.dont&&ex.cues.dont.length?`<div class="cuesub cue-dont"><div class="cuelabel">✕ Don't</div><ul>${ex.cues.dont.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}`;
-    const nVal=(NOTES[name]||"");const nOpen=nVal.trim()?" show":"";
+    const nOpen=nVal.trim()?" show":"";
     const noteBlock=`<div class="notesblock"><button class="formtog notetog" onclick="toggleNotes(this)">Notes ${nOpen?"\u25b4":"\u25be"}</button><div class="notewrap${nOpen}"><textarea class="exnotes" placeholder="Seat height, pin number, grip, machine #\u2026" oninput="setNote('${name.replace(/'/g,"\\'")}',this.value)">${esc(nVal)}</textarea></div></div>`;
     const swapOpts=getSwapOptions(name);
     const hlHtml=`<div id="hl-${i}">${renderHighlightBadge(log.highlight)}</div>`;
