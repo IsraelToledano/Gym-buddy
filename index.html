@@ -547,7 +547,7 @@ const PLAN={
     {n:"Rear delt reverse fly",m:"Rear delts",equip:"machine",sets:3,reps:"12–15",rest:"60s",cues:{do:["Keep a fixed, slight bend in the elbows.","Open to shoulder height, leading with the elbows.","Keep the shoulders down — target the rear delts, not the traps."],dont:["Don't shrug the traps to finish the movement.","Don't use momentum to swing the weight open."]}},
     {n:"Concentration curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60s",cues:{do:["Brace the elbow on the inner thigh.","Curl with the bicep and turn the pinky up at the top.","Squeeze hard and get a full stretch each rep."],dont:["Don't let the elbow drift off the thigh mid-rep.","Don't swing the torso to help the weight up."]}},
     {n:"Incline dumbbell curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60–75s",cues:{do:["Let the arms hang behind the torso for a big stretch.","Supinate the wrist and squeeze at the top.","Slow the descent to a full stretch."],dont:["Don't let the elbows drift forward as you curl.","Don't rush the stretch at the bottom."]}},
-    {n:"Leg curl",m:"Hamstrings",equip:"machine",leg:1,sets:3,reps:"8–12",rest:"90s",cues:{do:["Align the knees with the machine's pivot, pad above the heels.","Curl fully and squeeze the hamstrings.","Control the negative on the way back."],dont:["Don't let the hips lift off the pad.","Don't use momentum to kick the weight up."]}},
+    {n:"Leg extension",m:"Quads",equip:"machine",leg:1,sets:3,reps:"10–15",rest:"90s",cues:{do:["Align the knee with the machine's pivot point.","Squeeze hard for a full second at the top.","Control the lowering all the way down."],dont:["Don't let the lower back lift off the pad.","Don't slam the weight stack between reps."]}},
     {n:"Captain knee raise",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:{do:["Keep the back flat, no swinging.","Curl the pelvis up, not just the legs.","Squeeze hard at the top of the raise."],dont:["Don't use momentum to swing into the next rep.","Don't let the lower back arch away from the pads."]}},
     {n:"Back extension",m:"Lower back",equip:"machine",sets:3,reps:"10–12",rest:"75–90s",cues:{do:["Set the pad at the hip crease and hinge at the hips.","Rise to a straight line, squeezing glutes and hamstrings.","Add load only once bodyweight reps feel easy."],dont:["Don't hyperextend past a straight line at the top.","Don't round the lower back on the way down."]}}
   ]},
@@ -584,7 +584,9 @@ EXTRA_EX.forEach(e=>{if(!(e.n in NAME_INDEX))NAME_INDEX[e.n]=e;});
 // press). Everything else is discovered automatically below.
 const SWAP_ALTS={
   "Incline bench press":["Incline barbell press"],
-  "Incline barbell press":["Incline bench press"]
+  "Incline barbell press":["Incline bench press"],
+  "Leg extension":["Leg curl"],
+  "Leg curl":["Leg extension"]
 };
 // Auto-discovers same-muscle alternatives from the full exercise pool
 // (default days + EXTRA_EX + any custom exercises the user has added),
@@ -615,7 +617,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v31";
+const APP_VERSION="v32";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
