@@ -620,7 +620,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v35";
+const APP_VERSION="v36";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1023,7 +1023,16 @@ function renderSession(){
   const pct=totSets?Math.round(doneSets/totSets*100):0;
   let html=`<div class="shead"><div class="row1"><h2><b>${CUR.day}</b> · ${p.name}</h2><div class="clock" id="clock">0:00</div></div><div class="row2"><div class="prog" id="prog">${doneSets}/${totSets} sets · ${pct}%</div><button class="linkbtn" onclick="renderHome()">Back</button></div><div class="pbar"><div class="pbar-fill" id="progFill" style="width:${pct}%"></div></div></div>`;
   const n=computeNudge();
-  if(n&&!CUR.nudgeDismissed){html+=`<div class="nudge"><span>⚠️</span><div>Try to keep <b>${n.exNames}</b> in today — ${n.muscle.toLowerCase()} is behind this week (${n.v}/${n.t} sets).</div><button class="x" onclick="dismissNudge()">×</button></div>`;}
+  let nudgeMoved=false;
+  if(n&&!CUR.nudgeDismissed&&!CUR.nudgeReordered){
+    // The nudge is pointless if the flagged exercise still gets auto-tagged "cut
+    // first" — telling the user to keep it in while the order pushes it toward
+    // the cut zone is a straight contradiction. Move it above the cut line once,
+    // the same session the nudge appears, instead of just warning about it.
+    nudgeMoved=protectNudgedExercise(n);
+    CUR.nudgeReordered=true;saveCur();
+  }
+  if(n&&!CUR.nudgeDismissed){html+=`<div class="nudge"><span>⚠️</span><div>Try to keep <b>${n.exNames}</b> in today — ${n.muscle.toLowerCase()} is behind this week (${n.v}/${n.t} sets).${nudgeMoved?" Moved it above the cut line so it won't get cut first.":""}</div><button class="x" onclick="dismissNudge()">×</button></div>`;}
   html+=`<div class="list" id="exList">`;
   names.forEach((name,i)=>{
     const ex=NAME_INDEX[name];
@@ -1628,6 +1637,30 @@ let noteT=null;
 function dismissNudge(){CUR.nudgeDismissed=true;saveCur();renderSession();}
 function computeNudge(){if(!priorSessionThisWeek())return null;const vol=weeklyVolume();const defs=CUR.order.map(n=>NAME_INDEX[n]);const trained=[...new Set(defs.map(e=>e.m))];let best=null;
   trained.forEach(m=>{const meta=MUSCLES[m];if(!meta||!meta.nudge)return;const v=vol[m]||0,t=meta.t,ratio=v/t;if(v<t&&ratio<0.5){if(!best||ratio<best.ratio){const names=defs.filter(e=>e.m===m).map(e=>e.n);best={muscle:m,v,t,ratio,exNames:names.join(" & ")};}}});return best;}
+// The "cut first" zone is everything positioned after the abs exercise in
+// CUR.order (see the absSeen tagging in renderSession). If the nudge just told
+// the user to prioritize an exercise, leaving it back there means the app is
+// giving contradictory advice on the same screen. Pull it up to sit right
+// before the abs exercise instead, so it's out of the auto-cut zone. Returns
+// true if anything actually moved.
+function protectNudgedExercise(n){
+  if(!n)return false;
+  const absIdx=CUR.order.findIndex(name=>NAME_INDEX[name].abs);
+  if(absIdx<0)return false; // no cut line this session, nothing to protect against
+  let moved=false;
+  CUR.order.filter(name=>NAME_INDEX[name].m===n.muscle).forEach(name=>{
+    const ex=NAME_INDEX[name];
+    if(ex.main)return; // heavy top sets are never auto-cut anyway
+    const idx=CUR.order.indexOf(name);
+    if(idx>absIdx){
+      CUR.order.splice(idx,1);
+      const insertAt=CUR.order.findIndex(nm=>NAME_INDEX[nm].abs);
+      CUR.order.splice(insertAt,0,name);
+      moved=true;
+    }
+  });
+  return moved;
+}
 async function finishSession(){
   removeExToast();
   const missedMain=CUR.order.find(n=>{const d=NAME_INDEX[n];const lg=CUR.ex[n];return d.main&&!lg.skipped&&lg.sets.filter(s=>setComplete(d,s)).length===0;});
