@@ -620,7 +620,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v36";
+const APP_VERSION="v37";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1017,7 +1017,13 @@ let openIdx=-1;
 const DRAG_SVG='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
 const SWAP_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
 function renderSession(){
-  const names=CUR.order;let totSets=0,doneSets=0,absSeen=false;
+  const names=CUR.order;let totSets=0,doneSets=0;
+  // Must-have cap: real per-exercise time (setup + sets x (reps x tempo + rest))
+  // lands every routine at ~40-45min for the first 6 exercises and 46min+ for a
+  // 7th, and 6 is also the realistic ceiling for what actually gets done in a
+  // session — so the cut line is now a flat position cutoff, not tied to
+  // wherever the abs exercise happens to sit.
+  const MUST_HAVE_CAP=6;
   names.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];if(log.skipped)return;const sets=log.sets;totSets+=sets.length;doneSets+=sets.filter(s=>setComplete(ex,s)).length;});
   const p=PLAN[CUR.day];
   const pct=totSets?Math.round(doneSets/totSets*100):0;
@@ -1038,9 +1044,10 @@ function renderSession(){
     const ex=NAME_INDEX[name];
     const log=CUR.ex[name];const total=log.sets.length;const dn=log.sets.filter(s=>setComplete(ex,s)).length;
     const uskip=!!log.skipped;
-    const cls=["ex"];if(ex.main)cls.push("main");if(ex.abs)cls.push("abs");if(absSeen&&!ex.main)cls.push("skip");
+    const pastCap=i>=MUST_HAVE_CAP&&!ex.main;
+    const cls=["ex"];if(ex.main)cls.push("main");if(ex.abs)cls.push("abs");if(pastCap)cls.push("skip");
     if(uskip)cls.push("uskip");else if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
-    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(ex.calf)tags.push('<span class="tg pair">⟂ Pair with legs</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(absSeen&&!ex.main)tags.push('<span class="tg sk">Cut first</span>');if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
+    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(ex.calf)tags.push('<span class="tg pair">⟂ Pair with legs</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(pastCap)tags.push('<span class="tg sk">Cut first</span>');if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
@@ -1069,7 +1076,7 @@ function renderSession(){
     const swapOpts=getSwapOptions(name);
     const hlHtml=`<div id="hl-${i}">${renderHighlightBadge(log.highlight)}</div>`;
     html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}${effortHtml(i)}<button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="sethint">A set logs once you enter reps. Weight is optional. Clear reps to unlog.</div><div class="btnrow"><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo skip":"⤼ Mark as skipped"}</button><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button>${trendBtnHtml}</div><div class="cues">${cues}</div>${noteBlock}</div></div></div></div>`;
-    if(ex.abs&&!absSeen){absSeen=true;html+=`<div class="cutline"><span class="txt">Cut from here ↓</span><span class="rule"></span></div>`;}
+    if(i===MUST_HAVE_CAP-1){html+=`<div class="cutline"><span class="txt">Cut from here ↓</span><span class="rule"></span></div>`;}
   });
   html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button><div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
   app.innerHTML=html;tickClock();attachDragHandlers();initExImg();
@@ -1637,25 +1644,24 @@ let noteT=null;
 function dismissNudge(){CUR.nudgeDismissed=true;saveCur();renderSession();}
 function computeNudge(){if(!priorSessionThisWeek())return null;const vol=weeklyVolume();const defs=CUR.order.map(n=>NAME_INDEX[n]);const trained=[...new Set(defs.map(e=>e.m))];let best=null;
   trained.forEach(m=>{const meta=MUSCLES[m];if(!meta||!meta.nudge)return;const v=vol[m]||0,t=meta.t,ratio=v/t;if(v<t&&ratio<0.5){if(!best||ratio<best.ratio){const names=defs.filter(e=>e.m===m).map(e=>e.n);best={muscle:m,v,t,ratio,exNames:names.join(" & ")};}}});return best;}
-// The "cut first" zone is everything positioned after the abs exercise in
-// CUR.order (see the absSeen tagging in renderSession). If the nudge just told
-// the user to prioritize an exercise, leaving it back there means the app is
-// giving contradictory advice on the same screen. Pull it up to sit right
-// before the abs exercise instead, so it's out of the auto-cut zone. Returns
-// true if anything actually moved.
+// The "cut first" zone is now everything at position 6+ in CUR.order (see
+// MUST_HAVE_CAP in renderSession) rather than wherever the abs exercise sits.
+// If the nudge just told the user to prioritize an exercise, leaving it back
+// there means the app is giving contradictory advice on the same screen. Pull
+// it up into the must-have zone instead, so it's out of the auto-cut zone.
+// Returns true if anything actually moved.
 function protectNudgedExercise(n){
   if(!n)return false;
-  const absIdx=CUR.order.findIndex(name=>NAME_INDEX[name].abs);
-  if(absIdx<0)return false; // no cut line this session, nothing to protect against
+  const MUST_HAVE_CAP=6;
+  if(CUR.order.length<=MUST_HAVE_CAP)return false; // whole session already fits inside the cap
   let moved=false;
   CUR.order.filter(name=>NAME_INDEX[name].m===n.muscle).forEach(name=>{
     const ex=NAME_INDEX[name];
     if(ex.main)return; // heavy top sets are never auto-cut anyway
     const idx=CUR.order.indexOf(name);
-    if(idx>absIdx){
+    if(idx>=MUST_HAVE_CAP){
       CUR.order.splice(idx,1);
-      const insertAt=CUR.order.findIndex(nm=>NAME_INDEX[nm].abs);
-      CUR.order.splice(insertAt,0,name);
+      CUR.order.splice(MUST_HAVE_CAP-1,0,name);
       moved=true;
     }
   });
