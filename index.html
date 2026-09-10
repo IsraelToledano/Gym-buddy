@@ -380,6 +380,21 @@
   .lib-item.in-session .equip-tag{color:var(--teal);border-color:var(--teal)}
   .equip-tag{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:2px 7px;white-space:nowrap}
   .no-results{font-size:13px;color:var(--ink-faint);text-align:center;padding:16px 0}
+
+  .stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 4px}
+  .stat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+  .stat-card .sv{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:26px;line-height:1;display:flex;align-items:baseline;gap:5px}
+  .stat-card .sv .unit{font-family:'Manrope',sans-serif;font-weight:600;font-size:12.5px;color:var(--ink-faint)}
+  .stat-card .sl{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);margin-top:6px}
+  .stat-card.streak .sv{color:var(--amber-bright)}
+  .stat-card.gap-ok .sv{color:var(--green)}
+  .stat-card.gap-bad .sv{color:var(--red)}
+  .stat-card.gap-none .sv{color:var(--ink-faint);font-size:15px}
+
+  .milestone-banner{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(242,135,46,.16),rgba(255,163,80,.08));border:1px solid var(--amber);border-radius:var(--r);padding:14px;margin-bottom:14px}
+  .milestone-banner .ic{font-size:26px;line-height:1}
+  .milestone-banner .tt{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;text-transform:uppercase}
+  .milestone-banner .dd{font-size:12.5px;color:var(--ink-dim);margin-top:2px}
   .prof-saved{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--green);margin-top:4px;min-height:18px}
   .prof-saved.hidden{visibility:hidden}
 
@@ -645,7 +660,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v40";
+const APP_VERSION="v41";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -687,6 +702,31 @@ function weeklyVolumeForWeek(ws){const vol={};for(const m in MUSCLES)vol[m]=0;
   if(CUR&&weekStart(CUR.start)===ws)add({day:CUR.day,exOrder:CUR.order,ex:CUR.ex});
   return vol;}
 function priorSessionThisWeek(){const from=Date.now()-7*86400000;return HISTORY.some(s=>s.date>=from);}
+const CADENCE_TARGET=4;
+const MILESTONES=[10,25,50,75,100,150,200,250,300,400,500,750,1000];
+function computeStreak(){
+  const countWeek=w=>HISTORY.filter(s=>weekStart(s.date)===w).length;
+  let w=thisWeek(),streak=0;
+  if(countWeek(w)>=CADENCE_TARGET)streak++;
+  w-=7*86400000;
+  while(countWeek(w)>=CADENCE_TARGET){streak++;w-=7*86400000;}
+  return streak;
+}
+function statRowHtml(){
+  const streak=computeStreak();
+  const last=HISTORY.length?HISTORY[HISTORY.length-1]:null;
+  let gapCls="gap-none",gapVal="–",gapUnit="No sessions yet";
+  if(last){
+    const d=daysSinceTs(last.date);
+    gapCls=d>=3?"gap-bad":"gap-ok";
+    gapVal=String(d);
+    gapUnit=d===0?"today":d===1?"day ago":"days ago";
+  }
+  return `<div class="stat-row">
+    <div class="stat-card streak"><div class="sv">${streak}<span class="unit">wk streak</span></div><div class="sl">🔥 Current streak</div></div>
+    <div class="stat-card ${gapCls}"><div class="sv">${gapVal}<span class="unit">${gapUnit}</span></div><div class="sl">Last session</div></div>
+  </div>`;
+}
 /* ---- session suggestion ----------------------------------------------
    Scores all four days instead of following a blind rotation. Inputs:
    how long since that specific day was last trained, whether it keeps the
@@ -976,6 +1016,8 @@ function renderHome(summary){
   titleEl.textContent="Training";kickEl.textContent="Push / Pull · Tracker";
   subEl.textContent="Pick a day to start. Sets, weights and rest are tracked here.";
   let html="";
+  html+=statRowHtml();
+  if(summary&&summary.milestone){html+=`<div class="milestone-banner"><div class="ic">🎉</div><div><div class="tt">${summary.milestone} workouts logged</div><div class="dd">Since you started tracking — nice consistency.</div></div></div>`;}
   if(summary){html+=`<div class="nudge" style="border-color:rgba(111,191,115,.4);background:rgba(111,191,115,.1)"><span>✓</span><div><b style="color:var(--green)">${summary.day} logged.</b> ${summary.done}/${summary.total} sets done${summary.skipped?` · ${summary.skipped} exercise${summary.skipped>1?"s":""} skipped`:""}.</div></div>`;
     if(summary.highlights&&summary.highlights.length){
       const groups=buildMuscleSummary(summary.highlights);
@@ -1757,11 +1799,12 @@ async function finishSession(){
     if(log.highlight&&!log.skipped)highlights.push(Object.assign({muscle:ex.m,name},log.highlight));});
   const orderChanged=JSON.stringify(CUR.order)!==JSON.stringify(CUR.defaultOrder);
   HISTORY.push(rec);await sset("history",HISTORY);CUR=null;await sset("current",null);
+  const milestone=MILESTONES.includes(HISTORY.length)?HISTORY.length:null;
   if(orderChanged){
     const keep=await showConfirm(`You changed the exercise order or made a swap for ${rec.day} this session. Keep it as the default from now on?`,{okLabel:"Keep it",cancelLabel:"Just this once"});
     if(keep){SETTINGS.dayOrder=SETTINGS.dayOrder||{};SETTINGS.dayOrder[rec.day]=rec.exOrder.slice();await sset("settings",SETTINGS);}
   }
-  renderHome({day:rec.day,done,total,skipped,highlights});
+  renderHome({day:rec.day,done,total,skipped,highlights,milestone});
   launchConfetti();
   githubBackup();
 }
