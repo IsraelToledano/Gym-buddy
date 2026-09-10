@@ -572,7 +572,12 @@ const PLAN={
 const EXTRA_EX=[
   {n:"Machine lateral raise",m:"Side delts",equip:"machine",sets:3,reps:"12–15",rest:"45–60s",cues:{do:["Set the seat so the pivot lines up with your shoulder.","Lead with the elbows, raising to shoulder height.","Slow the negative instead of dropping the weight."],dont:["Don't shrug the traps to help lift the weight.","Don't let momentum carry the weight above shoulder height."]}},
   {n:"Machine bicep curl",m:"Biceps",equip:"machine",sets:3,reps:"10–12",rest:"60s",cues:{do:["Pin the elbows against the pad.","Curl through the full range without swinging.","Squeeze hard at the top of every rep."],dont:["Don't let the elbows lift off the pad.","Don't rush the negative back to the stretch."]}},
-  {n:"Decline crunch (weighted)",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"12–15",rest:"60–75s",cues:{do:["Hook the feet under the pads, hands or plate at your chest.","Curl the ribs toward the hips — round the spine, not just the hips.","Exhale and squeeze hard at the top."],dont:["Don't swing to build momentum into the next rep.","Don't yank with the neck to initiate the curl."]}}
+  {n:"Decline crunch (weighted)",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"12–15",rest:"60–75s",cues:{do:["Hook the feet under the pads, hands or plate at your chest.","Curl the ribs toward the hips — round the spine, not just the hips.","Exhale and squeeze hard at the top."],dont:["Don't swing to build momentum into the next rep.","Don't yank with the neck to initiate the curl."]}},
+  {n:"Goblet squat",m:"Quads",equip:"dumbbell",leg:1,sets:3,reps:"10–12",rest:"90s",cues:{do:["Hold a dumbbell vertically at your chest, elbows in.","Keep the torso upright as you squat.","Drive through mid-foot back to standing."],dont:["Don't let the lower back round at the bottom.","Don't let the knees cave inward."]}},
+  {n:"Bulgarian split squat",m:"Quads",equip:"dumbbell",leg:1,sets:3,reps:"8–12 per leg",rest:"90s",cues:{do:["Rest the rear foot on a bench, torso upright.","Lower straight down until the rear knee nears the floor.","Drive through the front heel back up."],dont:["Don't let the front knee cave inward.","Don't lean forward and load the lower back."]}},
+  {n:"Walking lunges",m:"Quads",equip:"dumbbell",leg:1,sets:3,reps:"10–12 per leg",rest:"75–90s",cues:{do:["Hold dumbbells at your sides, torso tall.","Step forward into a lunge, back knee lightly grazing the floor.","Push off the front foot into the next step."],dont:["Don't let the front knee travel past the toes excessively.","Don't lean the torso forward to compensate for balance."]}},
+  {n:"Standing DB calf raise",m:"Calves",equip:"dumbbell",calf:1,sets:3,reps:"12–15",rest:"60s",cues:{do:["Hold dumbbells at your sides, stand on a flat surface or step.","Rise onto the balls of the feet, pause at the top.","Lower under control for a full stretch."],dont:["Don't bounce out of the bottom stretch.","Don't rely on momentum instead of a controlled squeeze."]}},
+  {n:"Single-leg calf raise",m:"Calves",equip:"bodyweight",calf:1,sets:3,reps:"12–15 per leg",rest:"45–60s",cues:{do:["Balance on one foot, holding a rail or wall for support.","Rise fully onto the ball of the foot.","Lower under control for a full stretch."],dont:["Don't let the ankle roll inward or outward.","Don't rush the descent."]}}
 ];
 /* cross-day exercise index — lets an exercise be looked up by name regardless
    of which day it's originally defined under. This is what makes swapping
@@ -620,7 +625,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v38";
+const APP_VERSION="v39";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
