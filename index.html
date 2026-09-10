@@ -360,6 +360,26 @@
   .eyebtn:active{background:var(--bg)}
   .eyebtn svg{width:20px;height:20px}
   .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+  .searchwrap{position:relative;margin-bottom:14px}
+  .searchwrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--ink-faint);pointer-events:none}
+  .searchwrap input{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:16px;padding:11px 34px 11px 36px;font-family:inherit}
+  .searchwrap input:focus{outline:none;border-color:var(--teal)}
+  .searchwrap .clr{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--ink-faint);font-size:15px;padding:8px}
+  .muscle-group{margin-bottom:2px}
+  .mg-head{display:flex;align-items:center;justify-content:space-between;padding:10px 2px;width:100%;background:none;border:none;text-align:left}
+  .mg-head .nm{font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:13.5px;color:var(--ink-dim)}
+  .mg-head .mg-r{display:flex;align-items:center;gap:8px}
+  .mg-head .ct{font-size:11.5px;color:var(--ink-faint)}
+  .mg-head .chev{width:14px;height:14px;color:var(--ink-faint);transition:transform .15s}
+  .mg-head.open .chev{transform:rotate(90deg)}
+  .mg-body{display:flex;flex-direction:column;gap:6px;padding-bottom:10px}
+  .lib-item{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;text-align:left;font-size:14px;color:var(--ink)}
+  .lib-item:hover{border-color:var(--teal)}
+  .lib-item.in-session{opacity:.4}
+  .lib-item.in-session .equip-tag{color:var(--teal);border-color:var(--teal)}
+  .equip-tag{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:2px 7px;white-space:nowrap}
+  .no-results{font-size:13px;color:var(--ink-faint);text-align:center;padding:16px 0}
   .prof-saved{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--green);margin-top:4px;min-height:18px}
   .prof-saved.hidden{visibility:hidden}
 
@@ -625,7 +645,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v39";
+const APP_VERSION="v40";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1594,18 +1614,66 @@ async function openSwap(i){
 }
 
 /* ---------------- add exercise ---------------- */
+let ADDEX_OPEN_GROUPS=new Set();
+function escLibName(n){return n.replace(/'/g,"\\'");}
+function buildLibraryHtml(query){
+  const inOrder=new Set(CUR.order);
+  const q=(query||"").trim().toLowerCase();
+  const all=Object.values(NAME_INDEX);
+  const groupOrder=Object.keys(MUSCLES).filter(m=>all.some(e=>e.m===m));
+  if(q){
+    const matches=all.filter(e=>e.n.toLowerCase().includes(q));
+    if(!matches.length)return `<div class="no-results">No exercises match "${esc(query)}".</div>`;
+    const byM={};matches.forEach(e=>{(byM[e.m]=byM[e.m]||[]).push(e);});
+    return groupOrder.filter(m=>byM[m]).map(m=>{
+      const items=byM[m].sort((a,b)=>(EQUIP_RANK[a.equip]??9)-(EQUIP_RANK[b.equip]??9)||a.n.localeCompare(b.n));
+      return `<div class="muscle-group"><div class="mg-head open"><span class="nm">${m}</span><span class="mg-r"><span class="ct">${items.length}</span></span></div><div class="mg-body">${items.map(e=>libItemHtml(e,inOrder)).join("")}</div></div>`;
+    }).join("");
+  }
+  return groupOrder.map((m,i)=>{
+    const items=all.filter(e=>e.m===m).sort((a,b)=>(EQUIP_RANK[a.equip]??9)-(EQUIP_RANK[b.equip]??9)||a.n.localeCompare(b.n));
+    const open=ADDEX_OPEN_GROUPS.has(m);
+    return `<div class="muscle-group"><button class="mg-head${open?" open":""}" onclick="toggleLibGroup('${m}')"><span class="nm">${m}</span><span class="mg-r"><span class="ct">${items.length}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></button>${open?`<div class="mg-body">${items.map(e=>libItemHtml(e,inOrder)).join("")}</div>`:""}</div>`;
+  }).join("");
+}
+function libItemHtml(e,inOrder){
+  const already=inOrder.has(e.n);
+  return `<button class="lib-item${already?" in-session":""}" ${already?"disabled":`onclick="addFromLibrary('${escLibName(e.n)}')"`}><span>${e.n}${already?" ✓":""}</span><span class="equip-tag">${e.equip}</span></button>`;
+}
+function toggleLibGroup(m){
+  if(ADDEX_OPEN_GROUPS.has(m))ADDEX_OPEN_GROUPS.delete(m);else ADDEX_OPEN_GROUPS.add(m);
+  document.getElementById("exLibraryBody").innerHTML=buildLibraryHtml(document.getElementById("exSearch").value);
+}
+function filterExerciseLibrary(v){
+  document.getElementById("exLibraryBody").innerHTML=buildLibraryHtml(v);
+  document.getElementById("exSearchClr").style.display=v?"block":"none";
+  const sug=document.getElementById("exSuggestedWrap");
+  if(sug)sug.style.display=v?"none":"";
+}
+function clearExerciseSearch(){
+  const inp=document.getElementById("exSearch");inp.value="";
+  filterExerciseLibrary("");inp.focus();
+}
 function openAddExercise(){
   closeOverlay();
+  ADDEX_OPEN_GROUPS=new Set();
   const musclesToday=[...new Set(CUR.order.map(n=>NAME_INDEX[n].m))];
   const inOrder=new Set(CUR.order);
   const suggested=Object.values(NAME_INDEX)
     .filter(e=>musclesToday.includes(e.m)&&!inOrder.has(e.n))
     .sort((a,b)=>(EQUIP_RANK[a.equip]??9)-(EQUIP_RANK[b.equip]??9)||a.n.localeCompare(b.n));
-  const sugHtml=suggested.length?`<div class="section-h" style="margin-top:0">Suggested for today</div><div class="modal-opts" style="margin-bottom:18px">${suggested.map(e=>`<button class="modal-opt" onclick="addFromLibrary('${e.n.replace(/'/g,"\\'")}')">${e.n} <span style="color:var(--ink-faint);font-weight:400">· ${e.m}</span></button>`).join("")}</div>`:"";
+  const sugHtml=suggested.length?`<div id="exSuggestedWrap"><div class="section-h" style="margin-top:0">Suggested for today</div><div class="modal-opts" style="margin-bottom:18px">${suggested.map(e=>`<button class="modal-opt" onclick="addFromLibrary('${escLibName(e.n)}')">${e.n} <span style="color:var(--ink-faint);font-weight:400">· ${e.m}</span></button>`).join("")}</div></div>`:"";
   const muscleOpts=Object.keys(MUSCLES).map(m=>`<option value="${m}">${m}</option>`).join("");
   const html=`<div class="overlay"><div class="ov-head"><button class="bk" onclick="closeOverlay()" aria-label="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><div class="ti"><span>Added to this session</span>Add exercise</div></div><div class="ov-body">
+    <div class="searchwrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="exSearch" type="text" placeholder="Search exercises..." oninput="filterExerciseLibrary(this.value)">
+      <button id="exSearchClr" class="clr" style="display:none" onclick="clearExerciseSearch()">✕</button>
+    </div>
     ${sugHtml}
-    <div class="section-h" style="margin-top:0">Or add a custom exercise</div>
+    <div class="section-h" style="margin-top:0">All exercises</div>
+    <div id="exLibraryBody">${buildLibraryHtml("")}</div>
+    <div class="section-h">Or add a custom exercise</div>
     <div class="field"><label>Name</label><input id="ceName" type="text" placeholder="e.g. Cable fly"></div>
     <div class="field"><label>Muscle group</label><select id="ceMuscle">${muscleOpts}</select></div>
     <div class="field"><label>Equipment</label><select id="ceEquip">
