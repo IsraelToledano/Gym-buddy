@@ -338,6 +338,10 @@
   .rsess .rsets{grid-column:1/-1;color:var(--ink-faint);font-size:12px;margin-top:3px;line-height:1.4}
   .rsess.best{border-color:rgba(242,135,46,.4)}
   .rsess.best .rv{color:var(--amber-bright)}
+  .rsess .rpos{grid-column:1/-1;font-size:11px;margin-top:3px;font-weight:600}
+  .rsess .rpos.pos-ok{color:var(--ink-faint)}
+  .rsess .rpos.pos-early{color:var(--teal)}
+  .rsess .rpos.pos-late{color:var(--amber-bright)}
 
   .tennis-box{margin-bottom:4px}
   .tennis-recent{margin-top:9px}
@@ -668,7 +672,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v42";
+const APP_VERSION="v43";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -790,7 +794,14 @@ function sessStats(planEx,log){let top=0,vol=0,e1=0,reps=0,anyW=false;
   return{top:round1(top),vol:round1(vol),e1:round1(e1),reps,anyW};}
 // history series for an exercise (completed sessions + live current)
 function exSeries(name,includeCur){const out=[];
-  const grab=(s,date)=>{const pe=NAME_INDEX[name];if(!pe)return;const log=sessionLog(s,name);if(!log)return;if(!log.sets.some(x=>setComplete(pe,x)))return;const st=sessStats(pe,log);const setDetail=log.sets.filter(x=>setComplete(pe,x)).map(x=>({w:x.weight,r:x.reps}));out.push({date,day:s.day,...st,setDetail});};
+  const grab=(s,date)=>{const pe=NAME_INDEX[name];if(!pe)return;const log=sessionLog(s,name);if(!log)return;if(!log.sets.some(x=>setComplete(pe,x)))return;const st=sessStats(pe,log);const setDetail=log.sets.filter(x=>setComplete(pe,x)).map(x=>({w:x.weight,r:x.reps}));
+    let posInfo=null;
+    if(s.day&&PLAN[s.day]&&Array.isArray(s.exOrder)){
+      const schedPos=getDayOrderNames(s.day).indexOf(name);
+      const actualPos=s.exOrder.indexOf(name);
+      if(schedPos>=0&&actualPos>=0)posInfo={schedPos:schedPos+1,actualPos:actualPos+1,delta:actualPos-schedPos};
+    }
+    out.push({date,day:s.day,...st,setDetail,posInfo});};
   HISTORY.forEach(s=>grab(s,s.date));
   if(includeCur&&CUR)grab({day:CUR.day,exOrder:CUR.order,ex:CUR.ex},CUR.start);
   out.sort((a,b)=>a.date-b.date);return out;}
@@ -1301,7 +1312,13 @@ function renderTrend(){
   ser.slice().reverse().slice(0,8).forEach(s=>{const v=s[trendMetric]||0;
     const setsStr=(s.setDetail||[]).map(d=>{const w=parseFloat(d.w);const r=d.r!==""&&d.r!=null?d.r:"";if(bw)return r?`${r} reps`:"";return (w?w+"kg":"–")+(r?"×"+r:"");}).filter(Boolean).join(" · ");
     const rp=s.day&&PLAN[s.day]?`<div class="rday">${s.day} · ${PLAN[s.day].name}</div>`:"";
-    recent+=`<div class="rsess ${v===best&&best>0?"best":""}"><div class="rd">${fmtDate(s.date)}${rp}</div><div class="rv">${v}${unit?" "+unit:bw?" reps":""}</div>${setsStr?`<div class="rsets">${setsStr}</div>`:""}</div>`;});
+    let posBadge="";
+    if(s.posInfo){const d=s.posInfo.delta;
+      if(d===0)posBadge=`<div class="rpos pos-ok">Position #${s.posInfo.actualPos} · as scheduled</div>`;
+      else if(d<0)posBadge=`<div class="rpos pos-early">Position #${s.posInfo.actualPos} · ${Math.abs(d)} earlier than usual (usually #${s.posInfo.schedPos})</div>`;
+      else posBadge=`<div class="rpos pos-late">Position #${s.posInfo.actualPos} · ${d} later than usual (usually #${s.posInfo.schedPos})</div>`;
+    }
+    recent+=`<div class="rsess ${v===best&&best>0?"best":""}"><div class="rd">${fmtDate(s.date)}${rp}</div><div class="rv">${v}${unit?" "+unit:bw?" reps":""}</div>${setsStr?`<div class="rsets">${setsStr}</div>`:""}${posBadge}</div>`;});
   recent+=`</div>`;
   const html=`<div class="overlay"><div class="ov-head"><button class="bk" onclick="closeOverlay()" aria-label="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><div class="ti"><span>Last 3 months</span>${name}</div></div><div class="ov-body">${toggle}${chart}${recent}</div></div>`;
   document.getElementById("overlayMount").innerHTML=html;
