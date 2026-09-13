@@ -154,6 +154,9 @@
   .tg.dont{background:rgba(255,163,80,.14);color:var(--amber-bright);border:1px solid rgba(255,163,80,.35)}
   .tg.pair{background:rgba(84,185,168,.12);color:var(--teal);border:1px solid rgba(84,185,168,.3)}
   .tg.sk{background:rgba(255,255,255,.04);color:var(--ink-faint);border:1px solid var(--line)}
+  .tg.bumped{background:rgba(224,112,62,.14);color:var(--red);border:1px solid rgba(224,112,62,.35)}
+  .tg.due{background:rgba(242,135,46,.14);color:var(--amber-bright);border:1px solid rgba(242,135,46,.32)}
+  .tg.fresh{background:rgba(84,185,168,.12);color:var(--teal);border:1px solid rgba(84,185,168,.3)}
   .ex-right{display:flex;align-items:center;gap:10px}
   .setcount{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;color:var(--ink-dim);white-space:nowrap}
   .setcount b{color:var(--green)}
@@ -672,7 +675,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v43";
+const APP_VERSION="v44";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -912,6 +915,54 @@ function skipStreak(idx,name){
   }
   return streak;
 }
+/* ---------------- nice-to-have ranking (past the cut line) ----------------
+   The tail past the must-have cap isn't a frozen continuation of the routine —
+   it's ranked by what's actually been neglected (any session, not just this
+   day-type), so a repeatedly-skipped exercise surfaces before one you just did. */
+function sessionsSinceLastDone(name){
+  const ex=NAME_INDEX[name];if(!ex)return null;
+  for(let i=HISTORY.length-1;i>=0;i--){
+    const log=sessionLog(HISTORY[i],name);
+    if(log&&!log.skipped&&log.sets.some(s=>setComplete(ex,s)))return HISTORY.length-1-i;
+  }
+  return null;
+}
+function isDefaultForDay(day,name){return getDayOrderNames(day).includes(name);}
+function niceToHaveInfo(day,name){
+  const streak=skipStreak(HISTORY.length,name);
+  const since=sessionsSinceLastDone(name);
+  let reasonKey,reasonText;
+  if(since===null){reasonKey="due";reasonText="Not done yet";}
+  else if(streak>=1){reasonKey="bumped";reasonText=streak===1?"Skipped last session — bumped up":`Skipped last ${streak} sessions — bumped up`;}
+  else if(since>=3){reasonKey="due";reasonText=`Not done in ${since} sessions`;}
+  else if(since<=1){reasonKey="fresh";reasonText=since===0?"Done last session — lower priority":"Done recently — lower priority";}
+  else{reasonKey="due";reasonText=`Last done ${since} sessions ago`;}
+  const score=since===null?9999:(streak*100+since);
+  return{reasonKey,reasonText,score,isDefault:isDefaultForDay(day,name)};
+}
+// Shared by both the reorder step and the on-screen tag so the displayed reason
+// always matches the order it produced (the same-muscle override below changes
+// both together instead of drifting apart).
+function computeTailInfo(day,tailNames){
+  const info={};tailNames.forEach(n=>{info[n]=niceToHaveInfo(day,n);});
+  const byMuscle={};tailNames.forEach(n=>{const m=NAME_INDEX[n].m;(byMuscle[m]=byMuscle[m]||[]).push(n);});
+  Object.values(byMuscle).forEach(group=>{
+    if(group.length<2)return;
+    const nonDefault=group.find(n=>!info[n].isDefault);
+    if(!nonDefault)return;
+    group.forEach(n=>{if(info[n].isDefault){info[n].score=-1;info[n].reasonKey="due";info[n].reasonText=`Same muscle as ${nonDefault} — deprioritized this session`;}});
+  });
+  return info;
+}
+function reorderNiceToHave(day,order){
+  const MUST_HAVE_CAP=6;
+  if(order.length<=MUST_HAVE_CAP)return order;
+  const head=order.slice(0,MUST_HAVE_CAP);
+  const tail=order.slice(MUST_HAVE_CAP);
+  const info=computeTailInfo(day,tail);
+  tail.sort((a,b)=>info[b].score-info[a].score);
+  return head.concat(tail);
+}
 // how this exercise went in a given past session, vs the last time it was logged before that session
 function sessionExInsight(rec,name){
   const ex=NAME_INDEX[name];const log=sessionLog(rec,name);
@@ -1110,6 +1161,7 @@ function renderSession(){
   // session — so the cut line is now a flat position cutoff, not tied to
   // wherever the abs exercise happens to sit.
   const MUST_HAVE_CAP=6;
+  const tailInfo=computeTailInfo(CUR.day,names.slice(MUST_HAVE_CAP));
   names.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];if(log.skipped)return;const sets=log.sets;totSets+=sets.length;doneSets+=sets.filter(s=>setComplete(ex,s)).length;});
   const p=PLAN[CUR.day];
   const pct=totSets?Math.round(doneSets/totSets*100):0;
@@ -1133,7 +1185,7 @@ function renderSession(){
     const pastCap=i>=MUST_HAVE_CAP&&!ex.main;
     const cls=["ex"];if(ex.main)cls.push("main");if(ex.abs)cls.push("abs");if(pastCap)cls.push("skip");
     if(uskip)cls.push("uskip");else if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
-    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(ex.calf)tags.push('<span class="tg pair">⟂ Pair with legs</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(pastCap)tags.push('<span class="tg sk">Cut first</span>');if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
+    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(ex.calf)tags.push('<span class="tg pair">⟂ Pair with legs</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(pastCap&&tailInfo[name]){const nth=tailInfo[name];tags.push(`<span class="tg ${nth.reasonKey}">${esc(nth.reasonText)}</span>`);}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
@@ -1380,6 +1432,7 @@ function startSession(day){
   const order=getDayOrderNames(day);
   CUR={day,start:Date.now(),nudgeDismissed:false,order,defaultOrder:order.slice(),ex:{}};
   order.forEach(name=>{const def=NAME_INDEX[name];const prev=lastLog(name);CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};});
+  CUR.order=reorderNiceToHave(day,CUR.order);
   openIdx=0;saveCur();initAudio();requestWake();renderSession();}
 function openSession(){openIdx=0;if(CUR&&!CUR.order){CUR.order=getDayOrderNames(CUR.day);CUR.defaultOrder=CUR.order.slice();}renderSession();requestWake();}
 function previewDay(day){
@@ -1789,6 +1842,7 @@ function addFromLibrary(name){
   CUR.order.push(name);
   const prev=lastLog(name);
   CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–"}))};
+  CUR.order=reorderNiceToHave(CUR.day,CUR.order);
   closeOverlay();saveCur();renderSession();
 }
 async function saveCustomExercise(){
