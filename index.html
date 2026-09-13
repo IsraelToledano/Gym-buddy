@@ -157,6 +157,23 @@
   .tg.bumped{background:rgba(224,112,62,.14);color:var(--red);border:1px solid rgba(224,112,62,.35)}
   .tg.due{background:rgba(242,135,46,.14);color:var(--amber-bright);border:1px solid rgba(242,135,46,.32)}
   .tg.fresh{background:rgba(84,185,168,.12);color:var(--teal);border:1px solid rgba(84,185,168,.3)}
+
+  .day-btn.cardio-tile{border-color:var(--teal)}
+  .day-btn.cardio-tile .code{color:var(--teal)}
+  .cd-type-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px}
+  .cd-type-btn{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 6px;text-align:center;font-size:13px;font-weight:600;color:var(--ink-dim)}
+  .cd-type-btn .ic{font-size:20px;display:block;margin-bottom:4px}
+  .cd-type-btn.sel{border-color:var(--teal);color:var(--teal);background:rgba(84,185,168,.1)}
+  .cd-field{margin-top:16px}
+  .cd-label{font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--ink-faint);margin-bottom:7px}
+  .cd-input-row{display:flex;align-items:center;gap:8px}
+  .cd-input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:16px;padding:11px 12px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-weight:600}
+  .cd-unit{font-size:12.5px;color:var(--ink-faint);min-width:44px}
+  .rpe-row{display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-top:2px}
+  .rpe-btn{aspect-ratio:1;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink-dim);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;display:grid;place-items:center}
+  .rpe-btn.sel{background:var(--amber);border-color:var(--amber);color:#1a120a}
+  .rpe-hint{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-faint);margin-top:5px}
+  .inline-add{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;background:var(--card);border:1px dashed var(--line);border-radius:var(--r);padding:12px;margin-top:10px;color:var(--ink-dim);font-size:13.5px;font-weight:600}
   .ex-right{display:flex;align-items:center;gap:10px}
   .setcount{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;color:var(--ink-dim);white-space:nowrap}
   .setcount b{color:var(--green)}
@@ -675,11 +692,12 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v44";
+const APP_VERSION="v45";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
-function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,customEx:CUSTOM_EX});}
+function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
 let TENNIS=[];
+let CARDIO=[];
 let CUSTOM_EX=[];
 let PROFILE={heightCm:"",weightKg:"",age:"",goal:""};
 
@@ -1124,12 +1142,21 @@ function renderHome(summary){
   html+=`<div class="days">`;
   for(const k of ["A1","A2","B1","B2"]){const p=PLAN[k];html+=`<button class="day-btn${(!CUR&&k===nextDay)?" upnext-day":""}" onclick="previewDay('${k}')"><div class="code"><b>${k}</b></div><div class="nm">${p.name}</div><div class="ct">${p.ex.length} exercises</div></button>`;}
   html+=`</div>`;
+  html+=`<button class="day-btn cardio-tile" style="width:100%;margin-top:10px;display:flex;align-items:center;gap:14px;text-align:left" onclick="openCardioLog(null)">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 8 4-16 2 8h6"/></svg>
+    <div><div class="code"><b>CARDIO</b></div><div class="ct" style="margin-top:2px">Log a standalone cardio session</div></div>
+  </button>`;
   html+=`<div class="section-h">Other activity</div><div class="tennis-box"><button class="tool-btn" style="width:100%" onclick="openTennisLog()">🎾 Log tennis session</button>`;
   if(TENNIS.length){
     const recentT=TENNIS.slice().sort((a,b)=>b.date-a.date).slice(0,4);
     html+=`<div class="tennis-recent">`+recentT.map(t=>`<div class="rsess"><span class="rd">${fmtDate(t.date)} · ${t.duration} min${t.intensity?" · "+esc(t.intensity):""}</span><button class="tdel" onclick="deleteTennis(${t.date})" aria-label="delete">×</button></div>`).join("")+`</div>`;
   }
   html+=`</div>`;
+  if(CARDIO.length){
+    const recentC=CARDIO.slice().sort((a,b)=>b.date-a.date).slice(0,4);
+    const cdIcon={Stairs:"🪜",Elliptical:"🚲",Walk:"🚶"};
+    html+=`<div class="tennis-box" style="margin-top:10px"><div style="font-size:12px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:8px">Recent cardio</div><div class="tennis-recent">`+recentC.map(c=>`<div class="rsess"><span class="rd">${cdIcon[c.type]||"🏃"} ${esc(c.type)} · ${fmtDate(c.date)} · ${c.duration} min${c.rpe?" · RPE "+c.rpe:""}${c.hr?" · "+c.hr+" bpm":""}</span><button class="tdel" onclick="deleteCardio(${c.date})" aria-label="delete">×</button></div>`).join("")+`</div></div>`;
+  }
   const vol=weeklyVolume();
   html+=`<div class="section-h">Last 7 days</div><div class="week">`;
   DASH_ORDER.forEach(m=>{const t=MUSCLES[m].t,v=vol[m]||0,r=Math.min(v/t,1);html+=`<div class="wrow"><div class="ml">${m}</div><div class="track"><div class="fill" style="width:${r*100}%;background:${muscleColor(v/t)}"></div></div><div class="num" style="color:${v>=t?'var(--green)':'var(--ink-dim)'}">${v}/${t}</div></div>`;});
@@ -1216,7 +1243,7 @@ function renderSession(){
     html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}${effortHtml(i)}<button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="sethint">A set logs once you enter reps. Weight is optional. Clear reps to unlog.</div><div class="btnrow"><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo skip":"⤼ Mark as skipped"}</button><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button>${trendBtnHtml}</div><div class="cues">${cues}</div>${noteBlock}</div></div></div></div>`;
     if(i===MUST_HAVE_CAP-1){html+=`<div class="cutline"><span class="txt">Cut from here ↓</span><span class="rule"></span></div>`;}
   });
-  html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button><div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
+  html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button><button class="inline-add" onclick="openCardioLog(CUR.day)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Add cardio to this session</button><div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
   app.innerHTML=html;tickClock();attachDragHandlers();initExImg();
 }
 
@@ -1424,6 +1451,47 @@ async function deleteTennis(date){
   if(!(await showConfirm("Delete this tennis session?")))return;
   TENNIS=TENNIS.filter(t=>t.date!==date);
   await sset("tennis",TENNIS);
+  renderHome();
+}
+
+/* ---------------- cardio log ---------------- */
+let cdAttachDay=null;
+function openCardioLog(attachDay){
+  closeOverlay();
+  cdAttachDay=attachDay;
+  const today=new Date().toISOString().slice(0,10);
+  const types=[["Stairs","🪜"],["Elliptical","🚲"],["Walk","🚶"]];
+  const html=`<div class="overlay"><div class="ov-head"><button class="bk" onclick="closeOverlay()" aria-label="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><div class="ti"><span>${attachDay?"Added to "+attachDay:"Quick log"}</span>🏃 Cardio session</div></div><div class="ov-body">
+    ${attachDay?"":`<div class="field"><label>Date</label><input type="date" id="cdDate" value="${today}"></div>`}
+    <div class="cd-label" style="margin-top:${attachDay?"0":"4px"}">Type</div>
+    <div class="cd-type-row" id="cdType">${types.map(([n,ic],i)=>`<button type="button" class="cd-type-btn${i===0?" sel":""}" data-v="${n}" onclick="setCdType(this)"><span class="ic">${ic}</span>${n}</button>`).join("")}</div>
+    <div class="cd-field"><div class="cd-label">Duration</div><div class="cd-input-row"><input class="cd-input" id="cdDur" type="number" inputmode="numeric" placeholder="32"><div class="cd-unit">minutes</div></div></div>
+    <div class="cd-field"><div class="cd-label">Avg Heart Rate</div><div class="cd-input-row"><input class="cd-input" id="cdHr" type="number" inputmode="numeric" placeholder="140"><div class="cd-unit">bpm</div></div></div>
+    <div class="cd-field"><div class="cd-label">Intensity (RPE)</div><div class="rpe-row" id="cdRpe">${Array.from({length:10},(_,i)=>i+1).map(n=>`<button type="button" class="rpe-btn${n===6?" sel":""}" data-v="${n}" onclick="setCdRpe(this)">${n}</button>`).join("")}</div><div class="rpe-hint"><span>Easy</span><span>Max effort</span></div></div>
+    <button class="cd-save btn primary" style="width:100%" onclick="saveCardioLog()">Save Cardio Session</button>
+  </div></div>`;
+  document.getElementById("overlayMount").innerHTML=html;
+}
+function setCdType(btn){document.querySelectorAll("#cdType button").forEach(b=>b.classList.remove("sel"));btn.classList.add("sel");}
+function setCdRpe(btn){document.querySelectorAll("#cdRpe button").forEach(b=>b.classList.remove("sel"));btn.classList.add("sel");}
+async function saveCardioLog(){
+  const durEl=document.getElementById("cdDur"),hrEl=document.getElementById("cdHr");
+  const dur=parseInt(durEl.value,10);
+  if(!dur||dur<=0){await showAlert("Enter a duration in minutes.");return;}
+  const typeBtn=document.querySelector("#cdType button.sel");
+  const rpeBtn=document.querySelector("#cdRpe button.sel");
+  const hr=parseInt(hrEl.value,10)||null;
+  const dateEl=document.getElementById("cdDate");
+  const dateVal=dateEl&&dateEl.value?new Date(dateEl.value+"T12:00:00").getTime():Date.now();
+  CARDIO.push({date:dateVal,type:typeBtn?typeBtn.dataset.v:"Walk",duration:dur,hr,rpe:rpeBtn?parseInt(rpeBtn.dataset.v,10):null,day:cdAttachDay||null});
+  await sset("cardio",CARDIO);
+  closeOverlay();
+  if(cdAttachDay&&CUR)renderSession();else renderHome();
+}
+async function deleteCardio(date){
+  if(!(await showConfirm("Delete this cardio session?")))return;
+  CARDIO=CARDIO.filter(c=>c.date!==date);
+  await sset("cardio",CARDIO);
   renderHome();
 }
 
@@ -1983,8 +2051,8 @@ function markBackup(){BACKMETA={at:Date.now(),count:HISTORY.length};sset("backup
 async function doImport(){const ta=document.getElementById("impArea");if(!ta)return;let data;try{data=JSON.parse(ta.value);}catch(e){await showAlert("That doesn't look like valid backup text.");return;}
   if(!data||!Array.isArray(data.history)){await showAlert("No history found in that backup.");return;}
   if(!(await showConfirm(`Restore ${data.history.length} session(s)? This replaces your current saved history, notes, and profile.`)))return;
-  HISTORY=data.history;if(data.settings)SETTINGS=Object.assign(SETTINGS,data.settings);if(data.notes)NOTES=data.notes;if(data.profile)PROFILE=Object.assign({heightCm:"",weightKg:"",age:"",goal:""},data.profile);if(Array.isArray(data.tennis))TENNIS=data.tennis;if(Array.isArray(data.customEx)){CUSTOM_EX=data.customEx;CUSTOM_EX.forEach(e=>{NAME_INDEX[e.n]=e;});}
-  await sset("history",HISTORY);await sset("settings",SETTINGS);await sset("notes",NOTES);await sset("profile",PROFILE);await sset("tennis",TENNIS);await sset("customEx",CUSTOM_EX);updateProfileBtnState();applyTheme();showImport=false;renderHome();await showAlert("Restored "+HISTORY.length+" session(s).");}
+  HISTORY=data.history;if(data.settings)SETTINGS=Object.assign(SETTINGS,data.settings);if(data.notes)NOTES=data.notes;if(data.profile)PROFILE=Object.assign({heightCm:"",weightKg:"",age:"",goal:""},data.profile);if(Array.isArray(data.tennis))TENNIS=data.tennis;if(Array.isArray(data.cardio))CARDIO=data.cardio;if(Array.isArray(data.customEx)){CUSTOM_EX=data.customEx;CUSTOM_EX.forEach(e=>{NAME_INDEX[e.n]=e;});}
+  await sset("history",HISTORY);await sset("settings",SETTINGS);await sset("notes",NOTES);await sset("profile",PROFILE);await sset("tennis",TENNIS);await sset("cardio",CARDIO);await sset("customEx",CUSTOM_EX);updateProfileBtnState();applyTheme();showImport=false;renderHome();await showAlert("Restored "+HISTORY.length+" session(s).");}
 
 /* ---------------- clock ---------------- */
 let clockIv=null;
@@ -2187,7 +2255,7 @@ const verEl=document.getElementById("verBadge");if(verEl)verEl.textContent=APP_V
 (async function init(){
   SETTINGS=await sget("settings",SETTINGS);SETTINGS.dayOrder=SETTINGS.dayOrder||{};
   applyTheme();
-  HISTORY=await sget("history",[]);NOTES=await sget("notes",{});BACKMETA=await sget("backupMeta",{at:0,count:0,lastError:null,lastAttempt:0});PROFILE=await sget("profile",PROFILE);TENNIS=await sget("tennis",[]);CUSTOM_EX=await sget("customEx",[]);CUSTOM_EX.forEach(e=>{NAME_INDEX[e.n]=e;});updateProfileBtnState();
+  HISTORY=await sget("history",[]);NOTES=await sget("notes",{});BACKMETA=await sget("backupMeta",{at:0,count:0,lastError:null,lastAttempt:0});PROFILE=await sget("profile",PROFILE);TENNIS=await sget("tennis",[]);CARDIO=await sget("cardio",[]);CUSTOM_EX=await sget("customEx",[]);CUSTOM_EX.forEach(e=>{NAME_INDEX[e.n]=e;});updateProfileBtnState();
   CUR=await sget("current",null);
   if(CUR&&!CUR.order){
     // migrate a session started on the old index-keyed build (or discard if it doesn't match)
