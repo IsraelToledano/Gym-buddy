@@ -710,7 +710,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v48";
+const APP_VERSION="v49";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -2090,8 +2090,8 @@ async function finishSession(){
   HISTORY.push(rec);await sset("history",HISTORY);CUR=null;await sset("current",null);
   const milestone=MILESTONES.includes(HISTORY.length)?HISTORY.length:null;
   if(orderChanged){
-    const keep=await showConfirm(`You changed the exercise order or made a swap for ${rec.day} this session. Keep it as the default from now on?`,{okLabel:"Keep it",cancelLabel:"Just this once"});
-    if(keep){SETTINGS.dayOrder=SETTINGS.dayOrder||{};SETTINGS.dayOrder[rec.day]=rec.exOrder.slice();await sset("settings",SETTINGS);}
+    const noChange=await showConfirm(`You changed the exercise order or made a swap for ${rec.day} this session. Keep your saved routine as is, or update it to match?`,{okLabel:"Keep as is",cancelLabel:"Update routine"});
+    if(!noChange){SETTINGS.dayOrder=SETTINGS.dayOrder||{};SETTINGS.dayOrder[rec.day]=rec.exOrder.slice();await sset("settings",SETTINGS);}
   }
   renderHome({day:rec.day,done,total,skipped,highlights,milestone});
   launchConfetti();
