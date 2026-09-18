@@ -160,8 +160,8 @@
 
   .day-btn.cardio-tile{border-color:var(--teal)}
   .day-btn.cardio-tile .code{color:var(--teal)}
-  .cd-type-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px}
-  .cd-type-btn{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 6px;text-align:center;font-size:13px;font-weight:600;color:var(--ink-dim)}
+  .cd-type-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:6px}
+  .cd-type-btn{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 4px;text-align:center;font-size:12px;font-weight:600;color:var(--ink-dim)}
   .cd-type-btn .ic{font-size:20px;display:block;margin-bottom:4px}
   .cd-type-btn.sel{border-color:var(--teal);color:var(--teal);background:rgba(84,185,168,.1)}
   .cd-field{margin-top:16px}
@@ -710,7 +710,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v47";
+const APP_VERSION="v48";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1120,7 +1120,7 @@ function openHistorySession(idx){
   document.getElementById("overlayMount").innerHTML=html;
 }
 function cardioHistCardHtml(c){
-  const icon={Stairs:"🪜",Elliptical:"🚲",Walk:"🚶"}[c.type]||"🏃";
+  const icon={Stairs:"🪜",Elliptical:"🚲",Walk:"🚶",Tennis:"🎾"}[c.type]||"🏃";
   const bits=[`${c.duration} min`];
   if(c.floors)bits.push(`${c.floors} floors`);
   if(c.hr)bits.push(`${c.hr} bpm`);
@@ -1189,7 +1189,7 @@ function renderHome(summary){
   html+=`</div>`;
   if(CARDIO.length){
     const recentC=CARDIO.slice().sort((a,b)=>b.date-a.date).slice(0,4);
-    const cdIcon={Stairs:"🪜",Elliptical:"🚲",Walk:"🚶"};
+    const cdIcon={Stairs:"🪜",Elliptical:"🚲",Walk:"🚶",Tennis:"🎾"};
     html+=`<div class="tennis-box" style="margin-top:10px"><div style="font-size:12px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:8px">Recent cardio</div><div class="tennis-recent">`+recentC.map(c=>`<div class="rsess"><span class="rd">${cdIcon[c.type]||"🏃"} ${esc(c.type)} · ${fmtDate(c.date)} · ${c.duration} min${c.rpe?" · RPE "+c.rpe:""}${c.floors?" · "+c.floors+" floors":""}${c.hr?" · "+c.hr+" bpm":""}</span><button class="tdel" onclick="deleteCardio(${c.date})" aria-label="delete">×</button></div>`).join("")+`</div></div>`;
   }
   const vol=weeklyVolume();
@@ -1495,7 +1495,7 @@ async function deleteTennis(date){
    (not a running counter) so the elapsed time is correct even after the
    app reloads or is closed and reopened. */
 let CARDIO_LIVE=null;
-const CD_TYPES=[["Stairs","🪜"],["Elliptical","🚲"],["Walk","🚶"]];
+const CD_TYPES=[["Stairs","🪜"],["Elliptical","🚲"],["Walk","🚶"],["Tennis","🎾"]];
 function cdElapsedMs(){return CARDIO_LIVE?Date.now()-CARDIO_LIVE.startedAt:0;}
 function cdElapsedStr(){const e=cdElapsedMs();const m=Math.floor(e/60000),s=Math.floor((e%60000)/1000);return m+":"+String(s).padStart(2,"0");}
 function renderCardioBar(){
@@ -1514,18 +1514,22 @@ function startCardioLog(attachDay){
   closeOverlay();
   const html=`<div class="overlay"><div class="ov-head"><button class="bk" onclick="closeOverlay()" aria-label="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><div class="ti"><span>${attachDay?"Added to "+attachDay:"Quick log"}</span>🏃 Cardio session</div></div><div class="ov-body">
     <div class="cd-label" style="margin-top:4px">Type</div>
-    <div class="cd-type-row" id="cdType">${CD_TYPES.map(([n,ic],i)=>`<button type="button" class="cd-type-btn${i===0?" sel":""}" data-v="${n}" onclick="setCdType(this)"><span class="ic">${ic}</span>${n}</button>`).join("")}</div>
-    <div class="cd-label">Intensity (RPE) <span class="optional-tag">optional — can set at the end instead</span></div>
-    <div class="rpe-row" id="cdRpe">${Array.from({length:10},(_,i)=>i+1).map(n=>`<button type="button" class="rpe-btn" data-v="${n}" onclick="setCdRpe(this)">${n}</button>`).join("")}</div>
+    <div class="cd-type-row" id="cdType">${CD_TYPES.map(([n,ic],i)=>`<button type="button" class="cd-type-btn${i===0?" sel":""}" data-v="${n}" onclick="setCdType(this);toggleCdStartRpe()"><span class="ic">${ic}</span>${n}</button>`).join("")}</div>
+    <div id="cdStartRpeWrap">
+      <div class="cd-label">Intensity (RPE) <span class="optional-tag">optional — can set at the end instead</span></div>
+      <div class="rpe-row" id="cdRpe">${Array.from({length:10},(_,i)=>i+1).map(n=>`<button type="button" class="rpe-btn" data-v="${n}" onclick="setCdRpe(this)">${n}</button>`).join("")}</div>
+    </div>
     <button class="btn primary" style="width:100%;margin-top:22px" onclick="startCardioLive('${attachDay||""}')">▶ Start</button>
   </div></div>`;
   document.getElementById("overlayMount").innerHTML=html;
 }
+function toggleCdStartRpe(){const t=document.querySelector("#cdType button.sel");const w=document.getElementById("cdStartRpeWrap");if(w)w.style.display=(t&&t.dataset.v==="Tennis")?"none":"";}
 function setCdType(btn){document.querySelectorAll("#cdType button").forEach(b=>b.classList.remove("sel"));btn.classList.add("sel");}
 function setCdRpe(btn){document.querySelectorAll("#cdRpe button").forEach(b=>b.classList.remove("sel"));btn.classList.add("sel");}
 async function startCardioLive(attachDay){
   attachDay=attachDay||null;
   const typeBtn=document.querySelector("#cdType button.sel");
+  const type=typeBtn?typeBtn.dataset.v:"Walk";
   const rpeBtn=document.querySelector("#cdRpe button.sel");
   const attachedToLiveSession=!!(attachDay&&CUR&&CUR.day===attachDay);
   // seqIndex = how many exercises were already finished (done or skipped) at
@@ -1533,7 +1537,7 @@ async function startCardioLive(attachDay){
   // constant through the session — so history can splice it in where it
   // actually happened rather than always at the end.
   const doneCount=attachedToLiveSession?CUR.order.filter(n=>{const log=CUR.ex[n];const d=NAME_INDEX[n];return log.skipped||log.sets.filter(s=>setComplete(d,s)).length===log.sets.length;}).length:null;
-  CARDIO_LIVE={startedAt:Date.now(),type:typeBtn?typeBtn.dataset.v:"Walk",rpe:rpeBtn?parseInt(rpeBtn.dataset.v,10):null,day:attachDay,sessionStart:attachedToLiveSession?CUR.start:null,seqIndex:doneCount};
+  CARDIO_LIVE={startedAt:Date.now(),type,rpe:type==="Tennis"?null:(rpeBtn?parseInt(rpeBtn.dataset.v,10):null),day:attachDay,sessionStart:attachedToLiveSession?CUR.start:null,seqIndex:doneCount};
   await sset("cardioLive",CARDIO_LIVE);
   closeOverlay();renderCardioBar();
   if(CUR)renderSession();else renderHome();
@@ -1556,28 +1560,36 @@ function finishCardioLive(){
   if(!CARDIO_LIVE)return;
   closeOverlay();
   const isStairs=CARDIO_LIVE.type==="Stairs";
+  const isTennis=CARDIO_LIVE.type==="Tennis";
   const html=`<div class="overlay"><div class="ov-head"><button class="bk" onclick="closeOverlay()" aria-label="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><div class="ti"><span>${cdElapsedStr()} elapsed</span>Finish cardio</div></div><div class="ov-body">
     <div class="cd-label" style="margin-top:4px">Type</div>
-    <div class="cd-type-row" id="cdType">${CD_TYPES.map(([n,ic])=>`<button type="button" class="cd-type-btn${n===CARDIO_LIVE.type?" sel":""}" data-v="${n}" onclick="setCdType(this);toggleFloorsField()"><span class="ic">${ic}</span>${n}</button>`).join("")}</div>
+    <div class="cd-type-row" id="cdType">${CD_TYPES.map(([n,ic])=>`<button type="button" class="cd-type-btn${n===CARDIO_LIVE.type?" sel":""}" data-v="${n}" onclick="setCdType(this);toggleCdDetailFields()"><span class="ic">${ic}</span>${n}</button>`).join("")}</div>
     <div class="cd-field" id="cdFloorsField" style="${isStairs?"":"display:none"}"><div class="cd-label">Floors climbed <span class="optional-tag">optional</span></div><div class="cd-input-row"><input class="cd-input" id="cdFloors" type="number" inputmode="numeric" placeholder="42"><div class="cd-unit">floors</div></div></div>
-    <div class="cd-field"><div class="cd-label">Avg Heart Rate <span class="optional-tag">optional</span></div><div class="cd-input-row"><input class="cd-input" id="cdHr" type="number" inputmode="numeric" placeholder="140"><div class="cd-unit">bpm</div></div></div>
-    <div class="cd-field"><div class="cd-label">Intensity (RPE) <span class="optional-tag">optional</span></div><div class="rpe-row" id="cdRpe">${Array.from({length:10},(_,i)=>i+1).map(n=>`<button type="button" class="rpe-btn${CARDIO_LIVE.rpe===n?" sel":""}" data-v="${n}" onclick="setCdRpe(this)">${n}</button>`).join("")}</div></div>
+    <div id="cdMetricsFields" style="${isTennis?"display:none":""}">
+      <div class="cd-field"><div class="cd-label">Avg Heart Rate <span class="optional-tag">optional</span></div><div class="cd-input-row"><input class="cd-input" id="cdHr" type="number" inputmode="numeric" placeholder="140"><div class="cd-unit">bpm</div></div></div>
+      <div class="cd-field"><div class="cd-label">Intensity (RPE) <span class="optional-tag">optional</span></div><div class="rpe-row" id="cdRpe">${Array.from({length:10},(_,i)=>i+1).map(n=>`<button type="button" class="rpe-btn${CARDIO_LIVE.rpe===n?" sel":""}" data-v="${n}" onclick="setCdRpe(this)">${n}</button>`).join("")}</div></div>
+    </div>
     <button class="btn primary" style="width:100%;margin-top:20px" onclick="saveCardioFinish(false)">Save Cardio Session</button>
     <button class="tool-btn" style="width:100%;margin-top:8px" onclick="saveCardioFinish(true)">Save without details</button>
   </div></div>`;
   document.getElementById("overlayMount").innerHTML=html;
 }
-function toggleFloorsField(){const t=document.querySelector("#cdType button.sel");const f=document.getElementById("cdFloorsField");if(f)f.style.display=(t&&t.dataset.v==="Stairs")?"":"none";}
+function toggleCdDetailFields(){
+  const t=document.querySelector("#cdType button.sel");const v=t&&t.dataset.v;
+  const f=document.getElementById("cdFloorsField");if(f)f.style.display=(v==="Stairs")?"":"none";
+  const m=document.getElementById("cdMetricsFields");if(m)m.style.display=(v==="Tennis")?"none":"";
+}
 async function saveCardioFinish(skipDetails){
   const durMin=Math.max(1,Math.round(cdElapsedMs()/60000));
   const typeBtn=document.querySelector("#cdType button.sel");
   const type=typeBtn?typeBtn.dataset.v:CARDIO_LIVE.type;
   let floors=null,hr=null,rpe=CARDIO_LIVE.rpe||null;
-  if(!skipDetails){
+  if(!skipDetails&&type!=="Tennis"){
     const floorsEl=document.getElementById("cdFloors");if(floorsEl)floors=parseInt(floorsEl.value,10)||null;
     const hrEl=document.getElementById("cdHr");hr=parseInt(hrEl.value,10)||null;
     const rpeBtn=document.querySelector("#cdRpe button.sel");rpe=rpeBtn?parseInt(rpeBtn.dataset.v,10):rpe;
   }
+  if(type==="Tennis"){floors=null;hr=null;rpe=null;} // duration is the only metric for tennis
   CARDIO.push({date:Date.now(),type,duration:durMin,hr,rpe,floors,day:CARDIO_LIVE.day,sessionStart:CARDIO_LIVE.sessionStart,seqIndex:CARDIO_LIVE.seqIndex});
   await sset("cardio",CARDIO);
   CARDIO_LIVE=null;await sset("cardioLive",null);
