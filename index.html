@@ -495,7 +495,7 @@
 
   /* drag handle & reordering */
   .drag-handle{touch-action:none;position:relative;width:18px;height:26px;display:grid;place-items:center;color:var(--ink-faint);flex:none;cursor:grab;justify-self:center}
-  .drag-handle::before{content:"";position:absolute;inset:-11px -8px}
+  .drag-handle::before{content:"";position:absolute;inset:-4px -3px}
   .drag-handle svg{width:14px;height:14px}
   .ex{transition:opacity .15s ease}
   .ex-btn{transition:border-color .16s,background .16s,box-shadow .16s,transform .16s}
@@ -710,7 +710,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v50";
+const APP_VERSION="v51";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1906,36 +1906,62 @@ function removeSet(i,j){const name=CUR.order[i];CUR.ex[name].sets.splice(j,1);sa
 // the pointerdown handler — calling it later from a setTimeout (as the old
 // code did) silently fails on iOS Safari, so the drag never actually engages
 // even though the press+move gesture looks right. Capture now happens
-// immediately; a short hold delay still gates when reordering actually
-// "arms" so quick taps don't trigger it.
+// immediately, but ONLY as a best-effort assist for the pre-arm phase: once
+// armed, move/up listeners live on document instead, because Chromium
+// silently drops pointer capture the moment insertBefore relocates the
+// dragged row past a sibling — if capture is the only thing routing events,
+// the final release can land on whatever's now under the finger instead of
+// the handle, and the reorder never saves. A longer hold delay gates when
+// reordering actually "arms" so scrolling past the handle doesn't
+// accidentally trigger it — and any movement before it arms cancels the
+// hold outright, since a real scroll gesture moves within the first couple
+// hundred ms. A vibration on arming confirms grab mode so multi-step drags
+// feel intentional rather than a series of accidental single hops.
 let dragState=null;
 function attachDragHandlers(){
   document.querySelectorAll(".drag-handle").forEach(h=>{
     h.onpointerdown=(e)=>{
       e.preventDefault();
       const exEl=h.closest(".ex");const list=document.getElementById("exList");
-      try{h.setPointerCapture(e.pointerId);}catch(err){}
-      let armed=false;
+      const pointerId=e.pointerId;
+      try{h.setPointerCapture(pointerId);}catch(err){}
+      let armed=false;const startX=e.clientX,startY=e.clientY;let lastY=e.clientY;
       const pressTimer=setTimeout(()=>{
         armed=true;dragState={exEl,list};exEl.classList.add("dragging");
-      },180);
+        if(navigator.vibrate)navigator.vibrate(12);
+        try{h.releasePointerCapture(pointerId);}catch(err){} // hand off to document listeners below
+        document.addEventListener("pointermove",onMove);
+        document.addEventListener("pointerup",onUp);
+        document.addEventListener("pointercancel",onUp);
+      },320);
       const cleanup=()=>{
         clearTimeout(pressTimer);
         h.onpointermove=null;h.onpointerup=null;h.onpointercancel=null;
+        document.removeEventListener("pointermove",onMove);
+        document.removeEventListener("pointerup",onUp);
+        document.removeEventListener("pointercancel",onUp);
       };
-      h.onpointerup=()=>{cleanup();finishDrag();};
-      h.onpointercancel=()=>{cleanup();if(dragState){dragState.exEl.classList.remove("dragging");dragState=null;}};
-      h.onpointermove=(ev)=>{
-        if(!armed||!dragState)return;
+      const onMove=(ev)=>{
+        if(!dragState)return;
         ev.preventDefault();
-        const siblings=[...dragState.list.querySelectorAll(".ex")].filter(el=>el!==dragState.exEl);
         const y=ev.clientY;
+        if(Math.abs(y-lastY)<3)return; // ignore sub-pixel jitter so continuous drags stay smooth
+        lastY=y;
+        const siblings=[...dragState.list.querySelectorAll(".ex")].filter(el=>el!==dragState.exEl);
         for(const sib of siblings){
           const r=sib.getBoundingClientRect();const mid=r.top+r.height/2;
           const pos=dragState.exEl.compareDocumentPosition(sib);
           if(y<mid&&(pos&Node.DOCUMENT_POSITION_PRECEDING)){dragState.list.insertBefore(dragState.exEl,sib);break;}
           if(y>mid&&(pos&Node.DOCUMENT_POSITION_FOLLOWING)){dragState.list.insertBefore(dragState.exEl,sib.nextSibling);break;}
         }
+      };
+      const onUp=()=>{cleanup();finishDrag();};
+      // Pre-arm phase: still handled on the handle itself (nothing to relocate yet).
+      h.onpointerup=()=>{cleanup();finishDrag();};
+      h.onpointercancel=()=>{cleanup();if(dragState){dragState.exEl.classList.remove("dragging");dragState=null;}};
+      h.onpointermove=(ev)=>{
+        if(armed)return; // document listener takes over once armed
+        if(Math.abs(ev.clientX-startX)>10||Math.abs(ev.clientY-startY)>10)cleanup();
       };
     };
   });
