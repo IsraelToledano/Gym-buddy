@@ -710,7 +710,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v49";
+const APP_VERSION="v50";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -979,14 +979,36 @@ function niceToHaveInfo(day,name){
 // Shared by both the reorder step and the on-screen tag so the displayed reason
 // always matches the order it produced (the same-muscle override below changes
 // both together instead of drifting apart).
-function computeTailInfo(day,tailNames){
+// Muscle-overlap dedup, scanning the WHOLE session order (not just the tail).
+// Root cause of the Machine crunch / Captain knee raise duplicate: the weekly
+// muscle-deficit nudge (protectNudgedExercise) can promote an exercise above
+// the cut line with zero awareness of this dedup, which only ever compared
+// tail items against each other. A same-muscle pair straddling the cut line
+// was invisible to it. Passing fullOrder closes that gap: a tail exercise
+// whose muscle is already covered anywhere above the line — regardless of
+// default status, since that head slot is fixed either way — loses.
+function computeTailInfo(day,tailNames,fullOrder){
   const info={};tailNames.forEach(n=>{info[n]=niceToHaveInfo(day,n);});
+  fullOrder=fullOrder||tailNames;
+  const MUST_HAVE_CAP=6;
+  const headNames=fullOrder.slice(0,MUST_HAVE_CAP).filter(n=>!tailNames.includes(n));
   const byMuscle={};tailNames.forEach(n=>{const m=NAME_INDEX[n].m;(byMuscle[m]=byMuscle[m]||[]).push(n);});
   Object.values(byMuscle).forEach(group=>{
     if(group.length<2)return;
     const nonDefault=group.find(n=>!info[n].isDefault);
     if(!nonDefault)return;
     group.forEach(n=>{if(info[n].isDefault){info[n].score=-1;info[n].reasonKey="due";info[n].reasonText=`Same muscle as ${nonDefault} — deprioritized this session`;}});
+  });
+  const headMuscles={};headNames.forEach(n=>{headMuscles[NAME_INDEX[n].m]=n;});
+  tailNames.forEach(n=>{
+    const headMate=headMuscles[NAME_INDEX[n].m];
+    // Skip when both sides are part of the day's own default routine — two
+    // exercises for one muscle is often intentional programming (e.g. two
+    // biceps movements), not a conflict. Only flag when at least one side is
+    // a this-session addition (manually added, or nudge-promoted into head).
+    if(headMate&&!(info[n].isDefault&&isDefaultForDay(day,headMate))){
+      info[n].score=-2;info[n].reasonKey="due";info[n].reasonText=`Same muscle as ${headMate} — already covered this session`;
+    }
   });
   return info;
 }
@@ -995,7 +1017,7 @@ function reorderNiceToHave(day,order){
   if(order.length<=MUST_HAVE_CAP)return order;
   const head=order.slice(0,MUST_HAVE_CAP);
   const tail=order.slice(MUST_HAVE_CAP);
-  const info=computeTailInfo(day,tail);
+  const info=computeTailInfo(day,tail,order);
   tail.sort((a,b)=>info[b].score-info[a].score);
   return head.concat(tail);
 }
@@ -1223,7 +1245,7 @@ function renderSession(){
   // session — so the cut line is now a flat position cutoff, not tied to
   // wherever the abs exercise happens to sit.
   const MUST_HAVE_CAP=6;
-  const tailInfo=computeTailInfo(CUR.day,names.slice(MUST_HAVE_CAP));
+  const tailInfo=computeTailInfo(CUR.day,names.slice(MUST_HAVE_CAP),names);
   names.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];if(log.skipped)return;const sets=log.sets;totSets+=sets.length;doneSets+=sets.filter(s=>setComplete(ex,s)).length;});
   const p=PLAN[CUR.day];
   const pct=totSets?Math.round(doneSets/totSets*100):0;
@@ -2058,6 +2080,8 @@ function protectNudgedExercise(n){
   if(!n)return false;
   const MUST_HAVE_CAP=6;
   if(CUR.order.length<=MUST_HAVE_CAP)return false; // whole session already fits inside the cap
+  const headNames=CUR.order.slice(0,MUST_HAVE_CAP);
+  if(headNames.some(name=>NAME_INDEX[name].m===n.muscle))return false; // this muscle already has a fixed slot above the line — don't create a duplicate
   let moved=false;
   CUR.order.filter(name=>NAME_INDEX[name].m===n.muscle).forEach(name=>{
     const ex=NAME_INDEX[name];
