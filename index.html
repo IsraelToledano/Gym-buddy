@@ -185,6 +185,11 @@
   .cardio-bar .lbl b{color:var(--ink)}
   .cardio-bar .time{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:19px;color:var(--teal)}
   .cardio-bar .fin{background:var(--teal);color:#0d1f1c;border:none;border-radius:8px;padding:9px 16px;font-weight:700;font-size:13px;margin-left:10px}
+  .cardio-inline{background:var(--card2,var(--card));border:1px solid var(--teal);border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .cardio-inline .lbl{font-size:12.5px;color:var(--ink-dim);line-height:1.5}
+  .cardio-inline .lbl b{color:var(--ink)}
+  .cardio-inline .time{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:19px;color:var(--teal)}
+  .cardio-inline .fin{background:var(--teal);color:#0d1f1c;border:none;border-radius:8px;padding:9px 16px;font-weight:700;font-size:13px;margin-left:10px;flex:none}
   .glance-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
   .glance-chip{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:5px 9px;font-size:11.5px;color:var(--ink-dim)}
   .glance-chip b{color:var(--ink)}
@@ -744,7 +749,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v58";
+const APP_VERSION="v59";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -779,12 +784,12 @@ function weeklyVolume(){return volumeSince(Date.now()-7*86400000);}
 function volumeSince(fromTs){const vol={};for(const m in MUSCLES)vol[m]=0;
   const add=(s)=>{sessionExNames(s).forEach(n=>{const def=NAME_INDEX[n];if(!def)return;const l=sessionLog(s,n);if(!l)return;vol[def.m]=(vol[def.m]||0)+l.sets.filter(x=>setComplete(def,x)).length;});};
   HISTORY.forEach(s=>{if(s.date>=fromTs)add(s);});
-  if(CUR&&CUR.start>=fromTs)add({day:CUR.day,exOrder:CUR.order,ex:CUR.ex});
+  if(CUR&&CUR.start!=null&&CUR.start>=fromTs)add({day:CUR.day,exOrder:CUR.order,ex:CUR.ex});
   return vol;}
 function weeklyVolumeForWeek(ws){const vol={};for(const m in MUSCLES)vol[m]=0;
   const add=(s)=>{sessionExNames(s).forEach(n=>{const def=NAME_INDEX[n];if(!def)return;const l=sessionLog(s,n);if(!l)return;vol[def.m]=(vol[def.m]||0)+l.sets.filter(x=>setComplete(def,x)).length;});};
   HISTORY.forEach(s=>{if(weekStart(s.date)===ws)add(s);});
-  if(CUR&&weekStart(CUR.start)===ws)add({day:CUR.day,exOrder:CUR.order,ex:CUR.ex});
+  if(CUR&&CUR.start!=null&&weekStart(CUR.start)===ws)add({day:CUR.day,exOrder:CUR.order,ex:CUR.ex});
   return vol;}
 function priorSessionThisWeek(){const from=Date.now()-7*86400000;return HISTORY.some(s=>s.date>=from);}
 const CADENCE_TARGET=4;
@@ -876,7 +881,7 @@ function exSeries(name,includeCur){const out=[];
     }
     out.push({date,day:s.day,...st,setDetail,posInfo});};
   HISTORY.forEach(s=>grab(s,s.date));
-  if(includeCur&&CUR)grab({day:CUR.day,exOrder:CUR.order,ex:CUR.ex},CUR.start);
+  if(includeCur&&CUR&&CUR.start!=null)grab({day:CUR.day,exOrder:CUR.order,ex:CUR.ex},CUR.start);
   out.sort((a,b)=>a.date-b.date);return out;}
 function exPRs(name){const ser=exSeries(name,true);if(!ser.length)return{hasData:false};
   const bw=isBodyweight(name,ser);
@@ -928,7 +933,7 @@ function analyzeStrengthTrends(){
 }
 function analyzeConsistency(){
   const weeks=recentWeekStarts(4);
-  const counts=weeks.map(w=>HISTORY.filter(s=>weekStart(s.date)===w).length+((CUR&&weekStart(CUR.start)===w)?1:0));
+  const counts=weeks.map(w=>HISTORY.filter(s=>weekStart(s.date)===w).length+((CUR&&CUR.start!=null&&weekStart(CUR.start)===w)?1:0));
   const avg=round1(counts.reduce((a,b)=>a+b,0)/counts.length);
   return{avgSessionsPerWeek:avg,target:4,weeks:counts};
 }
@@ -1216,7 +1221,7 @@ function renderHome(summary){
     }
   }
   if(CUR){const p=PLAN[CUR.day];const names=CUR.order||p.ex.map(e=>e.n);let tot=0,done=0;names.forEach(n=>{const ex=NAME_INDEX[n];const log=CUR.ex[n];if(!log)return;tot+=log.sets.length;done+=log.sets.filter(s=>setComplete(ex,s)).length;});
-    html+=`<div class="resume"><div class="l"><div class="t">Resume ${CUR.day} · ${p.name}</div><div class="d">${done}/${tot} sets · started ${fmtDate(CUR.start)}</div></div><button onclick="openSession()">Resume</button></div>`;}
+    html+=`<div class="resume"><div class="l"><div class="t">Resume ${CUR.day} · ${p.name}</div><div class="d">${done}/${tot} sets · ${CUR.start==null?"not started yet":"started "+fmtDate(CUR.start)}</div></div><button onclick="openSession()">Resume</button></div>`;}
   const sg=suggestDay();
   const nextDay=sg.pick.d;
   html+=`<div class="section-h">Start a session</div>`;
@@ -1295,7 +1300,7 @@ function renderSession(){
     CUR.nudgeReordered=true;saveCur();
   }
   if(n&&!CUR.nudgeDismissed){html+=`<div class="nudge"><span>⚠️</span><div>Try to keep <b>${n.exNames}</b> in today — ${n.muscle.toLowerCase()} is behind this week (${n.v}/${n.t} sets).${nudgeMoved?" Moved it above the cut line so it won't get cut first.":""}</div><button class="x" onclick="dismissNudge()">×</button></div>`;}
-  html+=`<div class="list" id="exList">`;
+  html+=`<div class="list" id="exList">${cardioInlineHtml()}`;
   names.forEach((name,i)=>{
     const ex=NAME_INDEX[name];
     const log=CUR.ex[name];const total=log.sets.length;const dn=log.sets.filter(s=>setComplete(ex,s)).length;
@@ -1557,6 +1562,11 @@ let CARDIO_LIVE=null;
 const CD_TYPES=[["Stairs","🪜"],["Elliptical","🚲"],["Walk","🚶"],["Tennis","🎾"]];
 function cdElapsedMs(){return CARDIO_LIVE?Date.now()-CARDIO_LIVE.startedAt:0;}
 function cdElapsedStr(){const e=cdElapsedMs();const m=Math.floor(e/60000),s=Math.floor((e%60000)/1000);return m+":"+String(s).padStart(2,"0");}
+function cardioInlineHtml(){
+  if(!CARDIO_LIVE||!CUR||CARDIO_LIVE.day!==CUR.day||CARDIO_LIVE.sessionStart!==CUR.start)return"";
+  const icon=(CD_TYPES.find(t=>t[0]===CARDIO_LIVE.type)||["","🏃"])[1];
+  return `<div class="cardio-inline" id="cardioInlineCard" onclick="openCardioLive()"><div class="lbl">${icon} <b>${esc(CARDIO_LIVE.type)}</b> — cardio running<br><span class="time" id="cardioInlineTime">${cdElapsedStr()}</span></div><button class="fin" onclick="event.stopPropagation();finishCardioLive()">Finish</button></div>`;
+}
 function renderCardioBar(){
   const m=document.getElementById("cardioBarMount");if(!m)return;
   if(!CARDIO_LIVE){m.innerHTML="";return;}
@@ -1567,6 +1577,7 @@ setInterval(()=>{
   if(!CARDIO_LIVE)return;
   renderCardioBar();
   const liveEl=document.getElementById("cdLiveTime");if(liveEl)liveEl.textContent=cdElapsedStr();
+  const inlineEl=document.getElementById("cardioInlineTime");if(inlineEl)inlineEl.textContent=cdElapsedStr();
 },1000);
 function startCardioLog(attachDay){
   if(CARDIO_LIVE){openCardioLive();return;} // already one running — don't start a second
@@ -1596,6 +1607,7 @@ async function startCardioLive(attachDay){
   // constant through the session — so history can splice it in where it
   // actually happened rather than always at the end.
   const doneCount=attachedToLiveSession?CUR.order.filter(n=>{const log=CUR.ex[n];const d=NAME_INDEX[n];return log.skipped||log.sets.filter(s=>setComplete(d,s)).length===log.sets.length;}).length:null;
+  if(attachedToLiveSession)markSessionStarted();
   CARDIO_LIVE={startedAt:Date.now(),type,rpe:type==="Tennis"?null:(rpeBtn?parseInt(rpeBtn.dataset.v,10):null),day:attachDay,sessionStart:attachedToLiveSession?CUR.start:null,seqIndex:doneCount};
   await sset("cardioLive",CARDIO_LIVE);
   closeOverlay();renderCardioBar();
@@ -1665,7 +1677,10 @@ async function deleteCardio(date){
 /* ---------------- interactions ---------------- */
 function startSession(day){
   const order=getDayOrderNames(day);
-  CUR={day,start:Date.now(),nudgeDismissed:false,order,defaultOrder:order.slice(),ex:{}};
+  // start stays null until the first set is actually logged (or cardio kicks off) — see
+  // markSessionStarted(). Otherwise time spent getting ready before the first rep counts
+  // toward the session clock, inflating the duration.
+  CUR={day,start:null,nudgeDismissed:false,order,defaultOrder:order.slice(),ex:{}};
   order.forEach(name=>{const def=NAME_INDEX[name];const prev=lastLog(name);CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};});
   CUR.order=reorderNiceToHave(day,CUR.order);
   openIdx=0;saveCur();initAudio();requestWake();renderSession();}
@@ -1728,6 +1743,7 @@ function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const
   refreshExHead(i);updateProgress();scheduleSave();
   scheduleVolBarsRefresh(i,name);
   if(now&&!was){
+    markSessionStarted();
     startTimer(rs(ex.rest),ex,i,j);
     const doneCount=sets.filter(x=>setComplete(ex,x)).length;
     if(!CUR.ex[name].skipped&&doneCount===sets.length)collapseAndAdvance(i,"done");
@@ -2175,7 +2191,7 @@ async function finishSession(){
       return;
     }
   }
-  CUR.date=Date.now();const rec={day:CUR.day,date:CUR.date,start:CUR.start,exOrder:CUR.order.slice(),ex:{}};let done=0,total=0,skipped=0;
+  CUR.date=Date.now();const rec={day:CUR.day,date:CUR.date,start:(CUR.start==null?CUR.date:CUR.start),exOrder:CUR.order.slice(),ex:{}};let done=0,total=0,skipped=0;
   const highlights=[];
   CUR.order.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];const sets=log.sets.map(s=>({weight:s.weight,reps:s.reps}));rec.ex[name]={sets,skipped:!!log.skipped};const d=log.sets.filter(s=>setComplete(ex,s)).length;done+=d;total+=sets.length;if(d===0)skipped++;
     if(log.highlight&&!log.skipped)highlights.push(Object.assign({muscle:ex.m,name},log.highlight));});
@@ -2262,7 +2278,8 @@ async function doImport(){const ta=document.getElementById("impArea");if(!ta)ret
 
 /* ---------------- clock ---------------- */
 let clockIv=null;
-function tickClock(){if(clockIv)clearInterval(clockIv);const upd=()=>{const el=document.getElementById("clock");if(!el||!CUR){clearInterval(clockIv);return;}el.textContent=fmtClock(Math.floor((Date.now()-CUR.start)/1000));};upd();clockIv=setInterval(upd,1000);}
+function markSessionStarted(){if(CUR&&CUR.start==null){CUR.start=Date.now();saveCur();}}
+function tickClock(){if(clockIv)clearInterval(clockIv);const upd=()=>{const el=document.getElementById("clock");if(!el||!CUR){clearInterval(clockIv);return;}el.textContent=CUR.start==null?"0:00":fmtClock(Math.floor((Date.now()-CUR.start)/1000));};upd();clockIv=setInterval(upd,1000);}
 
 /* ---------------- rest timer ----------------
    Always derives "time left" from a stored end-timestamp (restEndAt), never
