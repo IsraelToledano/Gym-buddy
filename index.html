@@ -749,7 +749,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v59";
+const APP_VERSION="v60";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1274,6 +1274,7 @@ function renderHome(summary){
 }
 
 let openIdx=-1;
+function setOpenIdx(i){openIdx=i;if(CUR){CUR.openIdx=i;saveCur();}}
 const DRAG_SVG='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
 const SWAP_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
 function renderSession(){
@@ -1683,8 +1684,8 @@ function startSession(day){
   CUR={day,start:null,nudgeDismissed:false,order,defaultOrder:order.slice(),ex:{}};
   order.forEach(name=>{const def=NAME_INDEX[name];const prev=lastLog(name);CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};});
   CUR.order=reorderNiceToHave(day,CUR.order);
-  openIdx=0;saveCur();initAudio();requestWake();renderSession();}
-function openSession(){openIdx=0;if(CUR&&!CUR.order){CUR.order=getDayOrderNames(CUR.day);CUR.defaultOrder=CUR.order.slice();}renderSession();requestWake();}
+  setOpenIdx(0);initAudio();requestWake();renderSession();}
+function openSession(){if(CUR&&!CUR.order){CUR.order=getDayOrderNames(CUR.day);CUR.defaultOrder=CUR.order.slice();}openIdx=(CUR&&CUR.openIdx!=null&&CUR.openIdx>=-1&&CUR.openIdx<CUR.order.length)?CUR.openIdx:nextOpenIdx();renderSession();requestWake();}
 function previewDay(day){
   closeOverlay();
   const p=PLAN[day];
@@ -1727,7 +1728,7 @@ function lastLog(name){
   }
   return null;
 }
-function toggleEx(i){openIdx=(openIdx===i?-1:i);renderSession();if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}}
+function toggleEx(i){setOpenIdx(openIdx===i?-1:i);renderSession();if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}}
 function toggleNotes(b){const w=document.getElementById(b.dataset.target);if(!w)return;w.classList.toggle("show");b.textContent=w.classList.contains("show")?"Notes \u25b4":"Notes \u25be";}
 function toggleCues(b){const ul=b.closest(".btnrow").nextElementSibling;ul.classList.toggle("show");b.textContent=ul.classList.contains("show")?"Form cues ▴":"Form cues ▾";}
 function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;const s=sets[j];const was=setComplete(ex,s);s[f]=v;const now=setComplete(ex,s);
@@ -1808,7 +1809,7 @@ function collapseAndAdvance(i,kind){
   setTimeout(()=>{
     reorderAfterComplete(name);
     saveCur();
-    openIdx=nextOpenIdx();
+    setOpenIdx(nextOpenIdx());
     renderSession();
     if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}
   },kind==="skip"?360:3000);
@@ -2030,7 +2031,7 @@ function finishDrag(){
   const newOrder=[...dragState.list.querySelectorAll(".ex")].map(el=>el.dataset.name);
   dragState=null;
   if(!CUR)return;
-  if(JSON.stringify(newOrder)!==JSON.stringify(CUR.order)){CUR.order=newOrder;openIdx=-1;saveCur();renderSession();}
+  if(JSON.stringify(newOrder)!==JSON.stringify(CUR.order)){CUR.order=newOrder;setOpenIdx(-1);renderSession();}
 }
 
 /* ---------------- exercise swap ---------------- */
@@ -2186,7 +2187,7 @@ async function finishSession(){
   if(missedMain){
     const proceed=await showConfirm(`You haven't logged ${missedMain} yet — it's today's key lift. Worth getting at least that one in before you finish.`,{okLabel:"Finish anyway",cancelLabel:"Go back to it"});
     if(!proceed){
-      const idx=CUR.order.indexOf(missedMain);openIdx=idx;renderSession();
+      const idx=CUR.order.indexOf(missedMain);setOpenIdx(idx);renderSession();
       const el=app.querySelectorAll(".ex")[idx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});
       return;
     }
@@ -2488,7 +2489,7 @@ const verEl=document.getElementById("verBadge");if(verEl)verEl.textContent=APP_V
     if(planNames){const migrated={};planNames.forEach((n,i)=>{if(CUR.ex[i])migrated[n]=CUR.ex[i];});CUR.order=planNames;CUR.defaultOrder=planNames.slice();CUR.ex=migrated;await sset("current",CUR);}
     else CUR=null;
   }
-  if(CUR){openIdx=0;renderSession();requestWake();}else renderHome();
+  if(CUR){openIdx=(CUR.openIdx!=null&&CUR.openIdx>=-1&&CUR.order&&CUR.openIdx<CUR.order.length)?CUR.openIdx:nextOpenIdx();renderSession();requestWake();}else renderHome();
   renderCardioBar();
 })();
 </script>
