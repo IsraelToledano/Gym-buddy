@@ -744,7 +744,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v56";
+const APP_VERSION="v57";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1726,7 +1726,7 @@ function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const
   }
   sets.forEach((st,k)=>{const r=document.getElementById("row-"+i+"-"+k);if(r)r.classList.toggle("set-done",setComplete(ex,st));});
   refreshExHead(i);updateProgress();scheduleSave();
-  const hlEl=document.getElementById("hl-"+i);if(hlEl){const vb=CUR.ex[name].skipped?null:computeExVolumeInsight(name);hlEl.innerHTML=vb?renderHighlightBadge(vb):"";}
+  scheduleVolBarsRefresh(i,name);
   if(now&&!was){
     startTimer(rs(ex.rest),ex,i,j);
     const doneCount=sets.filter(x=>setComplete(ex,x)).length;
@@ -2132,6 +2132,7 @@ async function saveCustomExercise(){
   addFromLibrary(name);
 }
 let saveT=null;function scheduleSave(){if(saveT)clearTimeout(saveT);saveT=setTimeout(()=>saveCur(),500);}
+let volT=null;function scheduleVolBarsRefresh(i,name){if(volT)clearTimeout(volT);volT=setTimeout(()=>{const hlEl=document.getElementById("hl-"+i);if(!hlEl)return;const vb=CUR.ex[name]&&CUR.ex[name].skipped?null:computeExVolumeInsight(name);hlEl.innerHTML=vb?renderHighlightBadge(vb):"";},350);}
 function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function setNote(name,v){NOTES[name]=v;if(noteT)clearTimeout(noteT);noteT=setTimeout(()=>sset("notes",NOTES),500);}
 let noteT=null;
