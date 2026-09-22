@@ -615,7 +615,6 @@ const PLAN={
     {n:"Triceps V-cable pushdown",m:"Triceps",equip:"cable",sets:3,reps:"10–12",rest:"60–90s",cues:{do:["Stand tall with the elbows pinned to your sides.","Push to a full lockout with a 1-second squeeze.","Let only the forearms move."],dont:["Don't lean over the cable to add body weight to the push.","Don't let the elbows flare out or drift forward."]}},
     {n:"Machine crunch",m:"Abs",equip:"machine",abs:1,sets:3,reps:"10–15",rest:"60–75s",cues:{do:["Set the pad across the chest or upper abs.","Round the spine — curl ribs toward hips, not a hip hinge.","Exhale and squeeze hard at the bottom of the rep."],dont:["Don't just hinge at the hips — that's not a crunch.","Don't use momentum to yank the handles down."]}},
     {n:"Leg extension",m:"Quads",equip:"machine",leg:1,sets:3,reps:"10–15",rest:"90s",cues:{do:["Align the knee with the machine's pivot point.","Squeeze hard for a full second at the top.","Control the lowering all the way down."],dont:["Don't let the lower back lift off the pad.","Don't slam the weight stack between reps."]}},
-    {n:"Calf raise",m:"Calves",equip:"machine",calf:1,sets:3,reps:"10–15",rest:"60–90s",cues:{do:["Get a deep stretch at the bottom before rising.","Rise fully onto the toes and pause at the top.","Keep the knees mostly straight throughout."],dont:["Don't bounce out of the bottom stretch.","Don't cut the range short by only doing the top half."]}}
   ]},
   A2:{name:"Push",ex:[
     {n:"Incline barbell press",m:"Chest",equip:"barbell",main:1,sets:4,reps:"6–10",rest:"90–120s",cues:{do:["Set a 30° incline with a grip just outside shoulder width.","Lower to the upper chest, elbows ~45–60°.","Keep the blades retracted and feet planted."],dont:["Don't bounce the bar off the chest.","Don't flare the elbows out to 90° on the way down."]}},
@@ -652,6 +651,7 @@ const LEGACY_PLAN_NAMES={"A1": ["Dumbbell bench press", "Incline bench press", "
    small — mainly plugs equipment gaps (e.g. a machine option for a muscle
    that's currently only trained with dumbbells). */
 const EXTRA_EX=[
+  {n:"Calf raise",m:"Calves",equip:"machine",calf:1,sets:3,reps:"10–15",rest:"60–90s",cues:{do:["Get a deep stretch at the bottom before rising.","Rise fully onto the toes and pause at the top.","Keep the knees mostly straight throughout."],dont:["Don't bounce out of the bottom stretch.","Don't cut the range short by only doing the top half."]}},
   /* --- Retired from the default routine (v53) — still defined for history + swap-ins --- */
   {n:"Pec deck / butterfly",m:"Chest",equip:"machine",sets:2,reps:"12–15",rest:"60s",cues:{do:["Set the handles level with the shoulders.","Push through with a slight, fixed elbow bend.","Squeeze and pause at full contraction."],dont:["Don't let the weight stack slam down on the return.","Don't let the shoulders round forward to reach further."]}},
   {n:"Triceps rope extension",m:"Triceps",equip:"cable",sets:2,reps:"10–12",rest:"60s",cues:{do:["Pin the elbows to your sides throughout.","Push down and spread the rope apart at the bottom.","Hold the lockout with a 1-second squeeze."],dont:["Don't let the elbows drift forward as you push down.","Don't use body weight or a lean to move the rope."]}},
@@ -744,7 +744,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v57";
+const APP_VERSION="v58";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
