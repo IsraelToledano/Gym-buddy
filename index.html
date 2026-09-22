@@ -217,9 +217,9 @@
   .trendbtn:hover{border-color:var(--teal)}
   .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
   .btnrow .formtog,.btnrow .trendbtn{margin-top:0}
-  .targetrow{margin-bottom:8px}
-  .target-badge{display:inline-block;font-size:11px;font-weight:600;color:var(--teal);background:rgba(84,185,168,.12);border:1px solid rgba(84,185,168,.3);border-radius:20px;padding:3px 10px}
-  .lasttime{font-size:12px;color:var(--ink-faint);margin-bottom:10px;line-height:1.4}
+  .targetrow{margin-bottom:8px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+  .target-badge{display:inline-block;font-size:10.5px;font-weight:600;color:var(--teal);background:rgba(84,185,168,.12);border:1px solid rgba(84,185,168,.3);border-radius:20px;padding:3px 9px;flex:none;white-space:nowrap}
+  .lasttime{font-size:11px;color:var(--ink-faint);line-height:1.4;min-width:0}
   .lasttime b{color:var(--ink-dim);font-weight:600}
   .pinned-note{display:flex;gap:9px;align-items:flex-start;background:rgba(84,185,168,.10);border:1px solid rgba(84,185,168,.35);border-radius:12px;padding:10px 12px;margin-bottom:10px}
   .pinned-note .ic{font-size:14px;line-height:1.35}
@@ -252,6 +252,7 @@
   .ph-bar-fill.now.down{background:var(--red)}
   .ph-bar-fill.now.flat{background:var(--ink-faint)}
   .ph-bar-fill.prev{background:var(--ink-faint)}
+  .ph-bar-fill.best{background:var(--amber-bright)}
 
   .mg-block{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:10px}
   .mg-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px}
@@ -743,7 +744,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v53";
+const APP_VERSION="v56";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1310,12 +1311,13 @@ function renderSession(){
     if(exp){
       const prevSets=lastLog(name);
       const lastTimeStr=prevSets?prevSets.filter(s=>s.reps!==""&&s.reps!=null).map(s=>{const w=parseFloat(s.weight);return prs.bw?`${s.reps} reps`:(w?`${w}kg×${s.reps}`:`${s.reps} reps`);}).join(" · "):"";
-      const lastTimeHtml=lastTimeStr?`<div class="lasttime">Last time: <b>${lastTimeStr}</b></div>`:"";
+      const lastTimeHtml=lastTimeStr?`<span class="lasttime">Last: <b>${lastTimeStr}</b></span>`:"";
       // A filled note is useful gear/setup info (seat height, pin number...) — surface
       // it right at the top of the expanded card instead of making the person scroll
       // past sets and cues to find it. The editor down in noteBlock is untouched.
       const pinnedNoteHtml=nVal.trim()?`<div class="pinned-note"><span class="ic">📝</span><div class="tx">${esc(nVal)}</div></div>`:"";
-      topHtml=`${pinnedNoteHtml}${targetBadge?`<div class="targetrow">${targetBadge}</div>`:""}${lastTimeHtml}`;
+      const metaRow=(targetBadge||lastTimeHtml)?`<div class="targetrow">${targetBadge}${lastTimeHtml}</div>`:"";
+      topHtml=`${pinnedNoteHtml}${metaRow}`;
       if(!prs.hasData){statsHtml=`<div class="nohist" style="margin-bottom:0;padding-bottom:0;border-bottom:none">No history yet — your first logged session sets the baseline.</div>`;}
       else{
         trendBtnHtml=`<button class="trendbtn" onclick="openTrend('${name.replace(/'/g,"\\'")}')">View trend ›</button>`;
@@ -1327,10 +1329,12 @@ function renderSession(){
     log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${extra?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>`;});
     const cues=`${ex.cues.do&&ex.cues.do.length?`<div class="cuesub cue-do"><div class="cuelabel">✓ Do</div><ul>${ex.cues.do.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}${ex.cues.dont&&ex.cues.dont.length?`<div class="cuesub cue-dont"><div class="cuelabel">✕ Don't</div><ul>${ex.cues.dont.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}`;
     const nOpen=nVal.trim()?" show":"";
-    const noteBlock=`<div class="notesblock"><button class="formtog notetog" onclick="toggleNotes(this)">Notes ${nOpen?"\u25b4":"\u25be"}</button><div class="notewrap${nOpen}"><textarea class="exnotes" placeholder="Seat height, pin number, grip, machine #\u2026" oninput="setNote('${name.replace(/'/g,"\\'")}',this.value)">${esc(nVal)}</textarea></div></div>`;
+    const noteBtnHtml=`<button class="formtog notetog" onclick="toggleNotes(this)" data-target="notewrap-${i}">Notes ${nOpen?"\u25b4":"\u25be"}</button>`;
+    const noteBlock=`<div class="notewrap${nOpen}" id="notewrap-${i}"><textarea class="exnotes" placeholder="Seat height, pin number, grip, machine #\u2026" oninput="setNote('${name.replace(/'/g,"\\'")}',this.value)">${esc(nVal)}</textarea></div>`;
     const swapOpts=getSwapOptions(name);
-    const hlHtml=`<div id="hl-${i}">${renderHighlightBadge(log.highlight)}</div>`;
-    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}<div id="ef-${i}">${effortHtml(i)}</div><button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="sethint">A set logs once you enter reps. Weight is optional. Clear reps to unlog.</div><div class="btnrow"><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo skip":"⤼ Mark as skipped"}</button><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button>${trendBtnHtml}</div><div class="cues">${cues}</div>${noteBlock}</div></div></div></div>`;
+    const liveVB=uskip?null:computeExVolumeInsight(name);
+    const hlHtml=`<div id="hl-${i}">${liveVB?renderHighlightBadge(liveVB):""}</div>`;
+    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}<div id="ef-${i}">${effortHtml(i)}</div><button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="btnrow"><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo skip":"⤼ Mark as skipped"}</button><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button>${trendBtnHtml}${noteBtnHtml}</div><div class="cues">${cues}</div>${noteBlock}</div></div></div></div>`;
     if(i===MUST_HAVE_CAP-1){html+=`<div class="cutline"><span class="txt">Cut from here ↓</span><span class="rule"></span></div>`;}
   });
   html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button><button class="inline-add" onclick="startCardioLog(CUR.day)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>${CARDIO_LIVE?"Cardio in progress — tap to view":"Add cardio to this session"}</button><div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
@@ -1709,7 +1713,7 @@ function lastLog(name){
   return null;
 }
 function toggleEx(i){openIdx=(openIdx===i?-1:i);renderSession();if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}}
-function toggleNotes(b){const w=b.nextElementSibling;w.classList.toggle("show");b.textContent=w.classList.contains("show")?"Notes \u25b4":"Notes \u25be";}
+function toggleNotes(b){const w=document.getElementById(b.dataset.target);if(!w)return;w.classList.toggle("show");b.textContent=w.classList.contains("show")?"Notes \u25b4":"Notes \u25be";}
 function toggleCues(b){const ul=b.closest(".btnrow").nextElementSibling;ul.classList.toggle("show");b.textContent=ul.classList.contains("show")?"Form cues ▴":"Form cues ▾";}
 function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;const s=sets[j];const was=setComplete(ex,s);s[f]=v;const now=setComplete(ex,s);
   // If a set completes via reps while weight was left blank, fall back to the
@@ -1722,6 +1726,7 @@ function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const
   }
   sets.forEach((st,k)=>{const r=document.getElementById("row-"+i+"-"+k);if(r)r.classList.toggle("set-done",setComplete(ex,st));});
   refreshExHead(i);updateProgress();scheduleSave();
+  const hlEl=document.getElementById("hl-"+i);if(hlEl){const vb=CUR.ex[name].skipped?null:computeExVolumeInsight(name);hlEl.innerHTML=vb?renderHighlightBadge(vb):"";}
   if(now&&!was){
     startTimer(rs(ex.rest),ex,i,j);
     const doneCount=sets.filter(x=>setComplete(ex,x)).length;
@@ -1734,7 +1739,7 @@ function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const
     const doneCount=sets.filter(x=>setComplete(ex,x)).length;
     if(doneCount===sets.length){
       const h=computeExVolumeInsight(name);
-      if(h){CUR.ex[name].highlight=h;saveCur();const hlEl=document.getElementById("hl-"+i);if(hlEl)hlEl.innerHTML=renderHighlightBadge(h);}
+      if(h){CUR.ex[name].highlight=h;saveCur();}
     }
     // The effort ("Light session") prompt is computed fresh, unlike the cached
     // highlight above — but it was still baked into the DOM at the last full
@@ -1790,11 +1795,12 @@ function collapseAndAdvance(i,kind){
     openIdx=nextOpenIdx();
     renderSession();
     if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}
-  },kind==="skip"?360:520);
+  },kind==="skip"?360:3000);
 }
 /* ---------------- post-exercise volume insight ---------------- */
 function computeExVolumeInsight(name){
   const ex=NAME_INDEX[name];const log=CUR.ex[name];if(!log)return null;
+  const started=log.sets.some(s=>setComplete(ex,s));
   const cur=sessStats(ex,log);
   const priorSeries=exSeries(name,false); // HISTORY only, excludes the session in progress
   if(!priorSeries.length)return null; // first time logging this exercise — no baseline to compare, stay quiet
@@ -1804,25 +1810,26 @@ function computeExVolumeInsight(name){
   if(bw){
     const priorReps=prior.reps;
     const priorBestReps=Math.max(...priorSeries.map(s=>s.reps));
-    const isPR=cur.reps>priorBestReps;
-    const pct=priorReps>0?Math.round((cur.reps-priorReps)/priorReps*100):null;
-    const dir=pct==null?"flat":(pct>0?"up":(pct<0?"down":"flat"));
-    const mx=Math.max(cur.reps,priorReps,1);
+    const isPR=started&&cur.reps>priorBestReps;
+    const pct=started&&priorReps>0?Math.round((cur.reps-priorReps)/priorReps*100):null;
+    const dir=!started?"flat":(pct==null?"flat":(pct>0?"up":(pct<0?"down":"flat")));
+    const mx=Math.max(cur.reps,priorReps,priorBestReps,1);
     return{icon:isPR?"🔥":(dir==="up"?"📈":dir==="down"?"📉":"➖"),
       prText:isPR?`<b>New rep PR</b> — ${cur.reps} reps (+${cur.reps-priorBestReps} vs previous best)`:null,
-      bw:true,curVal:cur.reps,priorVal:priorReps,pct,dir,
-      nowW:Math.round(cur.reps/mx*100),prevW:Math.round(priorReps/mx*100)};
+      bw:true,started,curVal:cur.reps,priorVal:priorReps,bestVal:priorBestReps,pct,dir,
+      nowW:Math.round(cur.reps/mx*100),prevW:Math.round(priorReps/mx*100),bestW:Math.round(priorBestReps/mx*100)};
   }
   const priorVol=prior.vol;
+  const priorBestVol=Math.max(...priorSeries.map(s=>s.vol));
   const priorBestTop=Math.max(...priorSeries.map(s=>s.top));
-  const isPR=cur.top>priorBestTop;
-  const pct=priorVol>0?Math.round((cur.vol-priorVol)/priorVol*100):null;
-  const dir=pct==null?"flat":(pct>0?"up":(pct<0?"down":"flat"));
-  const mx=Math.max(cur.vol,priorVol,1);
+  const isPR=started&&cur.top>priorBestTop;
+  const pct=started&&priorVol>0?Math.round((cur.vol-priorVol)/priorVol*100):null;
+  const dir=!started?"flat":(pct==null?"flat":(pct>0?"up":(pct<0?"down":"flat")));
+  const mx=Math.max(cur.vol,priorVol,priorBestVol,1);
   return{icon:isPR?"🔥":(dir==="up"?"📈":dir==="down"?"📉":"➖"),
     prText:isPR?`<b>New PR</b> — ${cur.top}kg top weight (+${round1(cur.top-priorBestTop)}kg)`:null,
-    bw:false,curVal:cur.vol,priorVal:priorVol,pct,dir,
-    nowW:Math.round(cur.vol/mx*100),prevW:Math.round(priorVol/mx*100)};
+    bw:false,started,curVal:cur.vol,priorVal:priorVol,bestVal:priorBestVol,pct,dir,
+    nowW:Math.round(cur.vol/mx*100),prevW:Math.round(priorVol/mx*100),bestW:Math.round(priorBestVol/mx*100)};
 }
 /* Renders the persistent badge shown at the bottom of a finished exercise card */
 function renderHighlightBadge(h){
@@ -1830,9 +1837,11 @@ function renderHighlightBadge(h){
   const valStr=v=>h.bw?`${v} reps`:`${v}kg`;
   const label=h.bw?"Reps":"Volume";
   const topLine=h.prText?`<div class="ph-top"><span class="ic">🔥</span><div class="tx">${h.prText}</div></div>`:"";
-  const pctHtml=h.pct!=null?` → <span class="pct ${h.dir}">${h.pct>=0?"+":""}${h.pct}%</span>`:"";
-  const volLine=`<div class="ph-vol">${label}: <b>${valStr(h.curVal)}</b> vs ${valStr(h.priorVal)} last time${pctHtml}</div>`;
-  const bars=`<div class="ph-bars"><div class="ph-bar-row"><span class="lbl">Today</span><div class="ph-bar-track"><div class="ph-bar-fill now ${h.dir}" style="width:${h.nowW}%"></div></div></div><div class="ph-bar-row"><span class="lbl">Last</span><div class="ph-bar-track"><div class="ph-bar-fill prev" style="width:${h.prevW}%"></div></div></div></div>`;
+  const pctHtml=h.started&&h.pct!=null?` → <span class="pct ${h.dir}">${h.pct>=0?"+":""}${h.pct}%</span>`:"";
+  const volLine=h.started
+    ?`<div class="ph-vol">${label}: <b>${valStr(h.curVal)}</b> vs ${valStr(h.priorVal)} last time${pctHtml}</div>`
+    :`<div class="ph-vol">${label} so far: <b>${valStr(h.curVal)}</b> — last time ${valStr(h.priorVal)}, best ${valStr(h.bestVal)}</div>`;
+  const bars=`<div class="ph-bars"><div class="ph-bar-row"><span class="lbl">Now</span><div class="ph-bar-track"><div class="ph-bar-fill now ${h.dir}" style="width:${h.nowW}%"></div></div></div><div class="ph-bar-row"><span class="lbl">Last</span><div class="ph-bar-track"><div class="ph-bar-fill prev" style="width:${h.prevW}%"></div></div></div><div class="ph-bar-row"><span class="lbl">Best</span><div class="ph-bar-track"><div class="ph-bar-fill best" style="width:${h.bestW}%"></div></div></div></div>`;
   return `<div class="persist-highlight">${topLine}${volLine}${bars}</div>`;
 }
 let toastTimer=null,toastRemaining=3000,toastStart=0,toastPaused=false;
