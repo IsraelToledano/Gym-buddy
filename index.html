@@ -206,9 +206,9 @@
   .ex-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .26s ease}
   .ex-body>.inner{overflow:hidden}
   .ex-btn[aria-expanded="true"]+.ex-body{grid-template-rows:1fr}
-  .panel{border:1px solid var(--line);border-top:none;border-radius:0 0 var(--r) var(--r);margin-top:-6px;padding:11px;background:rgba(0,0,0,.18)}
+  .panel{border:1px solid var(--line);border-top:none;border-radius:0 0 var(--r) var(--r);margin-top:-6px;padding:10px;background:rgba(0,0,0,.18)}
 
-  .prstrip{display:flex;gap:7px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+  .prstrip{display:flex;gap:7px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
   .pr{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:6px 8px}
   .pr .lab{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap}
   .pr .val{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:17px;line-height:1.1;margin-top:1px}
@@ -220,8 +220,9 @@
   .nohist{font-size:12px;color:var(--ink-faint);margin-bottom:13px;padding-bottom:13px;border-bottom:1px solid var(--line)}
   .trendbtn{background:none;border:1px solid var(--line);border-radius:9px;color:var(--teal);font-size:12px;font-weight:600;padding:7px 11px;flex:none}
   .trendbtn:hover{border-color:var(--teal)}
-  .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-  .btnrow .formtog,.btnrow .trendbtn{margin-top:0}
+  .btnrow{display:flex;flex-wrap:nowrap;gap:6px;margin-top:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .btnrow::-webkit-scrollbar{display:none}
+  .btnrow .formtog,.btnrow .trendbtn{margin-top:0;padding:6px 9px;font-size:11px;flex:none;white-space:nowrap}
   .targetrow{margin-bottom:8px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}
   .target-badge{display:inline-block;font-size:10.5px;font-weight:600;color:var(--teal);background:rgba(84,185,168,.12);border:1px solid rgba(84,185,168,.3);border-radius:20px;padding:3px 9px;flex:none;white-space:nowrap}
   .lasttime{font-size:11px;color:var(--ink-faint);line-height:1.4;min-width:0}
@@ -238,7 +239,7 @@
   .ex-toast .bar-track{position:absolute;left:0;right:0;bottom:0;height:2.5px;background:rgba(255,255,255,.06)}
   .ex-toast .bar-fill{height:100%;background:var(--amber-bright);width:100%}
   .ex-toast.paused .bar-fill{background:var(--teal)}
-  .persist-highlight{margin-top:12px;background:var(--card-hi);border:1px solid rgba(242,135,46,.35);border-radius:10px;padding:10px 12px}
+  .persist-highlight{margin-top:9px;background:var(--card-hi);border:1px solid rgba(242,135,46,.35);border-radius:10px;padding:8px 12px}
   .ph-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
   .ph-top .ic{font-size:16px;flex-shrink:0}
   .ph-top .tx{color:var(--ink);font-size:12.5px;line-height:1.35}
@@ -302,7 +303,7 @@
   .ef-btns button{flex:1;border-radius:9px;padding:9px 10px;font-weight:600;font-size:13.5px;font-family:inherit;border:1px solid var(--line);background:var(--bg);color:var(--ink-dim)}
   .ef-yes{background:var(--teal)!important;border-color:var(--teal)!important;color:#0c1f1b!important}
   .ef-note{font-size:11px;color:var(--ink-faint);margin-top:8px}
-  .addset{margin-top:8px;width:100%;background:var(--bg);border:1px dashed var(--line);border-radius:10px;color:var(--ink-dim);font-weight:600;font-size:13px;padding:7px}
+  .addset{margin-top:6px;width:100%;background:var(--bg);border:1px dashed var(--line);border-radius:10px;color:var(--ink-dim);font-weight:600;font-size:13px;padding:6px}
   .addset:hover{border-color:var(--amber);color:var(--amber-bright)}
   .rmset{width:30px;height:38px;border:none;background:none;color:var(--ink-faint);font-size:15px;border-radius:8px}
   .rmset:hover{color:var(--red);background:rgba(224,112,62,.1)}
@@ -531,7 +532,7 @@
 
   /* ---- exercise animations: inline SVG stick figures, 2-keyframe CSS loops.
      No external files, so they work offline in the gym. ---- */
-  .exanim{position:relative;height:132px;display:flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow:hidden}
+  .exanim{position:relative;height:108px;display:flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden}
   .exanim img.exframe{height:100%;width:100%;object-fit:cover;display:block;opacity:0;transition:opacity .18s ease}
   .exanim img.exframe.ready{opacity:1}
   .exphase{position:absolute;left:8px;bottom:8px;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:11px;color:var(--ink);background:rgba(0,0,0,.55);backdrop-filter:blur(4px);padding:3px 8px;border-radius:6px;pointer-events:none}
@@ -751,7 +752,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v62";
+const APP_VERSION="v63";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1328,7 +1329,7 @@ function renderSession(){
       topHtml=`${pinnedNoteHtml}${metaRow}`;
       if(!prs.hasData){statsHtml=`<div class="nohist" style="margin-bottom:0;padding-bottom:0;border-bottom:none">No history yet — your first logged session sets the baseline.</div>`;}
       else{
-        trendBtnHtml=`<button class="trendbtn" onclick="openTrend('${name.replace(/'/g,"\\'")}')">View trend ›</button>`;
+        trendBtnHtml=`<button class="trendbtn" onclick="openTrend('${name.replace(/'/g,"\\'")}')">Trend ›</button>`;
         if(prs.bw){statsHtml=`<div class="prstrip"><div class="pr top"><div class="lab">Best set total</div><div class="val">${prs.reps} <small>reps</small></div></div></div><div class="prcaption">Bodyweight — tracking total reps</div>`;}
         else{statsHtml=`<div class="prstrip"><div class="pr top"><div class="lab">Top weight</div><div class="val">${prs.top} <small>kg</small></div></div><div class="pr vol"><div class="lab">Best volume</div><div class="val">${prs.vol} <small>kg</small></div></div><div class="pr e1"><div class="lab">est 1RM</div><div class="val">${prs.e1} <small>kg</small></div></div></div>`;}
       }
@@ -1342,7 +1343,7 @@ function renderSession(){
     const swapOpts=getSwapOptions(name);
     const liveVB=uskip?null:computeExVolumeInsight(name);
     const hlHtml=`<div id="hl-${i}">${liveVB?renderHighlightBadge(liveVB):""}</div>`;
-    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}<div id="ef-${i}">${effortHtml(i)}</div><button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="btnrow"><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo skip":"⤼ Mark as skipped"}</button><button class="formtog" onclick="toggleCues(this)">Form cues ▾</button>${trendBtnHtml}${noteBtnHtml}</div><div class="cues">${cues}</div>${noteBlock}</div></div></div></div>`;
+    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}<div id="ef-${i}">${effortHtml(i)}</div><button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="btnrow"><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo":"⤼ Skip"}</button><button class="formtog" onclick="toggleCues(this)">Cues ▾</button>${trendBtnHtml}${noteBtnHtml}</div><div class="cues">${cues}</div>${noteBlock}</div></div></div></div>`;
     if(i===MUST_HAVE_CAP-1){html+=`<div class="cutline"><span class="txt">Cut from here ↓</span><span class="rule"></span></div>`;}
   });
   html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button><button class="inline-add" onclick="startCardioLog(CUR.day)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>${CARDIO_LIVE?"Cardio in progress — tap to view":"Add cardio to this session"}</button><div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
@@ -1732,7 +1733,7 @@ function lastLog(name){
 }
 function toggleEx(i){setOpenIdx(openIdx===i?-1:i);renderSession();if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}}
 function toggleNotes(b){const w=document.getElementById(b.dataset.target);if(!w)return;w.classList.toggle("show");b.textContent=w.classList.contains("show")?"Notes \u25b4":"Notes \u25be";}
-function toggleCues(b){const ul=b.closest(".btnrow").nextElementSibling;ul.classList.toggle("show");b.textContent=ul.classList.contains("show")?"Form cues ▴":"Form cues ▾";}
+function toggleCues(b){const ul=b.closest(".btnrow").nextElementSibling;ul.classList.toggle("show");b.textContent=ul.classList.contains("show")?"Cues ▴":"Cues ▾";}
 function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;const s=sets[j];const was=setComplete(ex,s);s[f]=v;const now=setComplete(ex,s);
   // If a set completes via reps while weight was left blank, fall back to the
   // shown placeholder (last time's weight) rather than silently logging 0kg —
@@ -1747,6 +1748,7 @@ function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const
   scheduleVolBarsRefresh(i,name);
   if(now&&!was){
     markSessionStarted();
+    if(document.activeElement&&typeof document.activeElement.blur==="function")document.activeElement.blur();
     startTimer(rs(ex.rest),ex,i,j);
     const doneCount=sets.filter(x=>setComplete(ex,x)).length;
     if(!CUR.ex[name].skipped&&doneCount===sets.length)collapseAndAdvance(i,"done");
