@@ -185,6 +185,17 @@
   .cardio-bar .lbl b{color:var(--ink)}
   .cardio-bar .time{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:19px;color:var(--teal)}
   .cardio-bar .fin{background:var(--teal);color:#0d1f1c;border:none;border-radius:8px;padding:9px 16px;font-weight:700;font-size:13px;margin-left:10px}
+  .cd-finisher{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border:1px dashed var(--teal);border-radius:var(--r);padding:12px 14px;margin-top:10px}
+  .cd-finisher.done{border-style:solid;border-color:rgba(111,191,115,.45)}
+  .cd-finisher .cf-k{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+  .cd-finisher .cf-n{font-size:15px;font-weight:700;color:var(--ink);margin-top:2px}
+  .cd-finisher .cf-s{font-size:12px;color:var(--ink-dim);margin-top:1px}
+  .cd-finisher .cf-done{font-size:13.5px;color:var(--green);font-weight:600;margin-top:3px}
+  .cd-finisher .cf-go{background:var(--teal);color:#0d1f1c;border:none;border-radius:8px;padding:9px 16px;font-weight:700;font-size:13px;flex:none}
+  .cd-finisher .cf-more{background:none;border:1px solid var(--line);color:var(--ink-dim);border-radius:8px;padding:7px 12px;font-weight:600;font-size:12px;flex:none}
+  .kcal-line{display:flex;gap:6px;align-items:baseline;margin-top:6px;font-size:13px;color:var(--ink)}
+  .kcal-line .kb{color:var(--ink-dim);font-weight:400}
+  .kcal-sub{font-size:11.5px;color:var(--ink-faint);text-align:right;margin:-2px 0 4px}
   .cardio-inline{background:var(--card2,var(--card));border:1px solid var(--teal);border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .cardio-inline .lbl{font-size:12.5px;color:var(--ink-dim);line-height:1.5}
   .cardio-inline .lbl b{color:var(--ink)}
@@ -752,7 +763,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v63";
+const APP_VERSION="v64";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1177,6 +1188,7 @@ function openHistorySession(idx){
     <div class="overall-card"><div class="oh">Session overview</div>
     <div class="overall-row"><span>Sets completed</span><b>${st.done} / ${st.total}</b></div>
     <div class="overall-row"><span>Total volume</span><b>${st.vol}kg</b></div>
+    ${(()=>{const k=sessionKcal(rec);return k?`<div class="overall-row"><span>Est. calories</span><b>~${k.total} kcal</b></div><div class="kcal-sub">Lifting ~${k.lift}${k.cardio?` · cardio ~${k.cardio}`:""} · ${k.liftMin+k.cdMin} min</div>`:`<div class="overall-row"><span>Est. calories</span><b style="color:var(--ink-faint);font-weight:500">set weight in Profile</b></div>`;})()}
     ${deltaRow}${note}</div>
     <div class="section-h">Exercises</div>
     ${exCards.join("")}
@@ -1189,6 +1201,7 @@ function cardioHistCardHtml(c){
   if(c.floors)bits.push(`${c.floors} floors`);
   if(c.hr)bits.push(`${c.hr} bpm`);
   if(c.rpe)bits.push(`RPE ${c.rpe}`);
+  const k=cardioKcal(c);if(k)bits.push(`~${k} kcal`);
   return `<div class="cardio-hist-card"><div class="ch-top"><div class="ch-name">${icon} ${esc(c.type)}</div></div><div style="color:var(--ink-faint);font-size:12.5px;margin-top:4px">${bits.join(" · ")}</div></div>`;
 }
 
@@ -1205,7 +1218,7 @@ function renderHome(summary){
   let html="";
   html+=statRowHtml();
   if(summary&&summary.milestone){html+=`<div class="milestone-banner"><div class="ic">🎉</div><div><div class="tt">${summary.milestone} workouts logged</div><div class="dd">Since you started tracking — nice consistency.</div></div></div>`;}
-  if(summary){html+=`<div class="nudge" style="border-color:rgba(111,191,115,.4);background:rgba(111,191,115,.1)"><span>✓</span><div><b style="color:var(--green)">${summary.day} logged.</b> ${summary.done}/${summary.total} sets done${summary.skipped?` · ${summary.skipped} exercise${summary.skipped>1?"s":""} skipped`:""}.</div></div>`;
+  if(summary){html+=`<div class="nudge" style="border-color:rgba(111,191,115,.4);background:rgba(111,191,115,.1)"><span>✓</span><div><b style="color:var(--green)">${summary.day} logged.</b> ${summary.done}/${summary.total} sets done${summary.skipped?` · ${summary.skipped} exercise${summary.skipped>1?"s":""} skipped`:""}.${kcalLineHtml(summary.kcal)}</div></div>`;
     if(summary.highlights&&summary.highlights.length){
       const groups=buildMuscleSummary(summary.highlights);
       html+=`<div class="section-h">Highlights by muscle group</div>`;
@@ -1254,7 +1267,7 @@ function renderHome(summary){
   if(CARDIO.length){
     const recentC=CARDIO.slice().sort((a,b)=>b.date-a.date).slice(0,4);
     const cdIcon={Stairs:"🪜",Elliptical:"🚲",Walk:"🚶",Tennis:"🎾"};
-    html+=`<div class="tennis-box" style="margin-top:10px"><div style="font-size:12px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:8px">Recent cardio</div><div class="tennis-recent">`+recentC.map(c=>`<div class="rsess"><span class="rd">${cdIcon[c.type]||"🏃"} ${esc(c.type)} · ${fmtDate(c.date)} · ${c.duration} min${c.rpe?" · RPE "+c.rpe:""}${c.floors?" · "+c.floors+" floors":""}${c.hr?" · "+c.hr+" bpm":""}</span><button class="tdel" onclick="deleteCardio(${c.date})" aria-label="delete">×</button></div>`).join("")+`</div></div>`;
+    html+=`<div class="tennis-box" style="margin-top:10px"><div style="font-size:12px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:8px">Recent cardio</div><div class="tennis-recent">`+recentC.map(c=>`<div class="rsess"><span class="rd">${cdIcon[c.type]||"🏃"} ${esc(c.type)} · ${fmtDate(c.date)} · ${c.duration} min${c.rpe?" · RPE "+c.rpe:""}${c.floors?" · "+c.floors+" floors":""}${c.hr?" · "+c.hr+" bpm":""}${cardioKcal(c)?" · ~"+cardioKcal(c)+" kcal":""}</span><button class="tdel" onclick="deleteCardio(${c.date})" aria-label="delete">×</button></div>`).join("")+`</div></div>`;
   }
   const vol=weeklyVolume();
   html+=`<div class="section-h">Last 7 days</div><div class="week">`;
@@ -1346,7 +1359,7 @@ function renderSession(){
     html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}<div id="ef-${i}">${effortHtml(i)}</div><button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="btnrow"><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo":"⤼ Skip"}</button><button class="formtog" onclick="toggleCues(this)">Cues ▾</button>${trendBtnHtml}${noteBtnHtml}</div><div class="cues">${cues}</div>${noteBlock}</div></div></div></div>`;
     if(i===MUST_HAVE_CAP-1){html+=`<div class="cutline"><span class="txt">Cut from here ↓</span><span class="rule"></span></div>`;}
   });
-  html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button><button class="inline-add" onclick="startCardioLog(CUR.day)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>${CARDIO_LIVE?"Cardio in progress — tap to view":"Add cardio to this session"}</button><div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
+  html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button>${cardioFinisherHtml()}<div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
   app.innerHTML=html;tickClock();attachDragHandlers();initExImg();
 }
 
@@ -1564,6 +1577,42 @@ async function deleteTennis(date){
    app reloads or is closed and reopened. */
 let CARDIO_LIVE=null;
 const CD_TYPES=[["Stairs","🪜"],["Elliptical","🚲"],["Walk","🚶"],["Tennis","🎾"]];
+/* ---------------- calorie estimate ----------------
+   kcal = MET x bodyweight(kg) x hours (Compendium of Physical Activities).
+   Lifting uses MET 4.5 over the session's lifting time (rest periods included —
+   the MET already averages them in); cardio attached to the session is
+   subtracted from that time and counted with its own MET, scaled by RPE
+   when logged. Needs PROFILE.weightKg — without it we don't guess. */
+const CARDIO_FINISHER={type:"Stairs",min:"10\u201315",note:"Steady pace, RPE 6\u20137"};
+const CD_MET={Stairs:9.0,Elliptical:5.0,Walk:4.3,Tennis:7.3};
+const LIFT_MET=4.5;
+function bodyKg(){const w=parseFloat(PROFILE&&PROFILE.weightKg);return w>0?w:null;}
+function cardioKcal(c){const kg=bodyKg();if(!kg||!c||!c.duration)return null;let met=CD_MET[c.type]||5;if(c.rpe&&c.type!=="Tennis")met*=0.6+0.08*c.rpe;return Math.round(met*kg*c.duration/60);}
+function sessionKcal(rec){
+  const kg=bodyKg();if(!kg||!rec)return null;
+  const cds=rec.start!=null?CARDIO.filter(c=>c.sessionStart===rec.start):[];
+  const cdMin=cds.reduce((a,c)=>a+(c.duration||0),0);
+  const totMin=rec.start!=null?Math.min(Math.max(0,(rec.date-rec.start)/60000),150):0;
+  const liftMin=Math.max(0,totMin-cdMin);
+  const lift=Math.round(LIFT_MET*kg*liftMin/60);
+  const cardio=cds.reduce((a,c)=>a+(cardioKcal(c)||0),0);
+  return{total:lift+cardio,lift,cardio,liftMin:Math.round(liftMin),cdMin};
+}
+function kcalLineHtml(k){
+  if(!k)return `<div class="kcal-line"><span class="fl">\ud83d\udd25</span><span>Add your weight in <b>Profile</b> to see calories burned</span></div>`;
+  return `<div class="kcal-line"><span class="fl">\ud83d\udd25</span><span><b>~${k.total} kcal</b> burned <span class="kb">\u00b7 lifting ~${k.lift}${k.cardio?` \u00b7 cardio ~${k.cardio}`:""}</span></span></div>`;
+}
+function cardioFinisherHtml(){
+  const plus=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>`;
+  if(CARDIO_LIVE)return `<button class="inline-add" onclick="openCardioLive()">${plus}Cardio in progress \u2014 tap to view</button>`;
+  const done=CUR&&CUR.start!=null?CARDIO.filter(c=>c.sessionStart===CUR.start):[];
+  if(done.length){
+    const rows=done.map(c=>{const ic=(CD_TYPES.find(t=>t[0]===c.type)||["","\ud83c\udfc3"])[1];const k=cardioKcal(c);return `<div class="cf-done">\u2713 ${ic} ${esc(c.type)} \u00b7 ${c.duration} min${k?` \u00b7 ~${k} kcal`:""}</div>`;}).join("");
+    return `<div class="cd-finisher done"><div class="cf-l"><div class="cf-k">Cardio finisher</div>${rows}</div><button class="cf-more" onclick="startCardioLog(CUR.day)">+ More</button></div>`;
+  }
+  const f=CARDIO_FINISHER;const ic=(CD_TYPES.find(t=>t[0]===f.type)||["","\ud83c\udfc3"])[1];
+  return `<div class="cd-finisher"><div class="cf-l"><div class="cf-k">Cardio finisher</div><div class="cf-n">${ic} ${f.type} \u00b7 ${f.min} min</div><div class="cf-s">${f.note}</div></div><button class="cf-go" onclick="startCardioLog(CUR.day)">\u25b6 Start</button></div>`;
+}
 function cdElapsedMs(){return CARDIO_LIVE?Date.now()-CARDIO_LIVE.startedAt:0;}
 function cdElapsedStr(){const e=cdElapsedMs();const m=Math.floor(e/60000),s=Math.floor((e%60000)/1000);return m+":"+String(s).padStart(2,"0");}
 function cardioInlineHtml(){
@@ -1696,6 +1745,7 @@ function previewDay(day){
   const ld=lastDoneOf(day);
   const lastLine=ld?`Last done ${fmtDate(ld)}`:"Not done yet";
   const rows=order.map(n=>{const e=NAME_INDEX[n];return `<div class="prev-item"><div><div class="pi-name">${esc(n)}</div><div class="pi-sub">${esc(e.m)} · ${esc(e.equip)}</div></div><div class="pi-r">${e.sets}×${esc(e.reps)}<div class="pi-rest">${esc(e.rest)} rest</div></div></div>`;}).join("");
+  const cf=CARDIO_FINISHER;const cfRow=`<div class="prev-item"><div><div class="pi-name">Cardio finisher \u2014 ${esc(cf.type)}</div><div class="pi-sub">Cardio \u00b7 ${esc(cf.note)}</div></div><div class="pi-r">${esc(cf.min)} min</div></div>`;
   let cta;
   if(CUR&&CUR.day===day){
     cta=`<button class="btn primary" style="width:100%" onclick="closeOverlay();openSession()">Resume session</button>`;
@@ -1706,7 +1756,7 @@ function previewDay(day){
   }
   const html=`<div class="overlay"><div class="ov-head">${BACK_BTN}<div class="ti"><span>Preview · ${lastLine}</span>${day} · ${esc(p.name)}</div></div><div class="ov-body">
     <div class="section-h" style="margin-top:0">${order.length} exercises</div>
-    <div class="prev-list">${rows}</div>
+    <div class="prev-list">${rows}${cfRow}</div>
     ${cta}
   </div></div>`;
   document.getElementById("overlayMount").innerHTML=html;
@@ -2187,6 +2237,10 @@ function protectNudgedExercise(n){
 }
 async function finishSession(){
   removeExToast();
+  if(CARDIO_LIVE&&CARDIO_LIVE.sessionStart!=null&&CARDIO_LIVE.sessionStart===CUR.start){
+    const fin=await showConfirm("Your cardio is still running. Finish it first so it counts toward this session?",{okLabel:"Finish cardio",cancelLabel:"Save workout anyway"});
+    if(fin){finishCardioLive();return;}
+  }
   const missedMain=CUR.order.find(n=>{const d=NAME_INDEX[n];const lg=CUR.ex[n];return d.main&&!lg.skipped&&lg.sets.filter(s=>setComplete(d,s)).length===0;});
   if(missedMain){
     const proceed=await showConfirm(`You haven't logged ${missedMain} yet — it's today's key lift. Worth getting at least that one in before you finish.`,{okLabel:"Finish anyway",cancelLabel:"Go back to it"});
@@ -2207,7 +2261,7 @@ async function finishSession(){
     const noChange=await showConfirm(`You changed the exercise order or made a swap for ${rec.day} this session. Keep your saved routine as is, or update it to match?`,{okLabel:"Keep as is",cancelLabel:"Update routine"});
     if(!noChange){SETTINGS.dayOrder=SETTINGS.dayOrder||{};SETTINGS.dayOrder[rec.day]=rec.exOrder.slice();await sset("settings",SETTINGS);}
   }
-  renderHome({day:rec.day,done,total,skipped,highlights,milestone});
+  renderHome({day:rec.day,done,total,skipped,highlights,milestone,kcal:sessionKcal(rec)});
   launchConfetti();
   githubBackup();
 }
