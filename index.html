@@ -763,7 +763,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v64";
+const APP_VERSION="v65";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1348,7 +1348,7 @@ function renderSession(){
       }
     }
     let rows=`<div class="setrow head"><span></span><span>Weight (kg)</span><span>${SETTINGS.logReps?"Reps":""}</span><span></span></div>`;
-    log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${extra?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>`;});
+    log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" onblur="setInputBlur(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" onblur="setInputBlur(${i},${j})" onkeydown="if(event.key==='Enter')this.blur()" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${extra?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>`;});
     const cues=`${ex.cues.do&&ex.cues.do.length?`<div class="cuesub cue-do"><div class="cuelabel">✓ Do</div><ul>${ex.cues.do.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}${ex.cues.dont&&ex.cues.dont.length?`<div class="cuesub cue-dont"><div class="cuelabel">✕ Don't</div><ul>${ex.cues.dont.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}`;
     const nOpen=nVal.trim()?" show":"";
     const noteBtnHtml=`<button class="formtog notetog" onclick="toggleNotes(this)" data-target="notewrap-${i}">Notes ${nOpen?"\u25b4":"\u25be"}</button>`;
@@ -1784,6 +1784,30 @@ function lastLog(name){
 function toggleEx(i){setOpenIdx(openIdx===i?-1:i);renderSession();if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}}
 function toggleNotes(b){const w=document.getElementById(b.dataset.target);if(!w)return;w.classList.toggle("show");b.textContent=w.classList.contains("show")?"Notes \u25b4":"Notes \u25be";}
 function toggleCues(b){const ul=b.closest(".btnrow").nextElementSibling;ul.classList.toggle("show");b.textContent=ul.classList.contains("show")?"Cues ▴":"Cues ▾";}
+let pendingCommit=null;const COMMIT_IDLE_MS=2000;
+function commitSet(i,j){
+  if(!pendingCommit||pendingCommit.i!==i||pendingCommit.j!==j)return;
+  clearTimeout(pendingCommit.t);pendingCommit=null;
+  if(!CUR)return;const name=CUR.order[i];if(!name)return;
+  const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;
+  if(!sets[j]||!setComplete(ex,sets[j]))return;
+  // Blur before the rest-timer dock slides up, or iOS scrolls to keep the
+  // focused input above it (the v63 scroll-jump fix).
+  if(document.activeElement&&typeof document.activeElement.blur==="function")document.activeElement.blur();
+  startTimer(rs(ex.rest),ex,i,j);
+  const doneCount=sets.filter(x=>setComplete(ex,x)).length;
+  if(!CUR.ex[name].skipped&&doneCount===sets.length)collapseAndAdvance(i,"done");
+}
+function setInputBlur(i,j){
+  // Deferred a tick so we can see where focus went: hopping between weight
+  // and reps of the same set shouldn't commit it.
+  setTimeout(()=>{
+    if(!pendingCommit||pendingCommit.i!==i||pendingCommit.j!==j)return;
+    const a=document.activeElement,row=document.getElementById("row-"+i+"-"+j);
+    if(a&&row&&row.contains(a))return;
+    commitSet(i,j);
+  },0);
+}
 function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;const s=sets[j];const was=setComplete(ex,s);s[f]=v;const now=setComplete(ex,s);
   // If a set completes via reps while weight was left blank, fall back to the
   // shown placeholder (last time's weight) rather than silently logging 0kg —
@@ -1796,12 +1820,18 @@ function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const
   sets.forEach((st,k)=>{const r=document.getElementById("row-"+i+"-"+k);if(r)r.classList.toggle("set-done",setComplete(ex,st));});
   refreshExHead(i);updateProgress();scheduleSave();
   scheduleVolBarsRefresh(i,name);
-  if(now&&!was){
+  // A set counts as complete the moment reps has ANY digit, so acting on that
+  // instantly (blur + rest timer + collapse) cut people off after the "1" of
+  // "10". Instead the completion is held as pending and committed once typing
+  // settles: on leaving the set's inputs, or after COMMIT_IDLE_MS of no input.
+  const pendingHere=pendingCommit&&pendingCommit.i===i&&pendingCommit.j===j;
+  if(pendingHere){
+    clearTimeout(pendingCommit.t);
+    if(now)pendingCommit.t=setTimeout(()=>commitSet(i,j),COMMIT_IDLE_MS);else pendingCommit=null;
+  }else if(now&&!was){
+    if(pendingCommit)commitSet(pendingCommit.i,pendingCommit.j);
     markSessionStarted();
-    if(document.activeElement&&typeof document.activeElement.blur==="function")document.activeElement.blur();
-    startTimer(rs(ex.rest),ex,i,j);
-    const doneCount=sets.filter(x=>setComplete(ex,x)).length;
-    if(!CUR.ex[name].skipped&&doneCount===sets.length)collapseAndAdvance(i,"done");
+    pendingCommit={i,j,t:setTimeout(()=>commitSet(i,j),COMMIT_IDLE_MS)};
   }else if(was&&now&&!CUR.ex[name].skipped&&CUR.ex[name].highlight){
     // Editing a set that was already complete (e.g. bumping reps up after the
     // exercise was marked done) — silently refresh the persisted volume/PR
