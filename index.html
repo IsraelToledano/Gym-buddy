@@ -219,10 +219,10 @@
   .ex-btn[aria-expanded="true"]+.ex-body{grid-template-rows:1fr}
   .panel{border:1px solid var(--line);border-top:none;border-radius:0 0 var(--r) var(--r);margin-top:-6px;padding:10px;background:rgba(0,0,0,.18)}
 
-  .prstrip{display:flex;gap:7px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
-  .pr{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:6px 8px}
-  .pr .lab{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap}
-  .pr .val{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:17px;line-height:1.1;margin-top:1px}
+  .prstrip{display:flex;gap:6px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  .pr{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:3px 7px;display:flex;align-items:baseline;justify-content:space-between;gap:4px}
+  .pr .lab{font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap}
+  .pr .val{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;line-height:1.1;white-space:nowrap}
   .pr .val small{font-size:11px;font-weight:600;color:var(--ink-faint)}
   .pr.top .val{color:var(--amber-bright)}
   .pr.vol .val{color:var(--teal)}
@@ -250,19 +250,19 @@
   .ex-toast .bar-track{position:absolute;left:0;right:0;bottom:0;height:2.5px;background:rgba(255,255,255,.06)}
   .ex-toast .bar-fill{height:100%;background:var(--amber-bright);width:100%}
   .ex-toast.paused .bar-fill{background:var(--teal)}
-  .persist-highlight{margin-top:9px;background:var(--card-hi);border:1px solid rgba(242,135,46,.35);border-radius:10px;padding:8px 12px}
-  .ph-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .persist-highlight{margin-top:6px;background:var(--card-hi);border:1px solid rgba(242,135,46,.35);border-radius:10px;padding:6px 10px}
+  .ph-top{display:flex;align-items:center;gap:6px;margin-bottom:2px}
   .ph-top .ic{font-size:16px;flex-shrink:0}
   .ph-top .tx{color:var(--ink);font-size:12.5px;line-height:1.35}
   .ph-top .tx b{color:var(--amber-bright)}
-  .ph-vol{font-size:12px;color:var(--ink-dim);margin-bottom:7px}
+  .ph-vol{font-size:12px;color:var(--ink-dim);margin-bottom:4px}
   .ph-vol b{color:var(--ink);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px}
   .pct.up{color:var(--green);font-weight:700}
   .pct.down{color:var(--red);font-weight:700}
   .pct.flat{color:var(--ink-faint);font-weight:700}
-  .ph-bars{display:flex;flex-direction:column;gap:4px}
-  .ph-bar-row{display:flex;align-items:center;gap:7px}
-  .ph-bar-row .lbl{font-size:9.5px;color:var(--ink-faint);width:32px;flex:none}
+  .ph-bars{display:flex;gap:10px}
+  .ph-bar-row{display:flex;align-items:center;gap:5px;flex:1;min-width:0}
+  .ph-bar-row .lbl{font-size:9.5px;color:var(--ink-faint);flex:none}
   .ph-bar-track{flex:1;height:6px;background:var(--bg);border-radius:5px;overflow:hidden}
   .ph-bar-fill{height:100%;border-radius:5px}
   .ph-bar-fill.now.up{background:var(--green)}
@@ -286,11 +286,11 @@
   .mg-ex .stat.flat{color:var(--ink-faint)}
 
   .setgrid{width:100%}
-  .setrow{display:grid;grid-template-columns:24px 1fr 1fr 30px;align-items:center;gap:7px;padding:3.5px 0}
+  .setrow{display:grid;grid-template-columns:24px 1fr 1fr 30px;align-items:center;gap:7px;padding:2px 0}
   .setrow.head{padding-bottom:4px}
   .setrow.head span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
   .setrow .sn{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;color:var(--ink-dim);text-align:center}
-  .setrow input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--ink);font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:600;font-size:16px;padding:7px 8px;text-align:center;-moz-appearance:textfield}
+  .setrow input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--ink);font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:600;font-size:16px;padding:5px 8px;text-align:center;-moz-appearance:textfield}
   .setrow input::-webkit-outer-spin-button,.setrow input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   .setrow input:focus{outline:none;border-color:var(--amber)}
   .setrow input::placeholder{color:var(--ink-faint)}
@@ -547,7 +547,7 @@
 
   /* ---- exercise animations: inline SVG stick figures, 2-keyframe CSS loops.
      No external files, so they work offline in the gym. ---- */
-  .exanim{position:relative;height:108px;display:flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden}
+  .exanim{position:relative;height:clamp(72px,11vh,100px);display:flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden}
   .exanim img.exframe{height:100%;width:100%;object-fit:cover;display:block;opacity:0;transition:opacity .18s ease}
   .exanim img.exframe.ready{opacity:1}
   .exphase{position:absolute;left:8px;bottom:8px;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:11px;color:var(--ink);background:rgba(0,0,0,.55);backdrop-filter:blur(4px);padding:3px 8px;border-radius:6px;pointer-events:none}
@@ -767,7 +767,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v70";
+const APP_VERSION="v71";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1348,13 +1348,13 @@ function renderSession(){
       else{
         trendBtnHtml=`<button class="trendbtn" onclick="openTrend('${name.replace(/'/g,"\\'")}')">Trend ›</button>`;
         if(prs.bw){statsHtml=`<div class="prstrip"><div class="pr top"><div class="lab">Best set total</div><div class="val">${prs.reps} <small>reps</small></div></div></div><div class="prcaption">Bodyweight — tracking total reps</div>`;}
-        else{statsHtml=`<div class="prstrip"><div class="pr top"><div class="lab">Top weight</div><div class="val">${prs.top} <small>kg</small></div></div><div class="pr vol"><div class="lab">Best volume</div><div class="val">${prs.vol} <small>kg</small></div></div><div class="pr e1"><div class="lab">est 1RM</div><div class="val">${prs.e1} <small>kg</small></div></div></div>`;}
+        else{statsHtml=`<div class="prstrip"><div class="pr top"><div class="lab">Top</div><div class="val">${prs.top} <small>kg</small></div></div><div class="pr vol"><div class="lab">Best vol</div><div class="val">${prs.vol} <small>kg</small></div></div><div class="pr e1"><div class="lab">1RM</div><div class="val">${prs.e1} <small>kg</small></div></div></div>`;}
       }
     }
     let rows=`<div class="setrow head"><span></span><span>Weight (kg)</span><span>${SETTINGS.logReps?"Reps":""}</span><span></span></div>`;
     log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" onblur="setInputBlur(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" onblur="setInputBlur(${i},${j})" onkeydown="if(event.key==='Enter')this.blur()" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${extra?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>`;});
     const cues=`${ex.cues.do&&ex.cues.do.length?`<div class="cuesub cue-do"><div class="cuelabel">✓ Do</div><ul>${ex.cues.do.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}${ex.cues.dont&&ex.cues.dont.length?`<div class="cuesub cue-dont"><div class="cuelabel">✕ Don't</div><ul>${ex.cues.dont.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}`;
-    const nOpen=nVal.trim()?" show":"";
+    const nOpen=NOTES_OPEN.has(name)?" show":""; // filled notes already show pinned under the photo
     const noteBtnHtml=`<button class="formtog notetog" onclick="toggleNotes(this)" data-target="notewrap-${i}">Notes ${nOpen?"\u25b4":"\u25be"}</button>`;
     const noteBlock=`<div class="notewrap${nOpen}" id="notewrap-${i}"><textarea class="exnotes" placeholder="Seat height, pin number, grip, machine #\u2026" oninput="setNote('${name.replace(/'/g,"\\'")}',this.value)">${esc(nVal)}</textarea></div>`;
     const swapOpts=getSwapOptions(name);
@@ -1789,7 +1789,9 @@ function lastLog(name){
   return null;
 }
 function toggleEx(i){setOpenIdx(openIdx===i?-1:i);renderSession();if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}}
-function toggleNotes(b){const w=document.getElementById(b.dataset.target);if(!w)return;w.classList.toggle("show");b.textContent=w.classList.contains("show")?"Notes \u25b4":"Notes \u25be";}
+const NOTES_OPEN=new Set();
+function toggleNotes(b){const w=document.getElementById(b.dataset.target);if(!w)return;w.classList.toggle("show");
+  const i=parseInt(b.dataset.target.split("-")[1],10);const nm=CUR&&CUR.order[i];if(nm){if(w.classList.contains("show"))NOTES_OPEN.add(nm);else NOTES_OPEN.delete(nm);}b.textContent=w.classList.contains("show")?"Notes \u25b4":"Notes \u25be";}
 function toggleCues(b){const ul=b.closest(".btnrow").nextElementSibling;ul.classList.toggle("show");b.textContent=ul.classList.contains("show")?"Cues ▴":"Cues ▾";}
 /* A set counts as complete as soon as its reps field has a value, but acting
    on that per keystroke (rest timer, keyboard close, auto-collapse) cut people
@@ -1823,6 +1825,7 @@ function revealNextSet(i,j){
     if(k>=sets.length)k=j;
     const row=document.getElementById("row-"+i+"-"+k);const t=document.getElementById("timer");
     if(!row||!t||!document.getElementById("dock").classList.contains("up"))return;
+    const a=document.activeElement;if(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))return; // iOS is already positioning the field
     const over=row.getBoundingClientRect().bottom-(t.getBoundingClientRect().top-14);
     if(over>0)window.scrollBy({top:over,behavior:"smooth"});
   },380);
@@ -2513,8 +2516,12 @@ async function appRefresh(){
   await new Promise(r=>setTimeout(r,50)); // let a blur-triggered set commit land
   if(saveT){clearTimeout(saveT);saveT=null;}
   if(CUR)saveCur();
-  try{const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg)await reg.update();}catch(e){}
-  setTimeout(()=>location.reload(),300);
+  // reg.update() can hang on iOS (slow/flaky network) — never wait on it more
+  // than ~1.5s; the page fetch is network-first anyway, so a plain reload
+  // already pulls the latest index.html.
+  try{const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg)await Promise.race([reg.update().catch(()=>{}),new Promise(r=>setTimeout(r,1500))]);}catch(e){}
+  location.reload();
+  setTimeout(()=>{location.href=location.pathname;},1500); // fallback if reload is ignored
 }
 /* Keep the rest-timer dock glued to the bottom of the screen. On iOS,
    position:fixed is anchored to the layout viewport, and while the keyboard
