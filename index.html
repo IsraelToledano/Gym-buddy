@@ -260,9 +260,9 @@
   .pct.up{color:var(--green);font-weight:700}
   .pct.down{color:var(--red);font-weight:700}
   .pct.flat{color:var(--ink-faint);font-weight:700}
-  .ph-bars{display:flex;gap:10px}
-  .ph-bar-row{display:flex;align-items:center;gap:5px;flex:1;min-width:0}
-  .ph-bar-row .lbl{font-size:9.5px;color:var(--ink-faint);flex:none}
+  .ph-bars{display:flex;flex-direction:column;gap:4px}
+  .ph-bar-row{display:flex;align-items:center;gap:7px}
+  .ph-bar-row .lbl{font-size:9.5px;color:var(--ink-faint);width:32px;flex:none}
   .ph-bar-track{flex:1;height:6px;background:var(--bg);border-radius:5px;overflow:hidden}
   .ph-bar-fill{height:100%;border-radius:5px}
   .ph-bar-fill.now.up{background:var(--green)}
@@ -767,7 +767,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v71";
+const APP_VERSION="v72";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
