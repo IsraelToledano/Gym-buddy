@@ -765,7 +765,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v66";
+const APP_VERSION="v67";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1688,7 +1688,8 @@ function finishCardioLive(){
   const isStairs=CARDIO_LIVE.type==="Stairs";
   const isTennis=CARDIO_LIVE.type==="Tennis";
   const html=`<div class="overlay"><div class="ov-head"><button class="bk" onclick="closeOverlay()" aria-label="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><div class="ti"><span>${cdElapsedStr()} elapsed</span>Finish cardio</div></div><div class="ov-body">
-    <div class="cd-label" style="margin-top:4px">Type</div>
+    <div class="cd-field" style="margin-top:4px"><div class="cd-label">Duration</div><div class="cd-input-row"><input class="cd-input" id="cdDur" type="number" inputmode="numeric" min="1" value="${Math.max(1,Math.round(cdElapsedMs()/60000))}"><div class="cd-unit">min</div></div></div>
+    <div class="cd-label" style="margin-top:16px">Type</div>
     <div class="cd-type-row" id="cdType">${CD_TYPES.map(([n,ic])=>`<button type="button" class="cd-type-btn${n===CARDIO_LIVE.type?" sel":""}" data-v="${n}" onclick="setCdType(this);toggleCdDetailFields()"><span class="ic">${ic}</span>${n}</button>`).join("")}</div>
     <div class="cd-field" id="cdFloorsField" style="${isStairs?"":"display:none"}"><div class="cd-label">Floors climbed <span class="optional-tag">optional</span></div><div class="cd-input-row"><input class="cd-input" id="cdFloors" type="number" inputmode="numeric" placeholder="42"><div class="cd-unit">floors</div></div></div>
     <div id="cdMetricsFields" style="${isTennis?"display:none":""}">
@@ -1706,7 +1707,9 @@ function toggleCdDetailFields(){
   const m=document.getElementById("cdMetricsFields");if(m)m.style.display=(v==="Tennis")?"none":"";
 }
 async function saveCardioFinish(skipDetails){
-  const durMin=Math.max(1,Math.round(cdElapsedMs()/60000));
+  // The timer is only a default — you often forget to stop it, or start it late.
+  const durEl=document.getElementById("cdDur");const durTyped=durEl?parseInt(durEl.value,10):NaN;
+  const durMin=durTyped>0?durTyped:Math.max(1,Math.round(cdElapsedMs()/60000));
   const typeBtn=document.querySelector("#cdType button.sel");
   const type=typeBtn?typeBtn.dataset.v:CARDIO_LIVE.type;
   let floors=null,hr=null,rpe=CARDIO_LIVE.rpe||null;
