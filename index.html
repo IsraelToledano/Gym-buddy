@@ -286,7 +286,7 @@
   .mg-ex .stat.flat{color:var(--ink-faint)}
 
   .setgrid{width:100%}
-  .setrow{display:grid;grid-template-columns:24px 1fr 1fr 40px;align-items:center;gap:7px;padding:3.5px 0}
+  .setrow{display:grid;grid-template-columns:24px 1fr 1fr 30px;align-items:center;gap:7px;padding:3.5px 0}
   .setrow.head{padding-bottom:4px}
   .setrow.head span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
   .setrow .sn{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;color:var(--ink-dim);text-align:center}
@@ -298,11 +298,6 @@
   .ck svg{width:18px;height:18px;color:var(--ink-faint)}
   .setrow.set-done input{border-color:rgba(111,191,115,.4);color:var(--green)}
   .setrow.set-done .sn{color:var(--green)}
-  .setrow .tick{width:40px;height:34px;border-radius:9px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink-faint);display:grid;place-items:center;padding:0}
-  .setrow .tick svg{width:18px;height:18px}
-  .setrow .tick.on{background:var(--green);border-color:var(--green);color:#0d1f12}
-  .setrow input.need{animation:needPulse .5s ease 2;border-color:var(--amber)}
-  @keyframes needPulse{50%{box-shadow:0 0 0 3px rgba(242,140,40,.35)}}
   .reordering .ex-body{display:none}
   .reordering .cutline{opacity:.35}
   .setrow.set-done .ck{background:var(--green);border-color:var(--green)}
@@ -799,7 +794,7 @@ function sessionLog(s,name){
   return null;
 }
 function isBodyweight(name,hist){const pe=getPlanEx(name);const flag=pe&&(pe.abs||pe.reps==="to failure");if(hist&&hist.length)return hist.every(h=>!h.anyW);return!!flag;}
-function setComplete(ex,s){if(s&&"done" in s)return !!s.done;const wOk=s.weight!==""&&s.weight!=null;const rOk=s.reps!==""&&s.reps!=null;return SETTINGS.logReps?rOk:wOk;}
+function setComplete(ex,s){const wOk=s.weight!==""&&s.weight!=null;const rOk=s.reps!==""&&s.reps!=null;return SETTINGS.logReps?rOk:wOk;}
 
 function weeklyVolume(){return volumeSince(Date.now()-7*86400000);}
 function volumeSince(fromTs){const vol={};for(const m in MUSCLES)vol[m]=0;
@@ -1355,7 +1350,7 @@ function renderSession(){
       }
     }
     let rows=`<div class="setrow head"><span></span><span>Weight (kg)</span><span>${SETTINGS.logReps?"Reps":""}</span><span></span></div>`;
-    log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}">${extra?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<div class="sn">${j+1}</div>`}<input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" onkeydown="if(event.key==='Enter')this.blur()" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}<button class="tick${done?" on":""}" id="tick-${i}-${j}" onclick="toggleSetDone(${i},${j})" aria-label="mark set ${j+1} done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12.5 10 17.5 19 7"/></svg></button></div>`;});
+    log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" onblur="setInputBlur(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" onblur="setInputBlur(${i},${j})" onkeydown="if(event.key==='Enter')this.blur()" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${extra?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>`;});
     const cues=`${ex.cues.do&&ex.cues.do.length?`<div class="cuesub cue-do"><div class="cuelabel">✓ Do</div><ul>${ex.cues.do.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}${ex.cues.dont&&ex.cues.dont.length?`<div class="cuesub cue-dont"><div class="cuelabel">✕ Don't</div><ul>${ex.cues.dont.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}`;
     const nOpen=nVal.trim()?" show":"";
     const noteBtnHtml=`<button class="formtog notetog" onclick="toggleNotes(this)" data-target="notewrap-${i}">Notes ${nOpen?"\u25b4":"\u25be"}</button>`;
@@ -1741,7 +1736,7 @@ function startSession(day){
   // markSessionStarted(). Otherwise time spent getting ready before the first rep counts
   // toward the session clock, inflating the duration.
   CUR={day,start:null,nudgeDismissed:false,order,defaultOrder:order.slice(),ex:{}};
-  order.forEach(name=>{const def=NAME_INDEX[name];const prev=lastLog(name);CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",done:false,ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};});
+  order.forEach(name=>{const def=NAME_INDEX[name];const prev=lastLog(name);CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};});
   CUR.order=reorderNiceToHave(day,CUR.order);
   setOpenIdx(0);initAudio();requestWake();renderSession();}
 function openSession(){if(CUR&&!CUR.order){CUR.order=getDayOrderNames(CUR.day);CUR.defaultOrder=CUR.order.slice();}openIdx=(CUR&&CUR.openIdx!=null&&CUR.openIdx>=-1&&CUR.openIdx<CUR.order.length)?CUR.openIdx:nextOpenIdx();renderSession();requestWake();}
@@ -1791,43 +1786,41 @@ function lastLog(name){
 function toggleEx(i){setOpenIdx(openIdx===i?-1:i);renderSession();if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}}
 function toggleNotes(b){const w=document.getElementById(b.dataset.target);if(!w)return;w.classList.toggle("show");b.textContent=w.classList.contains("show")?"Notes \u25b4":"Notes \u25be";}
 function toggleCues(b){const ul=b.closest(".btnrow").nextElementSibling;ul.classList.toggle("show");b.textContent=ul.classList.contains("show")?"Cues ▴":"Cues ▾";}
-/* Completing a set is an explicit tap on its ✓, never inferred from typing.
-   Inferring it (any digit in reps = done) meant every keystroke could fire
-   the rest timer, close the keyboard and collapse the card mid-entry — the
-   root of the v57/v63/v65 input bugs. Typing now only edits values. */
-function toggleSetDone(i,j){
-  const name=CUR.order[i];const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;const s=sets[j];
-  const row=document.getElementById("row-"+i+"-"+j);
-  if(setComplete(ex,s)){
-    s.done=false;
-    if(row)row.classList.remove("set-done");const t=document.getElementById("tick-"+i+"-"+j);if(t)t.classList.remove("on");
-    refreshExHead(i);updateProgress();saveCur();scheduleVolBarsRefresh(i,name);return;
-  }
-  // Blank fields take the grey hint (last time's numbers), so repeating last
-  // session is one tap per set.
-  if((s.weight===""||s.weight==null)&&s.ph&&s.ph!=="–")s.weight=s.ph;
-  if(SETTINGS.logReps&&(s.reps===""||s.reps==null)){
-    if(s.phReps&&/^\d+$/.test(String(s.phReps)))s.reps=String(s.phReps);
-    else{const r=document.getElementById("r-"+i+"-"+j);if(r){r.focus();r.classList.remove("need");void r.offsetWidth;r.classList.add("need");}return;}
-  }
-  if(!SETTINGS.logReps&&(s.weight===""||s.weight==null)){const w=document.getElementById("w-"+i+"-"+j);if(w){w.focus();w.classList.remove("need");void w.offsetWidth;w.classList.add("need");}return;}
-  s.done=true;
-  const wIn=document.getElementById("w-"+i+"-"+j);if(wIn)wIn.value=s.weight??"";
-  const rIn=document.getElementById("r-"+i+"-"+j);if(rIn)rIn.value=s.reps??"";
-  if(row)row.classList.add("set-done");const t=document.getElementById("tick-"+i+"-"+j);if(t)t.classList.add("on");
-  if(navigator.vibrate)navigator.vibrate(10);
-  // Close the keyboard before the rest dock slides up, or iOS scrolls to keep
-  // the focused input above it.
-  if(document.activeElement&&typeof document.activeElement.blur==="function")document.activeElement.blur();
-  markSessionStarted();refreshExHead(i);updateProgress();saveCur();scheduleVolBarsRefresh(i,name);
+/* A set counts as complete as soon as its reps field has a value, but acting
+   on that per keystroke (rest timer, keyboard close, auto-collapse) cut people
+   off mid-number ("1" of "10"). So completion is held pending and only
+   committed when you leave the set's fields — tapping outside, which also
+   closes the keyboard. Hopping between weight and reps of the same set
+   doesn't count as leaving. */
+let pendingSet=null;
+function commitSet(i,j){
+  if(!pendingSet||pendingSet.i!==i||pendingSet.j!==j)return;
+  pendingSet=null;
+  if(!CUR)return;const name=CUR.order[i];if(!name)return;
+  const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;const s=sets[j];
+  if(!s||!setComplete(ex,s))return;
+  // Blank weight on a completed set takes the grey hint (last time's weight)
+  // rather than logging 0kg.
+  if((s.weight===""||s.weight==null)&&s.ph&&s.ph!=="–"){s.weight=s.ph;const w=document.getElementById("w-"+i+"-"+j);if(w)w.value=s.weight;scheduleSave();}
   startTimer(rs(ex.rest),ex,i,j);
   const doneCount=sets.filter(x=>setComplete(ex,x)).length;
   if(!CUR.ex[name].skipped&&doneCount===sets.length)collapseAndAdvance(i,"done");
 }
+function setInputBlur(i,j){
+  // Deferred a tick so we can see where focus went.
+  setTimeout(()=>{
+    if(!pendingSet||pendingSet.i!==i||pendingSet.j!==j)return;
+    const a=document.activeElement,row=document.getElementById("row-"+i+"-"+j);
+    if(a&&row&&row.contains(a))return; // still inside this set
+    commitSet(i,j);
+  },0);
+}
 function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;const s=sets[j];const was=setComplete(ex,s);s[f]=v;const now=setComplete(ex,s);
-  // Typing only edits values — completion is the ✓ tap (toggleSetDone). Clearing
-  // the deciding field of a ticked set un-ticks it so blanks never count as done.
-  if(s.done&&(v===""||v==null)&&((SETTINGS.logReps&&f==="reps")||(!SETTINGS.logReps&&f==="weight"))){s.done=false;const t=document.getElementById("tick-"+i+"-"+j);if(t)t.classList.remove("on");}
+  if(now&&!was){
+    // Another set still pending (focus jumped straight to this one) — commit it now.
+    if(pendingSet&&(pendingSet.i!==i||pendingSet.j!==j))commitSet(pendingSet.i,pendingSet.j);
+    markSessionStarted();pendingSet={i,j};
+  }else if(!now&&pendingSet&&pendingSet.i===i&&pendingSet.j===j)pendingSet=null;
   sets.forEach((st,k)=>{const r=document.getElementById("row-"+i+"-"+k);if(r)r.classList.toggle("set-done",setComplete(ex,st));});
   refreshExHead(i);updateProgress();scheduleSave();
   scheduleVolBarsRefresh(i,name);
@@ -2042,7 +2035,7 @@ function effortHtml(i){
     <div class="ef-note">Today only — your saved routine stays at ${NAME_INDEX[e.name].sets} sets.</div>
   </div>`;
 }
-function addSet(i){const name=CUR.order[i];const sets=CUR.ex[name].sets;const last=sets[sets.length-1];sets.push({weight:last?last.weight:"",reps:"",done:false,ph:last?last.ph:"–",phReps:last?last.phReps:""});saveCur();renderSession();}
+function addSet(i){const name=CUR.order[i];const sets=CUR.ex[name].sets;const last=sets[sets.length-1];sets.push({weight:last?last.weight:"",reps:"",ph:last?last.ph:"–",phReps:last?last.phReps:""});saveCur();renderSession();}
 function removeSet(i,j){const name=CUR.order[i];CUR.ex[name].sets.splice(j,1);saveCur();renderSession();}
 
 /* ---------------- drag-to-reorder ---------------- */
@@ -2164,7 +2157,7 @@ async function openSwap(i){
   const def=NAME_INDEX[newName];const prev=lastLog(newName);
   CUR.order[i]=newName;
   delete CUR.ex[name];
-  CUR.ex[newName]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",done:false,ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
+  CUR.ex[newName]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
   saveCur();renderSession();
 }
 
@@ -2247,7 +2240,7 @@ function addFromLibrary(name){
   const def=NAME_INDEX[name];if(!def)return;
   CUR.order.push(name);
   const prev=lastLog(name);
-  CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",done:false,ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
+  CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
   CUR.order=reorderNiceToHave(CUR.day,CUR.order);
   closeOverlay();saveCur();renderSession();
 }
