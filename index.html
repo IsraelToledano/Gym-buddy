@@ -286,7 +286,7 @@
   .mg-ex .stat.flat{color:var(--ink-faint)}
 
   .setgrid{width:100%}
-  .setrow{display:grid;grid-template-columns:24px 1fr 1fr 30px;align-items:center;gap:7px;padding:3.5px 0}
+  .setrow{display:grid;grid-template-columns:24px 1fr 1fr 40px;align-items:center;gap:7px;padding:3.5px 0}
   .setrow.head{padding-bottom:4px}
   .setrow.head span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
   .setrow .sn{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;color:var(--ink-dim);text-align:center}
@@ -298,6 +298,13 @@
   .ck svg{width:18px;height:18px;color:var(--ink-faint)}
   .setrow.set-done input{border-color:rgba(111,191,115,.4);color:var(--green)}
   .setrow.set-done .sn{color:var(--green)}
+  .setrow .tick{width:40px;height:34px;border-radius:9px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink-faint);display:grid;place-items:center;padding:0}
+  .setrow .tick svg{width:18px;height:18px}
+  .setrow .tick.on{background:var(--green);border-color:var(--green);color:#0d1f12}
+  .setrow input.need{animation:needPulse .5s ease 2;border-color:var(--amber)}
+  @keyframes needPulse{50%{box-shadow:0 0 0 3px rgba(242,140,40,.35)}}
+  .reordering .ex-body{display:none}
+  .reordering .cutline{opacity:.35}
   .setrow.set-done .ck{background:var(--green);border-color:var(--green)}
   .setrow.set-done .ck svg{color:#10210f}
   .reps-target{font-size:11px;color:var(--ink-faint);text-align:center;margin-top:2px}
@@ -763,7 +770,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v65";
+const APP_VERSION="v66";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -792,7 +799,7 @@ function sessionLog(s,name){
   return null;
 }
 function isBodyweight(name,hist){const pe=getPlanEx(name);const flag=pe&&(pe.abs||pe.reps==="to failure");if(hist&&hist.length)return hist.every(h=>!h.anyW);return!!flag;}
-function setComplete(ex,s){const wOk=s.weight!==""&&s.weight!=null;const rOk=s.reps!==""&&s.reps!=null;return SETTINGS.logReps?rOk:wOk;}
+function setComplete(ex,s){if(s&&"done" in s)return !!s.done;const wOk=s.weight!==""&&s.weight!=null;const rOk=s.reps!==""&&s.reps!=null;return SETTINGS.logReps?rOk:wOk;}
 
 function weeklyVolume(){return volumeSince(Date.now()-7*86400000);}
 function volumeSince(fromTs){const vol={};for(const m in MUSCLES)vol[m]=0;
@@ -1348,7 +1355,7 @@ function renderSession(){
       }
     }
     let rows=`<div class="setrow head"><span></span><span>Weight (kg)</span><span>${SETTINGS.logReps?"Reps":""}</span><span></span></div>`;
-    log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" onblur="setInputBlur(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" onblur="setInputBlur(${i},${j})" onkeydown="if(event.key==='Enter')this.blur()" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${extra?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>`;});
+    log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}">${extra?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<div class="sn">${j+1}</div>`}<input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" onkeydown="if(event.key==='Enter')this.blur()" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}<button class="tick${done?" on":""}" id="tick-${i}-${j}" onclick="toggleSetDone(${i},${j})" aria-label="mark set ${j+1} done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12.5 10 17.5 19 7"/></svg></button></div>`;});
     const cues=`${ex.cues.do&&ex.cues.do.length?`<div class="cuesub cue-do"><div class="cuelabel">✓ Do</div><ul>${ex.cues.do.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}${ex.cues.dont&&ex.cues.dont.length?`<div class="cuesub cue-dont"><div class="cuelabel">✕ Don't</div><ul>${ex.cues.dont.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}`;
     const nOpen=nVal.trim()?" show":"";
     const noteBtnHtml=`<button class="formtog notetog" onclick="toggleNotes(this)" data-target="notewrap-${i}">Notes ${nOpen?"\u25b4":"\u25be"}</button>`;
@@ -1734,7 +1741,7 @@ function startSession(day){
   // markSessionStarted(). Otherwise time spent getting ready before the first rep counts
   // toward the session clock, inflating the duration.
   CUR={day,start:null,nudgeDismissed:false,order,defaultOrder:order.slice(),ex:{}};
-  order.forEach(name=>{const def=NAME_INDEX[name];const prev=lastLog(name);CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};});
+  order.forEach(name=>{const def=NAME_INDEX[name];const prev=lastLog(name);CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",done:false,ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};});
   CUR.order=reorderNiceToHave(day,CUR.order);
   setOpenIdx(0);initAudio();requestWake();renderSession();}
 function openSession(){if(CUR&&!CUR.order){CUR.order=getDayOrderNames(CUR.day);CUR.defaultOrder=CUR.order.slice();}openIdx=(CUR&&CUR.openIdx!=null&&CUR.openIdx>=-1&&CUR.openIdx<CUR.order.length)?CUR.openIdx:nextOpenIdx();renderSession();requestWake();}
@@ -1784,55 +1791,47 @@ function lastLog(name){
 function toggleEx(i){setOpenIdx(openIdx===i?-1:i);renderSession();if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}}
 function toggleNotes(b){const w=document.getElementById(b.dataset.target);if(!w)return;w.classList.toggle("show");b.textContent=w.classList.contains("show")?"Notes \u25b4":"Notes \u25be";}
 function toggleCues(b){const ul=b.closest(".btnrow").nextElementSibling;ul.classList.toggle("show");b.textContent=ul.classList.contains("show")?"Cues ▴":"Cues ▾";}
-let pendingCommit=null;const COMMIT_IDLE_MS=2000;
-function commitSet(i,j){
-  if(!pendingCommit||pendingCommit.i!==i||pendingCommit.j!==j)return;
-  clearTimeout(pendingCommit.t);pendingCommit=null;
-  if(!CUR)return;const name=CUR.order[i];if(!name)return;
-  const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;
-  if(!sets[j]||!setComplete(ex,sets[j]))return;
-  // Blur before the rest-timer dock slides up, or iOS scrolls to keep the
-  // focused input above it (the v63 scroll-jump fix).
+/* Completing a set is an explicit tap on its ✓, never inferred from typing.
+   Inferring it (any digit in reps = done) meant every keystroke could fire
+   the rest timer, close the keyboard and collapse the card mid-entry — the
+   root of the v57/v63/v65 input bugs. Typing now only edits values. */
+function toggleSetDone(i,j){
+  const name=CUR.order[i];const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;const s=sets[j];
+  const row=document.getElementById("row-"+i+"-"+j);
+  if(setComplete(ex,s)){
+    s.done=false;
+    if(row)row.classList.remove("set-done");const t=document.getElementById("tick-"+i+"-"+j);if(t)t.classList.remove("on");
+    refreshExHead(i);updateProgress();saveCur();scheduleVolBarsRefresh(i,name);return;
+  }
+  // Blank fields take the grey hint (last time's numbers), so repeating last
+  // session is one tap per set.
+  if((s.weight===""||s.weight==null)&&s.ph&&s.ph!=="–")s.weight=s.ph;
+  if(SETTINGS.logReps&&(s.reps===""||s.reps==null)){
+    if(s.phReps&&/^\d+$/.test(String(s.phReps)))s.reps=String(s.phReps);
+    else{const r=document.getElementById("r-"+i+"-"+j);if(r){r.focus();r.classList.remove("need");void r.offsetWidth;r.classList.add("need");}return;}
+  }
+  if(!SETTINGS.logReps&&(s.weight===""||s.weight==null)){const w=document.getElementById("w-"+i+"-"+j);if(w){w.focus();w.classList.remove("need");void w.offsetWidth;w.classList.add("need");}return;}
+  s.done=true;
+  const wIn=document.getElementById("w-"+i+"-"+j);if(wIn)wIn.value=s.weight??"";
+  const rIn=document.getElementById("r-"+i+"-"+j);if(rIn)rIn.value=s.reps??"";
+  if(row)row.classList.add("set-done");const t=document.getElementById("tick-"+i+"-"+j);if(t)t.classList.add("on");
+  if(navigator.vibrate)navigator.vibrate(10);
+  // Close the keyboard before the rest dock slides up, or iOS scrolls to keep
+  // the focused input above it.
   if(document.activeElement&&typeof document.activeElement.blur==="function")document.activeElement.blur();
+  markSessionStarted();refreshExHead(i);updateProgress();saveCur();scheduleVolBarsRefresh(i,name);
   startTimer(rs(ex.rest),ex,i,j);
   const doneCount=sets.filter(x=>setComplete(ex,x)).length;
   if(!CUR.ex[name].skipped&&doneCount===sets.length)collapseAndAdvance(i,"done");
 }
-function setInputBlur(i,j){
-  // Deferred a tick so we can see where focus went: hopping between weight
-  // and reps of the same set shouldn't commit it.
-  setTimeout(()=>{
-    if(!pendingCommit||pendingCommit.i!==i||pendingCommit.j!==j)return;
-    const a=document.activeElement,row=document.getElementById("row-"+i+"-"+j);
-    if(a&&row&&row.contains(a))return;
-    commitSet(i,j);
-  },0);
-}
 function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const sets=CUR.ex[name].sets;const s=sets[j];const was=setComplete(ex,s);s[f]=v;const now=setComplete(ex,s);
-  // If a set completes via reps while weight was left blank, fall back to the
-  // shown placeholder (last time's weight) rather than silently logging 0kg —
-  // the grey hint implies "same as last time" and volume math shouldn't punish
-  // someone for not retyping an unchanged number.
-  if(now&&!was&&f==="reps"&&(s.weight===""||s.weight==null)&&s.ph&&s.ph!=="–"){
-    s.weight=s.ph;
-    const wIn=document.getElementById("w-"+i+"-"+j);if(wIn)wIn.value=s.weight;
-  }
+  // Typing only edits values — completion is the ✓ tap (toggleSetDone). Clearing
+  // the deciding field of a ticked set un-ticks it so blanks never count as done.
+  if(s.done&&(v===""||v==null)&&((SETTINGS.logReps&&f==="reps")||(!SETTINGS.logReps&&f==="weight"))){s.done=false;const t=document.getElementById("tick-"+i+"-"+j);if(t)t.classList.remove("on");}
   sets.forEach((st,k)=>{const r=document.getElementById("row-"+i+"-"+k);if(r)r.classList.toggle("set-done",setComplete(ex,st));});
   refreshExHead(i);updateProgress();scheduleSave();
   scheduleVolBarsRefresh(i,name);
-  // A set counts as complete the moment reps has ANY digit, so acting on that
-  // instantly (blur + rest timer + collapse) cut people off after the "1" of
-  // "10". Instead the completion is held as pending and committed once typing
-  // settles: on leaving the set's inputs, or after COMMIT_IDLE_MS of no input.
-  const pendingHere=pendingCommit&&pendingCommit.i===i&&pendingCommit.j===j;
-  if(pendingHere){
-    clearTimeout(pendingCommit.t);
-    if(now)pendingCommit.t=setTimeout(()=>commitSet(i,j),COMMIT_IDLE_MS);else pendingCommit=null;
-  }else if(now&&!was){
-    if(pendingCommit)commitSet(pendingCommit.i,pendingCommit.j);
-    markSessionStarted();
-    pendingCommit={i,j,t:setTimeout(()=>commitSet(i,j),COMMIT_IDLE_MS)};
-  }else if(was&&now&&!CUR.ex[name].skipped&&CUR.ex[name].highlight){
+  if(was&&now&&!CUR.ex[name].skipped&&CUR.ex[name].highlight){
     // Editing a set that was already complete (e.g. bumping reps up after the
     // exercise was marked done) — silently refresh the persisted volume/PR
     // badge so it never shows stale numbers from the moment it first
@@ -1890,13 +1889,15 @@ function collapseAndAdvance(i,kind){
   if(btn)btn.classList.add(kind==="skip"?"skip-celebrate":"celebrate");
   const name=CUR.order[i];
   if(kind==="done"){const h=computeExVolumeInsight(name);if(h){const toastText=h.prText||(h.pct!=null?`Volume ${h.pct>=0?"+":""}${h.pct}% vs last time`:"Logged");showExToast({icon:h.icon,text:toastText});CUR.ex[name].highlight=h;saveCur();}}
-  setTimeout(()=>{
+  const run=()=>{
+    if(dragState){setTimeout(run,300);return;} // don't rebuild the list mid-drag
     reorderAfterComplete(name);
     saveCur();
     setOpenIdx(nextOpenIdx());
     renderSession();
     if(openIdx>=0){const el=app.querySelectorAll(".ex")[openIdx];if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"});}
-  },kind==="skip"?360:3000);
+  };
+  setTimeout(run,kind==="skip"?360:3000);
 }
 /* ---------------- post-exercise volume insight ---------------- */
 function computeExVolumeInsight(name){
@@ -2041,7 +2042,7 @@ function effortHtml(i){
     <div class="ef-note">Today only — your saved routine stays at ${NAME_INDEX[e.name].sets} sets.</div>
   </div>`;
 }
-function addSet(i){const name=CUR.order[i];const sets=CUR.ex[name].sets;const last=sets[sets.length-1];sets.push({weight:last?last.weight:"",reps:"",ph:last?last.ph:"–",phReps:last?last.phReps:""});saveCur();renderSession();}
+function addSet(i){const name=CUR.order[i];const sets=CUR.ex[name].sets;const last=sets[sets.length-1];sets.push({weight:last?last.weight:"",reps:"",done:false,ph:last?last.ph:"–",phReps:last?last.phReps:""});saveCur();renderSession();}
 function removeSet(i,j){const name=CUR.order[i];CUR.ex[name].sets.splice(j,1);saveCur();renderSession();}
 
 /* ---------------- drag-to-reorder ---------------- */
@@ -2060,7 +2061,34 @@ function removeSet(i,j){const name=CUR.order[i];CUR.ex[name].sets.splice(j,1);sa
 // hold outright, since a real scroll gesture moves within the first couple
 // hundred ms. A vibration on arming confirms grab mode so multi-step drags
 // feel intentional rather than a series of accidental single hops.
-let dragState=null;
+let dragState=null,dragScrollRaf=null;
+function dragReposition(y){
+  if(!dragState)return;
+  const siblings=[...dragState.list.querySelectorAll(".ex")].filter(el=>el!==dragState.exEl);
+  for(const sib of siblings){
+    const r=sib.getBoundingClientRect();const mid=r.top+r.height/2;
+    const pos=dragState.exEl.compareDocumentPosition(sib);
+    if(y<mid&&(pos&Node.DOCUMENT_POSITION_PRECEDING)){dragState.list.insertBefore(dragState.exEl,sib);break;}
+    if(y>mid&&(pos&Node.DOCUMENT_POSITION_FOLLOWING)){dragState.list.insertBefore(dragState.exEl,sib.nextSibling);break;}
+  }
+}
+// The handle has touch-action:none (so the hold doesn't scroll the page), which
+// also means the page can't scroll during a drag — so scroll it ourselves when
+// the finger sits near the top/bottom edge.
+function startAutoScroll(){
+  cancelAnimationFrame(dragScrollRaf);
+  const step=()=>{
+    if(!dragState)return;
+    const y=dragState.y;const edge=90,H=window.innerHeight;
+    if(y!=null){
+      let d=0;
+      if(y<edge)d=-Math.ceil((edge-y)/6);else if(y>H-edge)d=Math.ceil((y-(H-edge))/6);
+      if(d){window.scrollBy(0,d);dragReposition(y);}
+    }
+    dragScrollRaf=requestAnimationFrame(step);
+  };
+  dragScrollRaf=requestAnimationFrame(step);
+}
 function attachDragHandlers(){
   document.querySelectorAll(".drag-handle").forEach(h=>{
     h.onpointerdown=(e)=>{
@@ -2071,6 +2099,14 @@ function attachDragHandlers(){
       let armed=false;const startX=e.clientX,startY=e.clientY;let lastY=e.clientY;
       const pressTimer=setTimeout(()=>{
         armed=true;dragState={exEl,list};exEl.classList.add("dragging");
+        // Expanded cards are tall (photo, sets, stats), so with one open you
+        // couldn't drag past it without the target going off-screen. Collapse
+        // everything to compact rows for the drag, keeping the grabbed row
+        // under the finger.
+        const before=exEl.getBoundingClientRect().top;
+        list.classList.add("reordering");
+        window.scrollBy(0,exEl.getBoundingClientRect().top-before);
+        startAutoScroll();
         if(navigator.vibrate)navigator.vibrate(12);
         try{h.releasePointerCapture(pointerId);}catch(err){} // hand off to document listeners below
         document.addEventListener("pointermove",onMove);
@@ -2087,21 +2123,14 @@ function attachDragHandlers(){
       const onMove=(ev)=>{
         if(!dragState)return;
         ev.preventDefault();
-        const y=ev.clientY;
+        const y=ev.clientY;dragState.y=y;
         if(Math.abs(y-lastY)<3)return; // ignore sub-pixel jitter so continuous drags stay smooth
-        lastY=y;
-        const siblings=[...dragState.list.querySelectorAll(".ex")].filter(el=>el!==dragState.exEl);
-        for(const sib of siblings){
-          const r=sib.getBoundingClientRect();const mid=r.top+r.height/2;
-          const pos=dragState.exEl.compareDocumentPosition(sib);
-          if(y<mid&&(pos&Node.DOCUMENT_POSITION_PRECEDING)){dragState.list.insertBefore(dragState.exEl,sib);break;}
-          if(y>mid&&(pos&Node.DOCUMENT_POSITION_FOLLOWING)){dragState.list.insertBefore(dragState.exEl,sib.nextSibling);break;}
-        }
+        lastY=y;dragReposition(y);
       };
       const onUp=()=>{cleanup();finishDrag();};
       // Pre-arm phase: still handled on the handle itself (nothing to relocate yet).
       h.onpointerup=()=>{cleanup();finishDrag();};
-      h.onpointercancel=()=>{cleanup();if(dragState){dragState.exEl.classList.remove("dragging");dragState=null;}};
+      h.onpointercancel=()=>{cleanup();if(dragState){finishDrag();}};
       h.onpointermove=(ev)=>{
         if(armed)return; // document listener takes over once armed
         if(Math.abs(ev.clientX-startX)>10||Math.abs(ev.clientY-startY)>10)cleanup();
@@ -2111,11 +2140,16 @@ function attachDragHandlers(){
 }
 function finishDrag(){
   if(!dragState)return;
-  dragState.exEl.classList.remove("dragging");
+  cancelAnimationFrame(dragScrollRaf);
+  dragState.exEl.classList.remove("dragging");dragState.list.classList.remove("reordering");
   const newOrder=[...dragState.list.querySelectorAll(".ex")].map(el=>el.dataset.name);
   dragState=null;
   if(!CUR)return;
-  if(JSON.stringify(newOrder)!==JSON.stringify(CUR.order)){CUR.order=newOrder;setOpenIdx(-1);renderSession();}
+  if(JSON.stringify(newOrder)!==JSON.stringify(CUR.order)){
+    // Keep the same exercise open after the move instead of collapsing all.
+    const openName=openIdx>=0?CUR.order[openIdx]:null;
+    CUR.order=newOrder;setOpenIdx(openName?newOrder.indexOf(openName):-1);renderSession();
+  }
 }
 
 /* ---------------- exercise swap ---------------- */
@@ -2130,7 +2164,7 @@ async function openSwap(i){
   const def=NAME_INDEX[newName];const prev=lastLog(newName);
   CUR.order[i]=newName;
   delete CUR.ex[name];
-  CUR.ex[newName]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–"}))};
+  CUR.ex[newName]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",done:false,ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
   saveCur();renderSession();
 }
 
@@ -2213,7 +2247,7 @@ function addFromLibrary(name){
   const def=NAME_INDEX[name];if(!def)return;
   CUR.order.push(name);
   const prev=lastLog(name);
-  CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–"}))};
+  CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",done:false,ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
   CUR.order=reorderNiceToHave(CUR.day,CUR.order);
   closeOverlay();saveCur();renderSession();
 }
