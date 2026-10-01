@@ -479,12 +479,12 @@
   .rep-sub{font-size:11.5px;color:var(--ink-faint);margin-top:2px}
   .rep-tag{font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--amber-bright);background:rgba(242,135,46,.14);border:1px solid rgba(242,135,46,.3);border-radius:5px;padding:1px 6px;margin-left:4px}
 
-  .timer-dock{position:fixed;left:0;right:0;bottom:0;z-index:50;transform:translateY(120%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+  .timer-dock{pointer-events:none;position:fixed;left:0;right:0;bottom:0;z-index:50;transform:translateY(120%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
   .timer-dock.up{transform:translateY(0)}
   body.kb-open .timer-dock.up{transform:translateY(120%)}
   body.kb-open .cardio-bar{display:none}
   .dock-in{max-width:600px;margin:0 auto;padding:0 13px calc(9px + env(safe-area-inset-bottom))}
-  .timer{background:var(--card-hi);border:1px solid var(--amber);border-radius:15px;padding:9px 13px;box-shadow:0 -10px 40px -12px rgba(0,0,0,.7),0 0 0 1px rgba(242,135,46,.25)}
+  .timer{pointer-events:auto;background:var(--card-hi);border:1px solid var(--amber);border-radius:15px;padding:9px 13px;box-shadow:0 -10px 40px -12px rgba(0,0,0,.7),0 0 0 1px rgba(242,135,46,.25)}
   .timer.go{border-color:var(--green);box-shadow:0 -10px 40px -12px rgba(0,0,0,.7),0 0 0 2px var(--green)}
   .timer .tr1{display:flex;align-items:center;justify-content:space-between;gap:10px}
   .timer .ctx{font-size:11.5px;color:var(--ink-dim);line-height:1.35}
@@ -767,7 +767,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v69";
+const APP_VERSION="v70";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1810,6 +1810,22 @@ function commitSet(i,j){
   startTimer(rs(ex.rest),ex,i,j);
   const doneCount=sets.filter(x=>setComplete(ex,x)).length;
   if(!CUR.ex[name].skipped&&doneCount===sets.length)collapseAndAdvance(i,"done");
+  else revealNextSet(i,j);
+}
+// The rest dock slides up over the bottom ~120px of the screen — exactly where
+// the next set's row usually sits after you finish one — so taps on it hit the
+// dock instead. Once the dock is up, nudge the page so the next unfilled row
+// sits clear above it.
+function revealNextSet(i,j){
+  setTimeout(()=>{
+    if(!CUR)return;const name=CUR.order[i];if(!name)return;const ex=NAME_INDEX[name];
+    const sets=CUR.ex[name].sets;let k=j+1;while(k<sets.length&&setComplete(ex,sets[k]))k++;
+    if(k>=sets.length)k=j;
+    const row=document.getElementById("row-"+i+"-"+k);const t=document.getElementById("timer");
+    if(!row||!t||!document.getElementById("dock").classList.contains("up"))return;
+    const over=row.getBoundingClientRect().bottom-(t.getBoundingClientRect().top-14);
+    if(over>0)window.scrollBy({top:over,behavior:"smooth"});
+  },380);
 }
 function setInputBlur(i,j){
   // Deferred a tick so we can see where focus went.
