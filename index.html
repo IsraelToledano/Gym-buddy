@@ -234,6 +234,7 @@
   .btnrow{display:flex;flex-wrap:nowrap;gap:6px;margin-top:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   .btnrow::-webkit-scrollbar{display:none}
   .btnrow .formtog,.btnrow .trendbtn{margin-top:0;padding:6px 9px;font-size:11px;flex:none;white-space:nowrap}
+  .lasttime .ago{color:var(--ink-faint);white-space:nowrap}
   .targetrow{margin-bottom:8px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}
   .target-badge{display:inline-block;font-size:10.5px;font-weight:600;color:var(--teal);background:rgba(84,185,168,.12);border:1px solid rgba(84,185,168,.3);border-radius:20px;padding:3px 9px;flex:none;white-space:nowrap}
   .lasttime{font-size:11px;color:var(--ink-faint);line-height:1.4;min-width:0}
@@ -373,6 +374,8 @@
   .btn.ghost{color:var(--ink-dim)}
 
   /* trend overlay */
+  body.ov-open .wrap,body.ov-open .timer-dock,body.ov-open .cardio-bar{display:none}
+  body.ov-open .overlay{position:relative;inset:auto;min-height:100vh;overflow:visible}
   .overlay{position:fixed;inset:0;z-index:70;background:var(--bg);overflow-y:auto;padding:0 16px calc(40px + env(safe-area-inset-bottom));animation:slideup .25s ease}
   @keyframes slideup{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
   .ov-head{position:sticky;top:0;background:var(--bg);padding:18px 0 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);max-width:600px;margin:0 auto}
@@ -768,7 +771,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v78";
+const APP_VERSION="v79";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1342,9 +1345,9 @@ function renderSession(){
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
     const nVal=(NOTES[name]||"");
     if(exp){
-      const prevSets=lastLog(name);
+      const prevInfo=lastLogInfo(name);const prevSets=prevInfo?prevInfo.sets:null;
       const lastTimeStr=prevSets?prevSets.filter(s=>s.reps!==""&&s.reps!=null).map(s=>{const w=parseFloat(s.weight);return prs.bw?`${s.reps} reps`:(w?`${w}kg×${s.reps}`:`${s.reps} reps`);}).join(" · "):"";
-      const lastTimeHtml=lastTimeStr?`<span class="lasttime">Last: <b>${lastTimeStr}</b></span>`:"";
+      const lastTimeHtml=lastTimeStr?`<span class="lasttime">Last: <b>${lastTimeStr}</b> <span class="ago">(${daysAgoTxt(prevInfo.date)})</span></span>`:"";
       // A filled note is useful gear/setup info (seat height, pin number...) — surface
       // it right at the top of the expanded card instead of making the person scroll
       // past sets and cues to find it. The editor down in noteBlock is untouched.
@@ -1378,6 +1381,19 @@ function renderSession(){
 let trendName=null,trendMetric="vol";
 function openTrend(name){trendName=name;const prs=exPRs(name);trendMetric=prs.bw?"reps":"vol";renderTrend();}
 function closeOverlay(){document.getElementById("overlayMount").innerHTML="";}
+/* Overlays (trend, history, cardio…) render as a proper page: the session
+   underneath is hidden and the overlay flows normally from the top, then the
+   session and its scroll position come back on close. As a position:fixed
+   layer over a scrolled page, iOS could draw it shifted — squeezed into the
+   top of the screen over the session — especially right after the keyboard
+   had been open. */
+let ovSavedY=0;
+new MutationObserver(()=>{
+  const open=!!document.getElementById("overlayMount").firstElementChild;
+  const was=document.body.classList.contains("ov-open");
+  if(open&&!was){ovSavedY=window.scrollY;document.body.classList.add("ov-open");window.scrollTo(0,0);}
+  else if(!open&&was){document.body.classList.remove("ov-open");window.scrollTo(0,ovSavedY);}
+}).observe(document.getElementById("overlayMount"),{childList:true});
 
 /* ---------------- profile ---------------- */
 let profSaveT=null;
@@ -1782,15 +1798,17 @@ async function confirmSwitchSession(day){
   closeOverlay();
   startSession(day);
 }
-function lastLog(name){
+function lastLog(name){const r=lastLogInfo(name);return r?r.sets:null;}
+function daysAgoTxt(ts){const d=Math.floor((new Date().setHours(0,0,0,0)-new Date(ts).setHours(0,0,0,0))/86400000);return d<=0?"today":d===1?"yesterday":`${d} days ago`;}
+function lastLogInfo(name){
   const def=NAME_INDEX[name];const bwEx=def&&(def.abs||def.reps==="to failure");
   for(let i=HISTORY.length-1;i>=0;i--){
     const log=sessionLog(HISTORY[i],name);if(!log||log.skipped)continue;
     const hasReps=log.sets&&log.sets.some(s=>s.reps!==""&&s.reps!=null);
     if(!hasReps)continue; // fully skipped (no weight, no reps) — not useful as "last time"
-    if(bwEx)return log.sets; // bodyweight lifts: reps alone are the data
+    if(bwEx)return{sets:log.sets,date:HISTORY[i].date}; // bodyweight lifts: reps alone are the data
     const hasWeight=log.sets.some(s=>s.weight!==""&&s.weight!=null&&parseFloat(s.weight)>0);
-    if(hasWeight)return log.sets; // only treat as "last time" once weight was actually logged
+    if(hasWeight)return{sets:log.sets,date:HISTORY[i].date}; // only treat as "last time" once weight was actually logged
     // reps-only entry (weight never got recorded, e.g. an old logging glitch) — keep looking further back
   }
   return null;
