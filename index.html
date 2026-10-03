@@ -769,7 +769,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v76";
+const APP_VERSION="v77";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1805,7 +1805,7 @@ function scrollExToTop(idx,smooth){
   const top=el.getBoundingClientRect().top+window.scrollY-off;
   window.scrollTo({top:Math.max(0,top),behavior:smooth?"smooth":"auto"});
 }
-function toggleEx(i){setOpenIdx(openIdx===i?-1:i);renderSession();if(openIdx>=0)scrollExToTop(openIdx,true);}
+function toggleEx(i){setOpenIdx(openIdx===i?-1:i);renderSession();if(openIdx>=0)scrollExToTop(openIdx,false);}
 const NOTES_OPEN=new Set();
 function toggleNotes(b){const w=document.getElementById(b.dataset.target);if(!w)return;w.classList.toggle("show");
   const i=parseInt(b.dataset.target.split("-")[1],10);const nm=CUR&&CUR.order[i];if(nm){if(w.classList.contains("show"))NOTES_OPEN.add(nm);else NOTES_OPEN.delete(nm);}b.textContent=w.classList.contains("show")?"Notes \u25b4":"Notes \u25be";}
@@ -1930,7 +1930,7 @@ function collapseAndAdvance(i,kind){
     saveCur();
     setOpenIdx(nextOpenIdx());
     renderSession();
-    if(openIdx>=0)scrollExToTop(openIdx,true);
+    if(openIdx>=0)scrollExToTop(openIdx,false);
   };
   setTimeout(run,kind==="skip"?360:3000);
 }
@@ -1976,7 +1976,11 @@ function renderHighlightBadge(h){
   if(!h)return "";
   const valStr=v=>h.bw?`${v} reps`:`${v}kg`;
   const label=h.bw?"Reps":"Volume";
-  const topLine=h.prText?`<div class="ph-top"><span class="ic">🔥</span><div class="tx">${h.prText}</div></div>`:"";
+  // The PR line's space is always reserved: this box re-renders as you type, and
+  // a line appearing/disappearing (e.g. typing "1" then "12") changed the
+  // page height under the focused field, which made iOS scroll the page
+  // again — the "up then down" jump.
+  const topLine=h.prText?`<div class="ph-top"><span class="ic">🔥</span><div class="tx">${h.prText}</div></div>`:`<div class="ph-top" style="visibility:hidden" aria-hidden="true"><span class="ic">🔥</span><div class="tx">&nbsp;</div></div>`;
   const pctHtml=h.started&&h.pct!=null?` → <span class="pct ${h.dir}">${h.pct>=0?"+":""}${h.pct}%</span>`:"";
   const volLine=h.started
     ?`<div class="ph-vol">${label}: <b>${valStr(h.curVal)}</b> vs ${valStr(h.priorVal)} last time${pctHtml}</div>`
