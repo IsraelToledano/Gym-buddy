@@ -654,7 +654,7 @@ const PLAN={
     {n:"Leg extension",m:"Quads",equip:"machine",leg:1,sets:3,reps:"10–15",rest:"90s",cues:{do:["Align the knee with the machine's pivot point.","Squeeze hard for a full second at the top.","Control the lowering all the way down."],dont:["Don't let the lower back lift off the pad.","Don't slam the weight stack between reps."]}},
     {n:"Dumbbell side bend",m:"Obliques",equip:"dumbbell",sets:3,reps:"12–15 per side",rest:"45–60s",cues:{do:["Hold one dumbbell at your side, other hand on your hip or behind your head.","Bend straight sideways at the waist, moving only in the side-to-side plane.","Return upright by contracting the side opposite the weight.","Use a moderate weight — this is not a heavy lift."],dont:["Don't lean forward or backward; that turns it into a twist.","Don't let the hips shift side to side — move at the waist only.","Don't go heavy: loading this hard sharply increases spinal disc compression."]}},
     {n:"Concentration curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60s",cues:{do:["Brace the elbow on the inner thigh.","Curl with the bicep and turn the pinky up at the top.","Squeeze hard and get a full stretch each rep."],dont:["Don't let the elbow drift off the thigh mid-rep.","Don't swing the torso to help the weight up."]}},
-    {n:"Knee raise (parallel bars)",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:{do:["Keep the back flat against the pad, no swinging.","Curl the pelvis up, not just the thighs.","Bring the knees to the chest and squeeze."],dont:["Don't use momentum to swing the legs up.","Don't let the lower back arch away from the pad."]}},
+    {n:"Captain knee raise",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:{do:["Keep the back flat, no swinging.","Curl the pelvis up, not just the legs.","Squeeze hard at the top of the raise."],dont:["Don't use momentum to swing into the next rep.","Don't let the lower back arch away from the pads."]}},
   ]},
   B2:{name:"Pull",ex:[
     {n:"Lat pulldown",m:"Back",equip:"machine",main:1,sets:4,reps:"8–12",rest:"90–120s",cues:{do:["Grip a bit wider than shoulder width.","Drive the elbows down and back to the upper chest.","Get a full, controlled stretch at the top."],dont:["Don't lean back excessively to muscle the bar down.","Don't let the shoulders shrug toward the ears."]}},
@@ -668,7 +668,7 @@ const PLAN={
 };
 /* Exercise order of the ORIGINAL plan (v52), kept only so old index-keyed history
    records (sessions saved before exOrder existed) still resolve to the right names. */
-const LEGACY_PLAN_NAMES={"A1": ["Dumbbell bench press", "Incline bench press", "Dumbbell overhead press", "Lateral raises", "Leg extension", "Calf raise", "Machine crunch", "Pec deck / butterfly", "Triceps rope extension", "Glute rear kick"], "A2": ["Machine bench press", "Incline barbell press", "Machine shoulder press", "Lateral raises", "Leg press", "Calf press", "Knee raise (parallel bars)", "Triceps V-cable pushdown", "Machine triceps extension"], "B1": ["Lat pulldown (machine)", "Seated cable row (machine)", "Rear delt reverse fly", "Concentration curl", "Incline dumbbell curl", "Leg extension", "Captain knee raise", "Back extension"], "B2": ["Lat pulldown", "Seated cable row (V-grip)", "Rear delt reverse fly", "Leg curl", "Cable rope hammer curl", "Seated incline curl", "Captain knee raise", "Back extension"]};
+const LEGACY_PLAN_NAMES={"A1": ["Dumbbell bench press", "Incline bench press", "Dumbbell overhead press", "Lateral raises", "Leg extension", "Calf raise", "Machine crunch", "Pec deck / butterfly", "Triceps rope extension", "Glute rear kick"], "A2": ["Machine bench press", "Incline barbell press", "Machine shoulder press", "Lateral raises", "Leg press", "Calf press", "Captain knee raise", "Triceps V-cable pushdown", "Machine triceps extension"], "B1": ["Lat pulldown (machine)", "Seated cable row (machine)", "Rear delt reverse fly", "Concentration curl", "Incline dumbbell curl", "Leg extension", "Captain knee raise", "Back extension"], "B2": ["Lat pulldown", "Seated cable row (V-grip)", "Rear delt reverse fly", "Leg curl", "Cable rope hammer curl", "Seated incline curl", "Captain knee raise", "Back extension"]};
 /* Extra exercises available as swap-in alternatives / "add exercise" picks,
    even though they're not a default part of any day. Kept intentionally
    small — mainly plugs equipment gaps (e.g. a machine option for a muscle
@@ -682,7 +682,6 @@ const EXTRA_EX=[
   {n:"Machine shoulder press",m:"Front delts",equip:"machine",sets:3,reps:"6–10",rest:"90s",cues:{do:["Start the handles near ear height.","Brace the back against the pad throughout.","Lower under control back to the start position."],dont:["Don't shrug the traps to help finish the press.","Don't lock out hard at the top — stop just short."]}},
   {n:"Leg press",m:"Quads",equip:"machine",leg:1,sets:3,reps:"8–12",rest:"90–120s",cues:{do:["Set feet shoulder-width on the mid-platform.","Lower to roughly a 90° knee bend.","Push through the mid-foot on the way up."],dont:["Don't let the lower back round off the pad.","Don't hard-lock the knees at the top."]}},
   {n:"Calf press",m:"Calves",equip:"machine",calf:1,sets:3,reps:"10–15",rest:"60–90s",cues:{do:["Set the balls of the feet on the edge of the platform.","Drop the heels deep, then press to full extension.","Pause briefly at both the top and bottom."],dont:["Don't bounce out of the bottom stretch.","Don't shorten the range just to move more weight."]}},
-  {n:"Knee raise (parallel bars)",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:{do:["Keep the back flat against the pad, no swinging.","Curl the pelvis up, not just the thighs.","Bring the knees to the chest and squeeze."],dont:["Don't use momentum to swing the legs up.","Don't let the lower back arch away from the pad."]}},
   {n:"Incline dumbbell curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60–75s",cues:{do:["Let the arms hang behind the torso for a big stretch.","Supinate the wrist and squeeze at the top.","Slow the descent to a full stretch."],dont:["Don't let the elbows drift forward as you curl.","Don't rush the stretch at the bottom."]}},
   {n:"Leg curl",m:"Hamstrings",equip:"machine",leg:1,sets:3,reps:"10–12",rest:"90s",cues:{do:["Align the knees with the pivot, pad above the heels.","Curl fully and squeeze at the top.","Control the negative all the way back."],dont:["Don't let the hips lift off the pad.","Don't use momentum to kick the weight up."]}},
   {n:"Cable rope hammer curl",m:"Biceps",equip:"cable",sets:3,reps:"8–10",rest:"60s",cues:{do:["Grip the rope with a neutral, palms-in grip.","Pin the elbows to your sides and keep them still.","Curl until the biceps touch the forearms, squeeze, then control it back."],dont:["Don't let the elbows drift forward or flare out.","Don't lean back or use the hips to help move the rope."]}},
@@ -769,7 +768,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v77";
+const APP_VERSION="v78";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -792,8 +791,12 @@ function getPlanEx(name){return NAME_INDEX[name]||null;}
    "current" (exOrder array + exercises keyed by name). These two helpers let
    every other function treat both the same way. */
 function sessionExNames(s){return s.exOrder||(LEGACY_PLAN_NAMES[s.day]||[]);}
+// Old names that are the same exercise as a current one — history logged under
+// the old name counts for the current one (also covers restoring old backups).
+const NAME_ALIASES={"Knee raise (parallel bars)":"Captain knee raise"};
 function sessionLog(s,name){
   if(s.ex&&Object.prototype.hasOwnProperty.call(s.ex,name))return s.ex[name];
+  if(s.ex){for(const a in NAME_ALIASES){if(NAME_ALIASES[a]===name&&Object.prototype.hasOwnProperty.call(s.ex,a))return s.ex[a];}}
   if(!s.exOrder){const p=LEGACY_PLAN_NAMES[s.day];if(p){const idx=p.indexOf(name);if(idx>=0&&s.ex&&s.ex[idx]!==undefined)return s.ex[idx];}}
   return null;
 }
@@ -2679,6 +2682,18 @@ const verEl=document.getElementById("verBadge");if(verEl)verEl.textContent=APP_V
     SETTINGS.fixJul5Reps=1;await sset("settings",SETTINGS);
   }
   CUR=await sget("current",null);
+  // One-time: "Knee raise (parallel bars)" and "Captain knee raise" are the same
+  // exercise — rename everywhere to "Captain knee raise".
+  if(!SETTINGS.mergeKneeRaise){
+    const O="Knee raise (parallel bars)",N="Captain knee raise";
+    const ren=arr=>Array.isArray(arr)?arr.map(n=>n===O?N:n).filter((n,k,a)=>a.indexOf(n)===k):arr;
+    HISTORY.forEach(h=>{if(h.ex&&h.ex[O]!==undefined){if(h.ex[N]===undefined)h.ex[N]=h.ex[O];delete h.ex[O];}if(h.exOrder)h.exOrder=ren(h.exOrder);});
+    await sset("history",HISTORY);
+    if(NOTES[O]){if(!NOTES[N])NOTES[N]=NOTES[O];delete NOTES[O];await sset("notes",NOTES);}
+    if(SETTINGS.dayOrder)for(const d in SETTINGS.dayOrder)SETTINGS.dayOrder[d]=ren(SETTINGS.dayOrder[d]);
+    if(CUR&&CUR.ex){if(CUR.ex[O]!==undefined){if(CUR.ex[N]===undefined)CUR.ex[N]=CUR.ex[O];delete CUR.ex[O];}CUR.order=ren(CUR.order);if(CUR.defaultOrder)CUR.defaultOrder=ren(CUR.defaultOrder);await sset("current",CUR);}
+    SETTINGS.mergeKneeRaise=1;await sset("settings",SETTINGS);
+  }
   if(CUR&&!CUR.order){
     // migrate a session started on the old index-keyed build (or discard if it doesn't match)
     const planNames=LEGACY_PLAN_NAMES[CUR.day]||null;
