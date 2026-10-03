@@ -28,7 +28,7 @@
   .bc{font-family:'Barlow Condensed',sans-serif}
   button{font-family:inherit;cursor:pointer;color:inherit}
   html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
-  body{overflow-x:hidden}
+  body{overflow-x:hidden;overflow-x:clip}
   input,textarea{font-family:inherit}
   /* iOS Safari force-zooms on focus for any field under 16px and never
      zooms back out — which is what breaks the layout past its borders.
@@ -484,7 +484,8 @@
 
   .timer-dock{pointer-events:none;position:fixed;left:0;right:0;bottom:0;z-index:50;transform:translateY(120%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
   .timer-dock.up{transform:translateY(0)}
-  body.typing .timer-dock,body.typing .cardio-bar{visibility:hidden}
+  body.typing .cardio-bar{visibility:hidden}
+  .timer-dock.vv{bottom:auto}
   .dock-in{max-width:600px;margin:0 auto;padding:0 13px calc(9px + env(safe-area-inset-bottom))}
   .timer{pointer-events:auto;background:var(--card-hi);border:1px solid var(--amber);border-radius:15px;padding:9px 13px;box-shadow:0 -10px 40px -12px rgba(0,0,0,.7),0 0 0 1px rgba(242,135,46,.25)}
   .timer.go{border-color:var(--green);box-shadow:0 -10px 40px -12px rgba(0,0,0,.7),0 0 0 2px var(--green)}
@@ -771,7 +772,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v79";
+const APP_VERSION="v80";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -2486,7 +2487,7 @@ function startTimer(sec,ex,i,j){
   const nm=(CUR&&CUR.order)?CUR.order[i]:null;const tot=(nm&&CUR.ex[nm])?CUR.ex[nm].sets.length:ex.sets;const lastSet=j>=tot-1;
   restLabel=`Rest done — ${ex.n}`;
   tCtx.innerHTML=`Rest · <b>${ex.n}</b><br>${lastSet?"next: next exercise":"next: set "+(j+2)+" of "+tot}`;
-  timer.classList.remove("go");dock.classList.add("up");
+  timer.classList.remove("go");dock.classList.add("up");placeDock();if(isField(document.activeElement))setTimeout(keepFieldAboveDock,50);
   initAudio();
   restBeepScheduled=scheduleBeep(sec);
   if(restBeepScheduled)startKeepAlive();
@@ -2569,15 +2570,34 @@ async function appRefresh(){
   location.reload();
   setTimeout(()=>{location.href=location.pathname;},1500); // fallback if reload is ignored
 }
-/* While a field is focused the rest dock (and cardio pill) are simply hidden —
-   instantly, the moment you tap, before the keyboard starts moving — and come
-   back when you leave the field. The v69 approach followed the keyboard via
-   visualViewport, which made the dock ride up with it and then slide away:
-   extra motion on every tap. Nothing here scrolls the page; the only movement
-   left is iOS's own lift to keep the field above the keyboard. */
+/* Rest dock anchored to the bottom of what's actually visible.
+   iOS positions position:fixed against the "layout viewport", which doesn't
+   shrink for the keyboard and can stay offset after the keyboard closes —
+   that's why the timer showed up at the top of the screen after tapping ✓.
+   So the dock is placed against the visual viewport instead: just above the
+   number pad while it's open, at the very bottom once it closes. */
 const isField=el=>!!el&&(el.tagName==="INPUT"||el.tagName==="TEXTAREA");
-document.addEventListener("focusin",e=>{if(isField(e.target))document.body.classList.add("typing");});
-document.addEventListener("focusout",()=>{setTimeout(()=>{if(!isField(document.activeElement))document.body.classList.remove("typing");},0);});
+document.addEventListener("focusin",e=>{if(isField(e.target)){document.body.classList.add("typing");setTimeout(keepFieldAboveDock,350);}});
+document.addEventListener("focusout",()=>{setTimeout(()=>{if(!isField(document.activeElement))document.body.classList.remove("typing");placeDock();},0);});
+function placeDock(){
+  const d=document.getElementById("dock");const vv=window.visualViewport;if(!d||!vv)return;
+  d.classList.add("vv");
+  d.style.top=Math.round(vv.offsetTop+vv.height-d.offsetHeight)+"px";
+}
+// With the dock sitting above the number pad, make sure it isn't covering the
+// field you're typing in (iOS only lifts the field above the keyboard).
+function keepFieldAboveDock(){
+  const a=document.activeElement;const d=document.getElementById("dock");const vv=window.visualViewport;
+  if(!isField(a)||!d||!d.classList.contains("up")||!vv)return;
+  const fieldBottom=a.getBoundingClientRect().bottom, dockTop=d.getBoundingClientRect().top;
+  if(fieldBottom>dockTop-8)window.scrollBy(0,fieldBottom-(dockTop-8));
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener("resize",()=>{placeDock();if(isField(document.activeElement))keepFieldAboveDock();});
+  window.visualViewport.addEventListener("scroll",placeDock);
+  window.addEventListener("scroll",placeDock,{passive:true});
+  window.addEventListener("resize",placeDock);
+}
 /* ---------------- alert ---------------- */
 let audioCtx=null;
 function initAudio(){try{const AC=window.AudioContext||window.webkitAudioContext;if(AC&&!audioCtx)audioCtx=new AC();if(audioCtx&&audioCtx.state==="suspended")audioCtx.resume();}catch(e){}}
