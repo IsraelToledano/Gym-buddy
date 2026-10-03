@@ -481,8 +481,7 @@
 
   .timer-dock{pointer-events:none;position:fixed;left:0;right:0;bottom:0;z-index:50;transform:translateY(120%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
   .timer-dock.up{transform:translateY(0)}
-  body.kb-open .timer-dock.up{transform:translateY(120%)}
-  body.kb-open .cardio-bar{display:none}
+  body.typing .timer-dock,body.typing .cardio-bar{visibility:hidden}
   .dock-in{max-width:600px;margin:0 auto;padding:0 13px calc(9px + env(safe-area-inset-bottom))}
   .timer{pointer-events:auto;background:var(--card-hi);border:1px solid var(--amber);border-radius:15px;padding:9px 13px;box-shadow:0 -10px 40px -12px rgba(0,0,0,.7),0 0 0 1px rgba(242,135,46,.25)}
   .timer.go{border-color:var(--green);box-shadow:0 -10px 40px -12px rgba(0,0,0,.7),0 0 0 2px var(--green)}
@@ -767,7 +766,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v72";
+const APP_VERSION="v73";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1827,7 +1826,7 @@ function revealNextSet(i,j){
     if(!row||!t||!document.getElementById("dock").classList.contains("up"))return;
     const a=document.activeElement;if(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))return; // iOS is already positioning the field
     const over=row.getBoundingClientRect().bottom-(t.getBoundingClientRect().top-14);
-    if(over>0)window.scrollBy({top:over,behavior:"smooth"});
+    if(over>0)window.scrollBy(0,over);
   },380);
 }
 function setInputBlur(i,j){
@@ -2523,25 +2522,15 @@ async function appRefresh(){
   location.reload();
   setTimeout(()=>{location.href=location.pathname;},1500); // fallback if reload is ignored
 }
-/* Keep the rest-timer dock glued to the bottom of the screen. On iOS,
-   position:fixed is anchored to the layout viewport, and while the keyboard
-   is open the visible area pans inside it — so the dock appeared to float and
-   travel with you as you scrolled. While the keyboard is up the dock now
-   tucks away below the screen edge (the timer keeps running and the chime
-   still fires); when it closes the dock returns, re-anchored to the visible
-   bottom in case iOS left the viewport offset. */
-function pinDock(){
-  const vv=window.visualViewport;if(!vv)return;
-  const kb=window.innerHeight-vv.height>120;
-  document.body.classList.toggle("kb-open",kb);
-  const gap=kb?0:Math.max(0,Math.round(window.innerHeight-(vv.offsetTop+vv.height)));
-  const d=document.getElementById("dock");if(d)d.style.bottom=gap?gap+"px":"";
-}
-if(window.visualViewport){
-  window.visualViewport.addEventListener("resize",pinDock);
-  window.visualViewport.addEventListener("scroll",pinDock);
-  window.addEventListener("focusout",()=>setTimeout(pinDock,300));
-}
+/* While a field is focused the rest dock (and cardio pill) are simply hidden —
+   instantly, the moment you tap, before the keyboard starts moving — and come
+   back when you leave the field. The v69 approach followed the keyboard via
+   visualViewport, which made the dock ride up with it and then slide away:
+   extra motion on every tap. Nothing here scrolls the page; the only movement
+   left is iOS's own lift to keep the field above the keyboard. */
+const isField=el=>!!el&&(el.tagName==="INPUT"||el.tagName==="TEXTAREA");
+document.addEventListener("focusin",e=>{if(isField(e.target))document.body.classList.add("typing");});
+document.addEventListener("focusout",()=>{setTimeout(()=>{if(!isField(document.activeElement))document.body.classList.remove("typing");},0);});
 /* ---------------- alert ---------------- */
 let audioCtx=null;
 function initAudio(){try{const AC=window.AudioContext||window.webkitAudioContext;if(AC&&!audioCtx)audioCtx=new AC();if(audioCtx&&audioCtx.state==="suspended")audioCtx.resume();}catch(e){}}
