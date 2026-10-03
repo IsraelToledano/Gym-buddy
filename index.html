@@ -769,7 +769,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v74";
+const APP_VERSION="v75";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -886,8 +886,10 @@ function suggestDay(){
 function nextSuggestedDay(){const ROT=["A1","B1","A2","B2"];if(!HISTORY.length)return ROT[0];const last=HISTORY[HISTORY.length-1].day;const idx=ROT.indexOf(last);if(idx<0)return ROT[0];return ROT[(idx+1)%ROT.length];}
 
 // per-session stats for one exercise
+const MAX_SANE_REPS=50;
 function sessStats(planEx,log){let top=0,vol=0,e1=0,reps=0,anyW=false;
   log.sets.forEach(s=>{if(!setComplete(planEx,s))return;const w=parseFloat(s.weight)||0;const r=parseInt(s.reps)||0;
+    if(r>MAX_SANE_REPS)return; // e.g. "131" for 13 — a typo would otherwise inflate bests/1RM forever
     if(w>0)anyW=true;reps+=r;vol+=w*r;if(w>top)top=w;const e=w*(1+r/30);if(e>e1)e1=e;});
   return{top:round1(top),vol:round1(vol),e1:round1(e1),reps,anyW};}
 // history series for an exercise (completed sessions + live current)
@@ -1811,6 +1813,7 @@ function commitSet(i,j){
   // Blank weight on a completed set takes the grey hint (last time's weight)
   // rather than logging 0kg.
   if((s.weight===""||s.weight==null)&&s.ph&&s.ph!=="–"){s.weight=s.ph;const w=document.getElementById("w-"+i+"-"+j);if(w)w.value=s.weight;scheduleSave();}
+  scheduleVolBarsRefresh(i,name);
   startTimer(rs(ex.rest),ex,i,j);
   const doneCount=sets.filter(x=>setComplete(ex,x)).length;
   if(!CUR.ex[name].skipped&&doneCount===sets.length)collapseAndAdvance(i,"done");
@@ -1922,7 +1925,10 @@ function collapseAndAdvance(i,kind){
 function computeExVolumeInsight(name){
   const ex=NAME_INDEX[name];const log=CUR.ex[name];if(!log)return null;
   const started=log.sets.some(s=>setComplete(ex,s));
-  const cur=sessStats(ex,log);
+  // Blank weight on a done set will be saved as the grey hint (last time's
+  // weight) when you leave the field — count it that way now, or the live
+  // bars show 0kg / -100% until then.
+  const cur=sessStats(ex,{sets:log.sets.map(s=>(s.weight===""||s.weight==null)&&s.ph&&s.ph!=="–"?Object.assign({},s,{weight:s.ph}):s)});
   const priorSeries=exSeries(name,false); // HISTORY only, excludes the session in progress
   if(!priorSeries.length)return null; // first time logging this exercise — no baseline to compare, stay quiet
   const bw=isBodyweight(name,priorSeries);
@@ -2648,6 +2654,13 @@ const verEl=document.getElementById("verBadge");if(verEl)verEl.textContent=APP_V
   if((SETTINGS.routineRev||0)<53){["A1","A2","B1","B2"].forEach(d=>{delete SETTINGS.dayOrder[d];});SETTINGS.routineRev=53;await sset("settings",SETTINGS);}
   applyTheme();
   HISTORY=await sget("history",[]);NOTES=await sget("notes",{});BACKMETA=await sget("backupMeta",{at:0,count:0,lastError:null,lastAttempt:0});PROFILE=await sget("profile",PROFILE);TENNIS=await sget("tennis",[]);CARDIO=await sget("cardio",[]);CARDIO_LIVE=await sget("cardioLive",null);CUSTOM_EX=await sget("customEx",[]);CUSTOM_EX.forEach(e=>{NAME_INDEX[e.n]=e;});updateProfileBtnState();
+  if(!SETTINGS.fixJul5Reps){
+    let fixed=false;
+    HISTORY.forEach(h=>{const d=new Date(h.date);if(h.day!=="B1"||d.getFullYear()!==2026||d.getMonth()!==6||d.getDate()!==5)return;
+      const lg=h.ex&&h.ex["Lat pulldown (machine)"];if(!lg)return;lg.sets.forEach(st=>{if(String(st.reps)==="131"){st.reps="13";fixed=true;}});});
+    if(fixed)await sset("history",HISTORY);
+    SETTINGS.fixJul5Reps=1;await sset("settings",SETTINGS);
+  }
   CUR=await sget("current",null);
   if(CUR&&!CUR.order){
     // migrate a session started on the old index-keyed build (or discard if it doesn't match)
