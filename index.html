@@ -772,7 +772,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v81";
+const APP_VERSION="v82";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1363,7 +1363,7 @@ function renderSession(){
       }
     }
     let rows=`<div class="setrow head"><span></span><span>Weight (kg)</span><span>${SETTINGS.logReps?"Reps":""}</span><span></span></div>`;
-    log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" onblur="setInputBlur(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" onblur="setInputBlur(${i},${j})" onkeydown="if(event.key==='Enter')this.blur()" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${extra?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>`;});
+    log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" onblur="setInputBlur(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" onblur="setInputBlur(${i},${j})" onkeydown="if(event.key==='Enter')this.blur()" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${(extra||(j===log.sets.length-1&&log.sets.length>1&&!done))?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>`;});
     const cues=`${ex.cues.do&&ex.cues.do.length?`<div class="cuesub cue-do"><div class="cuelabel">✓ Do</div><ul>${ex.cues.do.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}${ex.cues.dont&&ex.cues.dont.length?`<div class="cuesub cue-dont"><div class="cuelabel">✕ Don't</div><ul>${ex.cues.dont.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}`;
     const nOpen=NOTES_OPEN.has(name)?" show":""; // filled notes already show pinned under the photo
     const noteBtnHtml=`<button class="formtog notetog" onclick="toggleNotes(this)" data-target="notewrap-${i}">Notes ${nOpen?"\u25b4":"\u25be"}</button>`;
