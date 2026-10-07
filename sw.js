@@ -1,4 +1,4 @@
-const CACHE = "gym-buddy-v83";
+const CACHE = "gym-buddy-v84";
 const IMG_CACHE = "gym-buddy-exercise-img-v2";
 const IMG_PATH = "/Gym-buddy/img/exercises/";
 const ASSETS = ["./", "./index.html", "./manifest.json"];
@@ -98,6 +98,19 @@ function fireNotification(label) {
     clients.forEach((c) => c.postMessage({ type: "rest-alert-fired" }));
   });
 }
+
+// Web Push from the rest-timer worker (no payload): show the rest-is-up notification.
+self.addEventListener("push", (e) => {
+  e.waitUntil(
+    self.registration.showNotification("Rest is up 💪", {
+      body: "Time for your next set.",
+      icon: "icon-192.png",
+      badge: "icon-192.png",
+      tag: "rest-timer",
+      renotify: true,
+    })
+  );
+});
 
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();

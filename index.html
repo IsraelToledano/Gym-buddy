@@ -775,8 +775,8 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v83";
-function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;return s;}
+const APP_VERSION="v84";
+function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
 let TENNIS=[];
@@ -1415,6 +1415,7 @@ function openProfile(){
     <div class="theme-row"><div><div class="tl">Appearance</div><div class="td">${SETTINGS.theme==="light"?"Light":"Dark"} mode</div></div><button class="theme-switch" onclick="toggleTheme()" aria-label="toggle theme"><div class="knob"></div></button></div>
     <div class="field" style="margin-top:14px"><label>GitHub backup token</label><div class="tokwrap"><input id="pGhToken" type="password" autocomplete="off" placeholder="Fine-grained PAT, Contents read/write" value="${esc(SETTINGS.ghToken||"")}" oninput="setGhToken(this.value)"><textarea id="pGhTokenTa" class="tok-ta" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off" style="display:none" oninput="setGhToken(this.value)">${esc(SETTINGS.ghToken||"")}</textarea><button type="button" class="eyebtn" id="ghTokenEye" aria-label="show token" onclick="toggleGhTokenVis()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div><div class="tokhint" id="ghTokenHint" style="display:none">Full token shown above — check carefully for missing/extra characters, especially at the start and end.</div></div>
     <div class="prof-saved hidden" id="ghTokenSaved">✓ Saved — will auto-backup at end of each session</div>
+    <div class="theme-row" style="margin-top:14px"><div><div class="tl">Rest alerts on lock screen</div><div class="td" id="pushState">${SETTINGS.pushSub?"On — a notification when rest is up":"Off"}</div></div><button class="tool-btn" style="flex:none;padding:8px 12px" onclick="${SETTINGS.pushSub?"testPush()":"enablePush()"}">${SETTINGS.pushSub?"Send test":"Turn on"}</button></div>
   </div></div>`;
   document.getElementById("overlayMount").innerHTML=html;
 }
@@ -2556,8 +2557,37 @@ function reschedule(){const left=Math.max(0,Math.round((restEndAt-Date.now())/10
 // anyway as a bonus for platforms (mainly Android) where it reliably works.
 // The real guarantee is syncTimer() catching up the instant you reopen the app.
 function swReady(){return navigator.serviceWorker&&navigator.serviceWorker.controller;}
-function scheduleBgAlert(sec,label){if(!swReady())return;navigator.serviceWorker.controller.postMessage({type:"schedule-rest-alert",ms:sec*1000,label});}
-function cancelBgAlert(){if(!swReady())return;navigator.serviceWorker.controller.postMessage({type:"cancel-rest-alert"});}
+/* ---- lock-screen rest alert (Web Push) ----
+   iPhone suspends web apps in the background, so nothing inside the app can
+   reliably fire at the end of a rest. Instead, when a rest starts the app asks
+   our small Cloudflare worker (push-worker/worker.js) to send a push at the
+   end time; iOS shows it like any app notification, locked screen included.
+   One-time setup: Profile → Rest alerts on lock screen → Turn on. */
+const PUSH_URL="https://gym-buddy-push.srul7022.workers.dev";
+function pushPost(path,body){return fetch(PUSH_URL+path,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify(body),keepalive:true});}
+function b64urlToBytes(b){const s=atob(b.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((b.length+3)%4));return Uint8Array.from(s,c=>c.charCodeAt(0));}
+async function enablePush(){
+  if(!("serviceWorker" in navigator)||!("PushManager" in window)||!("Notification" in window)){await showAlert("Notifications only work when Gym Buddy is opened from its Home Screen icon (iOS 16.4 or newer).");return;}
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!=="granted"){await showAlert("Notifications weren't allowed. You can turn them on in iPhone Settings → Notifications → Gym Buddy, then tap Turn on again.");return;}
+    const reg=await navigator.serviceWorker.ready;
+    const {key}=await (await fetch(PUSH_URL+"/vapid-public")).json();
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64urlToBytes(key)});
+    SETTINGS.pushSub=sub.toJSON();await sset("settings",SETTINGS);
+    await pushPost("/test",{sub:SETTINGS.pushSub});
+    openProfile&&openProfile();
+    await showAlert("Done — you should get a test notification now. From here on you'll get one whenever a rest ends, even with the phone locked.");
+  }catch(e){await showAlert("Couldn't turn on notifications: "+(e&&e.message||e));}
+}
+async function testPush(){if(!SETTINGS.pushSub)return enablePush();try{const r=await pushPost("/test",{sub:SETTINGS.pushSub});const j=await r.json();if(!j.ok)throw new Error("push service answered "+j.status);await showAlert("Test sent — it should arrive in a second or two.");}catch(e){await showAlert("Test failed: "+(e&&e.message||e)+". Tap Turn on again to re-register.");SETTINGS.pushSub=null;await sset("settings",SETTINGS);}}
+function scheduleBgAlert(sec,label){
+  if(SETTINGS.pushSub){pushPost("/schedule",{sub:SETTINGS.pushSub,delayMs:Math.round(sec*1000)}).catch(()=>{});return;}
+  if(!swReady())return;navigator.serviceWorker.controller.postMessage({type:"schedule-rest-alert",ms:sec*1000,label});}
+function cancelBgAlert(){
+  if(SETTINGS.pushSub){pushPost("/cancel",{sub:SETTINGS.pushSub}).catch(()=>{});return;}
+  if(!swReady())return;navigator.serviceWorker.controller.postMessage({type:"cancel-rest-alert"});}
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).catch(()=>{});
   navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="rest-alert-fired"&&restActive&&!restFired){restFired=true;fireAlert();}});
