@@ -1,0 +1,16 @@
+# Cloudflare Worker for rest-timer push notifications (see push-worker/worker.js).
+# Lives at the repo root so Cloudflare's GitHub build deploys the worker itself
+# rather than publishing the repo as a static site. GitHub Pages ignores this file.
+name = "gym-buddy-push"
+main = "push-worker/worker.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+preview_urls = false
+
+[[durable_objects.bindings]]
+name = "TIMER"
+class_name = "RestTimer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RestTimer"]
