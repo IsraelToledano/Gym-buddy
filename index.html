@@ -351,7 +351,8 @@
   .cutline{display:flex;align-items:center;gap:10px;margin:4px 0 13px;padding-left:6px}
   .cutline .rule{flex:1;height:0;border-top:2px dashed rgba(242,135,46,.5)}
   .cutline .txt{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);white-space:nowrap}
-  .ex.skip .ex-btn{opacity:.66}
+  .ex.skip .ex-btn{border-style:dashed;border-color:rgba(84,185,168,.45)}
+  .tg.opt{background:rgba(84,185,168,.12);color:var(--teal);border:1px solid rgba(84,185,168,.3)}
   .ex.skip.done .ex-btn,.ex.skip.partial .ex-btn{opacity:1}
 
   /* user-marked skip (distinct from the auto "cut first" suggestion above) */
@@ -757,12 +758,25 @@ function getSwapOptions(name){
     .map(e=>e.n);
   return[...pinned,...auto].slice(0,6);
 }
+const uniqNames=a=>a.filter((n,k)=>a.indexOf(n)===k);
+/* Must-have vs optional is fixed by the plan (positions 7+ in the day's
+   routine), not by where an exercise currently sits in your order — so
+   reordering never changes it. A swap inherits the status of what it replaced;
+   exercises you add yourself count as must-have. Heavy top sets never optional. */
+const OPTIONAL_FROM=6;
+function isOptionalEx(day,name){
+  const ex=NAME_INDEX[name];if(ex&&ex.main)return false;
+  const src=(CUR&&CUR.swapOf&&CUR.swapOf[name])||name;
+  const idx=PLAN[day]?PLAN[day].ex.findIndex(e=>e.n===src):-1;
+  return idx>=OPTIONAL_FROM;
+}
 function getDayOrderNames(day){
   const planNames=PLAN[day].ex.map(e=>e.n);
   let order=(SETTINGS.dayOrder&&SETTINGS.dayOrder[day])?SETTINGS.dayOrder[day].filter(n=>NAME_INDEX[n]):planNames.slice();
   // A plan exercise missing from a saved custom order (newly added to the
   // routine) goes in at its plan position — before the next plan exercise
   // that is in the order — not at the very end below the cut line.
+  order=uniqNames(order);
   planNames.forEach((n,pi)=>{if(order.includes(n))return;const nextIn=planNames.slice(pi+1).find(x=>order.includes(x));const at=nextIn?order.indexOf(nextIn):order.length;order.splice(at,0,n);});
   return order;
 }
@@ -775,7 +789,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v84";
+const APP_VERSION="v85";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1318,8 +1332,7 @@ function renderSession(){
   // 7th, and 6 is also the realistic ceiling for what actually gets done in a
   // session — so the cut line is now a flat position cutoff, not tied to
   // wherever the abs exercise happens to sit.
-  const MUST_HAVE_CAP=6;
-  const tailInfo=computeTailInfo(CUR.day,names.slice(MUST_HAVE_CAP),names);
+
   names.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];if(log.skipped)return;const sets=log.sets;totSets+=sets.length;doneSets+=sets.filter(s=>setComplete(ex,s)).length;});
   const p=PLAN[CUR.day];
   const pct=totSets?Math.round(doneSets/totSets*100):0;
@@ -1331,19 +1344,18 @@ function renderSession(){
     // first" — telling the user to keep it in while the order pushes it toward
     // the cut zone is a straight contradiction. Move it above the cut line once,
     // the same session the nudge appears, instead of just warning about it.
-    nudgeMoved=protectNudgedExercise(n);
     CUR.nudgeReordered=true;saveCur();
   }
-  if(n&&!CUR.nudgeDismissed){html+=`<div class="nudge"><span>⚠️</span><div>Try to keep <b>${n.exNames}</b> in today — ${n.muscle.toLowerCase()} is behind this week (${n.v}/${n.t} sets).${nudgeMoved?" Moved it above the cut line so it won't get cut first.":""}</div><button class="x" onclick="dismissNudge()">×</button></div>`;}
+  if(n&&!CUR.nudgeDismissed){html+=`<div class="nudge"><span>⚠️</span><div>Try to keep <b>${n.exNames}</b> in today — ${n.muscle.toLowerCase()} is behind this week (${n.v}/${n.t} sets).</div><button class="x" onclick="dismissNudge()">×</button></div>`;}
   html+=`<div class="list" id="exList">${cardioInlineHtml()}`;
   names.forEach((name,i)=>{
     const ex=NAME_INDEX[name];
     const log=CUR.ex[name];const total=log.sets.length;const dn=log.sets.filter(s=>setComplete(ex,s)).length;
     const uskip=!!log.skipped;
-    const pastCap=i>=MUST_HAVE_CAP&&!ex.main;
+    const pastCap=isOptionalEx(CUR.day,name);
     const cls=["ex"];if(ex.main)cls.push("main");if(ex.abs)cls.push("abs");if(pastCap)cls.push("skip");
     if(uskip)cls.push("uskip");else if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
-    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(pastCap&&tailInfo[name]){const nth=tailInfo[name];tags.push(`<span class="tg ${nth.reasonKey}">${esc(nth.reasonText)}</span>`);}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
+    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
@@ -1375,7 +1387,6 @@ function renderSession(){
     const liveVB=uskip?null:computeExVolumeInsight(name);
     const hlHtml=`<div id="hl-${i}">${liveVB?renderHighlightBadge(liveVB):""}</div>`;
     html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}<div id="ef-${i}">${effortHtml(i)}</div><button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="btnrow"><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo":"⤼ Skip"}</button><button class="formtog" onclick="toggleCues(this)">Cues ▾</button>${trendBtnHtml}${noteBtnHtml}</div><div class="cues">${cues}</div>${noteBlock}</div></div></div></div>`;
-    if(i===MUST_HAVE_CAP-1){html+=`<div class="cutline"><span class="txt">Cut from here ↓</span><span class="rule"></span></div>`;}
   });
   html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button>${cardioFinisherHtml()}<div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
   app.innerHTML=html;tickClock();attachDragHandlers();initExImg();
@@ -1770,9 +1781,8 @@ function startSession(day){
   // toward the session clock, inflating the duration.
   CUR={day,start:null,nudgeDismissed:false,order,defaultOrder:order.slice(),ex:{}};
   order.forEach(name=>{const def=NAME_INDEX[name];const prev=lastLog(name);CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};});
-  CUR.order=reorderNiceToHave(day,CUR.order);
   setOpenIdx(0);initAudio();requestWake();renderSession();}
-function openSession(){if(CUR&&!CUR.order){CUR.order=getDayOrderNames(CUR.day);CUR.defaultOrder=CUR.order.slice();}openIdx=(CUR&&CUR.openIdx!=null&&CUR.openIdx>=-1&&CUR.openIdx<CUR.order.length)?CUR.openIdx:nextOpenIdx();renderSession();requestWake();}
+function openSession(){if(CUR&&!CUR.order){CUR.order=getDayOrderNames(CUR.day);CUR.defaultOrder=CUR.order.slice();}if(CUR&&CUR.order){const u=uniqNames(CUR.order);let ch=u.length!==CUR.order.length;CUR.order=u;if(normalizeOrder())ch=true;if(ch)saveCur();}openIdx=(CUR&&CUR.openIdx!=null&&CUR.openIdx>=-1&&CUR.openIdx<CUR.order.length)?CUR.openIdx:nextOpenIdx();renderSession();requestWake();}
 function previewDay(day){
   closeOverlay();
   const p=PLAN[day];
@@ -1877,7 +1887,24 @@ function commitSet(i,j){
   startTimer(rs(ex.rest),ex,i,j);
   const doneCount=sets.filter(x=>setComplete(ex,x)).length;
   if(!CUR.ex[name].skipped&&doneCount===sets.length)collapseAndAdvance(i,"done");
+  else if(doneCount===1)settleOrder(name,j); // just started this one — bring it up under the finished ones
   else revealNextSet(i,j);
+}
+/* List order follows progress: finished (or skipped) exercises first, then the
+   one(s) you've started, then everything not started yet in your planned order.
+   Re-ordering only ever happens once no field has focus, so it never moves the
+   list while you're typing. */
+function exProgressGroup(n){const d=NAME_INDEX[n],lg=CUR.ex[n];if(!lg||!d)return 2;if(lg.skipped)return 0;const dn=lg.sets.filter(x=>setComplete(d,x)).length;return(dn>0&&dn>=lg.sets.length)?0:(dn>0?1:2);}
+function normalizeOrder(){const before=CUR.order.join("|");CUR.order=[0,1,2].flatMap(g=>CUR.order.filter(n=>exProgressGroup(n)===g));return CUR.order.join("|")!==before;}
+function settleOrder(name,j){
+  const run=()=>{
+    if(!CUR)return;
+    if(dragState||isField(document.activeElement)){setTimeout(run,400);return;}
+    if(!normalizeOrder()){const i=CUR.order.indexOf(name);if(i>=0)revealNextSet(i,j);return;}
+    const i=CUR.order.indexOf(name);saveCur();setOpenIdx(i);renderSession();scrollExToTop(i,false);
+    if(i>=0)revealNextSet(i,j);
+  };
+  run();
 }
 // The rest dock slides up over the bottom ~120px of the screen — exactly where
 // the next set's row usually sits after you finish one — so taps on it hit the
@@ -1972,8 +1999,9 @@ function collapseAndAdvance(i,kind){
   const name=CUR.order[i];
   if(kind==="done"){const h=computeExVolumeInsight(name);if(h){const toastText=h.prText||(h.pct!=null?`Volume ${h.pct>=0?"+":""}${h.pct}% vs last time`:"Logged");showExToast({icon:h.icon,text:toastText});CUR.ex[name].highlight=h;saveCur();}}
   const run=()=>{
-    if(dragState){setTimeout(run,300);return;} // don't rebuild the list mid-drag
-    reorderAfterComplete(name);
+    // Never rebuild the list under you: wait while dragging or while a field has focus.
+    if(dragState||isField(document.activeElement)){setTimeout(run,400);return;}
+    normalizeOrder();
     saveCur();
     setOpenIdx(nextOpenIdx());
     renderSession();
@@ -2243,7 +2271,7 @@ function finishDrag(){
 
 /* ---------------- exercise swap ---------------- */
 async function openSwap(i){
-  const name=CUR.order[i];const alts=getSwapOptions(name);
+  const name=CUR.order[i];const alts=getSwapOptions(name).filter(n=>!CUR.order.includes(n));
   if(!alts.length){await showAlert("No swap options set up for "+name+" yet.");return;}
   const choice=await showChoice("Swap "+name,"Use for this session:",alts);
   if(choice==null)return;
@@ -2252,6 +2280,7 @@ async function openSwap(i){
   if(hasLogged){const ok=await showConfirm(`Swap to ${newName}? Sets already logged for ${name} this session will be cleared.`);if(!ok)return;}
   const def=NAME_INDEX[newName];const prev=lastLog(newName);
   CUR.order[i]=newName;
+  CUR.swapOf=CUR.swapOf||{};CUR.swapOf[newName]=CUR.swapOf[name]||name;
   delete CUR.ex[name];
   CUR.ex[newName]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
   saveCur();renderSession();
@@ -2334,10 +2363,11 @@ function openAddExercise(){
 }
 function addFromLibrary(name){
   const def=NAME_INDEX[name];if(!def)return;
+  const have=CUR.order.indexOf(name);
+  if(have>=0){closeOverlay();setOpenIdx(have);renderSession();scrollExToTop(have,false);return;} // already in today's list — open it instead of adding a second copy
   CUR.order.push(name);
   const prev=lastLog(name);
   CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
-  CUR.order=reorderNiceToHave(CUR.day,CUR.order);
   closeOverlay();saveCur();renderSession();
 }
 async function saveCustomExercise(){
