@@ -775,7 +775,10 @@ function isOptionalEx(day,name){
 }
 function getDayOrderNames(day){
   const planNames=PLAN[day].ex.map(e=>e.n);
-  let order=(SETTINGS.dayOrder&&SETTINGS.dayOrder[day])?SETTINGS.dayOrder[day].filter(n=>NAME_INDEX[n]):planNames.slice();
+  // A saved order only re-orders the day's own plan exercises. Names from old
+  // routines or past swaps that got saved into it (Calf raise / Captain knee
+  // raise showing up on A1) are ignored.
+  let order=(SETTINGS.dayOrder&&SETTINGS.dayOrder[day])?SETTINGS.dayOrder[day].filter(n=>planNames.includes(n)):planNames.slice();
   // A plan exercise missing from a saved custom order (newly added to the
   // routine) goes in at its plan position — before the next plan exercise
   // that is in the order — not at the very end below the cut line.
@@ -792,7 +795,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v87";
+const APP_VERSION="v88";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1791,7 +1794,10 @@ function startSession(day){
 function tidyCur(){
   if(!CUR||!CUR.order)return;
   const openName=(CUR.openIdx!=null&&CUR.openIdx>=0)?CUR.order[CUR.openIdx]:null;
-  const u=uniqNames(CUR.order);let ch=u.length!==CUR.order.length;CUR.order=u;
+  let u=uniqNames(CUR.order);
+  if(PLAN[CUR.day]){const plan=PLAN[CUR.day].ex.map(e=>e.n),keep=new Set([...(CUR.added||[]),...Object.keys(CUR.swapOf||{})]);
+    u=u.filter(n=>{if(plan.includes(n)||keep.has(n))return true;const lg=CUR.ex[n],d=NAME_INDEX[n];return !!(lg&&d&&(lg.skipped||lg.sets.some(x=>setComplete(d,x))));});}
+  let ch=u.length!==CUR.order.length;CUR.order=u;
   if(normalizeOrder())ch=true;
   if(ch){if(openName!=null)CUR.openIdx=CUR.order.indexOf(openName);saveCur();}
 }
@@ -2278,7 +2284,7 @@ function finishDrag(){
   if(JSON.stringify(newOrder)!==JSON.stringify(CUR.order)){
     // Keep the same exercise open after the move instead of collapsing all.
     const openName=openIdx>=0?CUR.order[openIdx]:null;
-    CUR.order=newOrder;setOpenIdx(openName?newOrder.indexOf(openName):-1);renderSession();
+    CUR.order=newOrder;CUR.userReordered=true;setOpenIdx(openName?newOrder.indexOf(openName):-1);renderSession();
   }
 }
 
@@ -2378,7 +2384,7 @@ function addFromLibrary(name){
   const def=NAME_INDEX[name];if(!def)return;
   const have=CUR.order.indexOf(name);
   if(have>=0){closeOverlay();setOpenIdx(have);renderSession();scrollExToTop(have,false);return;} // already in today's list — open it instead of adding a second copy
-  CUR.order.push(name);
+  CUR.order.push(name);CUR.added=(CUR.added||[]).concat(name);
   const prev=lastLog(name);
   CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
   closeOverlay();saveCur();renderSession();
@@ -2450,12 +2456,15 @@ async function finishSession(){
   const highlights=[];
   CUR.order.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];const sets=log.sets.map(s=>({weight:s.weight,reps:s.reps}));rec.ex[name]={sets,skipped:!!log.skipped};const d=log.sets.filter(s=>setComplete(ex,s)).length;done+=d;total+=sets.length;if(d===0)skipped++;
     if(log.highlight&&!log.skipped)highlights.push(Object.assign({muscle:ex.m,name},log.highlight));});
-  const orderChanged=JSON.stringify(CUR.order)!==JSON.stringify(CUR.defaultOrder);
+  // The list now re-orders itself by progress, so only a manual drag counts as
+  // "you changed the order" — and only the plan exercises' order gets saved.
+  const planNow=PLAN[rec.day]?CUR.order.filter(n=>PLAN[rec.day].ex.some(e=>e.n===n)):[];
+  const orderChanged=!!CUR.userReordered&&JSON.stringify(planNow)!==JSON.stringify(getDayOrderNames(rec.day));
   HISTORY.push(rec);await sset("history",HISTORY);CUR=null;await sset("current",null);
   const milestone=MILESTONES.includes(HISTORY.length)?HISTORY.length:null;
   if(orderChanged){
-    const noChange=await showConfirm(`You changed the exercise order or made a swap for ${rec.day} this session. Keep your saved routine as is, or update it to match?`,{okLabel:"Keep as is",cancelLabel:"Update routine"});
-    if(!noChange){SETTINGS.dayOrder=SETTINGS.dayOrder||{};SETTINGS.dayOrder[rec.day]=rec.exOrder.slice();await sset("settings",SETTINGS);}
+    const noChange=await showConfirm(`You reordered ${rec.day} this session. Keep your saved order, or use this order from now on?`,{okLabel:"Keep as is",cancelLabel:"Use new order"});
+    if(!noChange){SETTINGS.dayOrder=SETTINGS.dayOrder||{};SETTINGS.dayOrder[rec.day]=planNow;await sset("settings",SETTINGS);}
   }
   renderHome({day:rec.day,done,total,skipped,highlights,milestone,kcal:sessionKcal(rec)});
   launchConfetti();
@@ -2817,6 +2826,7 @@ const verEl=document.getElementById("verBadge");if(verEl)verEl.textContent=APP_V
     SETTINGS.fixJul5Reps=1;await sset("settings",SETTINGS);
   }
   CUR=await sget("current",null);
+  if(SETTINGS.dayOrder&&!SETTINGS.cleanedDayOrder){for(const d in SETTINGS.dayOrder){if(PLAN[d]){const pn=PLAN[d].ex.map(e=>e.n);SETTINGS.dayOrder[d]=(SETTINGS.dayOrder[d]||[]).filter((n,k,a)=>pn.includes(n)&&a.indexOf(n)===k);}}SETTINGS.cleanedDayOrder=1;await sset("settings",SETTINGS);}
   // One-time renames (see NAME_ALIASES): an exercise logged under an old name is
   // renamed everywhere — history, notes, saved day orders, an open session.
   SETTINGS.renamedAliases=SETTINGS.renamedAliases||(SETTINGS.mergeKneeRaise?["Knee raise (parallel bars)"]:[]);
