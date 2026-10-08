@@ -789,7 +789,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v85";
+const APP_VERSION="v86";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1782,7 +1782,17 @@ function startSession(day){
   CUR={day,start:null,nudgeDismissed:false,order,defaultOrder:order.slice(),ex:{}};
   order.forEach(name=>{const def=NAME_INDEX[name];const prev=lastLog(name);CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};});
   setOpenIdx(0);initAudio();requestWake();renderSession();}
-function openSession(){if(CUR&&!CUR.order){CUR.order=getDayOrderNames(CUR.day);CUR.defaultOrder=CUR.order.slice();}if(CUR&&CUR.order){const u=uniqNames(CUR.order);let ch=u.length!==CUR.order.length;CUR.order=u;if(normalizeOrder())ch=true;if(ch)saveCur();}openIdx=(CUR&&CUR.openIdx!=null&&CUR.openIdx>=-1&&CUR.openIdx<CUR.order.length)?CUR.openIdx:nextOpenIdx();renderSession();requestWake();}
+// Remove duplicate entries and put the list in progress order, keeping the
+// same exercise open. Runs on Resume AND when the app reopens straight into
+// a workout (refresh / relaunch), which previously skipped it.
+function tidyCur(){
+  if(!CUR||!CUR.order)return;
+  const openName=(CUR.openIdx!=null&&CUR.openIdx>=0)?CUR.order[CUR.openIdx]:null;
+  const u=uniqNames(CUR.order);let ch=u.length!==CUR.order.length;CUR.order=u;
+  if(normalizeOrder())ch=true;
+  if(ch){if(openName!=null)CUR.openIdx=CUR.order.indexOf(openName);saveCur();}
+}
+function openSession(){if(CUR&&!CUR.order){CUR.order=getDayOrderNames(CUR.day);CUR.defaultOrder=CUR.order.slice();}tidyCur();openIdx=(CUR&&CUR.openIdx!=null&&CUR.openIdx>=-1&&CUR.openIdx<CUR.order.length)?CUR.openIdx:nextOpenIdx();renderSession();requestWake();}
 function previewDay(day){
   closeOverlay();
   const p=PLAN[day];
@@ -2822,6 +2832,7 @@ const verEl=document.getElementById("verBadge");if(verEl)verEl.textContent=APP_V
     if(planNames){const migrated={};planNames.forEach((n,i)=>{if(CUR.ex[i])migrated[n]=CUR.ex[i];});CUR.order=planNames;CUR.defaultOrder=planNames.slice();CUR.ex=migrated;await sset("current",CUR);}
     else CUR=null;
   }
+  if(CUR)tidyCur();
   if(CUR){openIdx=(CUR.openIdx!=null&&CUR.openIdx>=-1&&CUR.order&&CUR.openIdx<CUR.order.length)?CUR.openIdx:nextOpenIdx();renderSession();requestWake();}else renderHome();
   renderCardioBar();
 })();
