@@ -807,7 +807,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v91";
+const APP_VERSION="v92";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -842,7 +842,11 @@ function sessionLog(s,name){
 function isBodyweight(name,hist){const pe=getPlanEx(name);const flag=pe&&(pe.abs||pe.reps==="to failure");if(hist&&hist.length)return hist.every(h=>!h.anyW);return!!flag;}
 function setComplete(ex,s){const wOk=s.weight!==""&&s.weight!=null;const rOk=s.reps!==""&&s.reps!=null;return SETTINGS.logReps?rOk:wOk;}
 
-function weeklyVolume(){return volumeSince(Date.now()-7*86400000);}
+// "This week" = today plus the 7 full calendar days before it (from local
+// midnight 7 days ago), not 7×24h from this minute — otherwise last week's
+// same-weekday session drops out depending on the hour you open the app.
+function weekStartTs(){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-7);return d.getTime();}
+function weeklyVolume(){return volumeSince(weekStartTs());}
 function volumeSince(fromTs){const vol={};for(const m in MUSCLES)vol[m]=0;
   const add=(s)=>{sessionExNames(s).forEach(n=>{const def=NAME_INDEX[n];if(!def)return;const l=sessionLog(s,n);if(!l)return;vol[def.m]=(vol[def.m]||0)+l.sets.filter(x=>setComplete(def,x)).length;});};
   HISTORY.forEach(s=>{if(s.date>=fromTs)add(s);});
@@ -853,7 +857,7 @@ function weeklyVolumeForWeek(ws){const vol={};for(const m in MUSCLES)vol[m]=0;
   HISTORY.forEach(s=>{if(weekStart(s.date)===ws)add(s);});
   if(CUR&&CUR.start!=null&&weekStart(CUR.start)===ws)add({day:CUR.day,exOrder:CUR.order,ex:CUR.ex});
   return vol;}
-function priorSessionThisWeek(){const from=Date.now()-7*86400000;return HISTORY.some(s=>s.date>=from);}
+function priorSessionThisWeek(){const from=weekStartTs();return HISTORY.some(s=>s.date>=from);}
 const CADENCE_TARGET=4;
 const MILESTONES=[10,25,50,75,100,150,200,250,300,400,500,750,1000];
 function computeStreak(){
@@ -2427,7 +2431,7 @@ function toggleNudgeWhy(){const d=document.getElementById("nudgeWhy");if(!d)retu
 // The reasoning behind the nudge, kept short: this week's sessions that had an
 // exercise for the muscle, and whether each one was done or skipped.
 function nudgeWhyHtml(n){
-  const m=n.muscle,from=Date.now()-7*86400000;
+  const m=n.muscle,from=weekStartTs();
   const rows=HISTORY.filter(h=>h.date>=from).sort((x,y)=>x.date-y.date).map(h=>{
     const names=(h.exOrder&&h.exOrder.length?h.exOrder:Object.keys(h.ex||{})).filter(x=>NAME_INDEX[x]&&NAME_INDEX[x].m===m);
     if(!names.length)return null;
