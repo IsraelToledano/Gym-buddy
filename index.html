@@ -139,6 +139,13 @@
   .nudge-detail{margin-top:7px;font-size:12.5px;line-height:1.45;color:var(--ink-dim)}
   .nudge-detail .nw-sum{margin-bottom:4px}
   .nudge-detail .nw-row{display:flex;flex-direction:column;padding:4px 0;border-top:1px solid rgba(242,135,46,.2)}
+  .sg-row{margin-top:6px}
+  .sg-row .sg-m{color:var(--ink-dim);font-size:12px;margin-left:4px}
+  .sg-bits{display:flex;flex-wrap:wrap;gap:5px;margin-top:3px}
+  .sg-bits span{font-size:11.5px;border-radius:6px;padding:1px 7px;border:1px solid var(--line);color:var(--ink-dim)}
+  .sg-bits .sg-man.ok{color:var(--green);border-color:rgba(111,191,115,.45)}
+  .sg-bits .sg-opt{color:var(--amber-bright);border-color:rgba(242,135,46,.4)}
+  .sg-bits .sg-add{color:var(--ink);border-style:dashed}
   .nudge-detail .nw-mh{font-weight:700;color:var(--amber-bright);margin-top:6px;text-transform:uppercase;font-size:11px;letter-spacing:.06em}
   .nudge-detail .nw-date{font-weight:600;color:var(--ink)}
   .nudge-detail .nw-done{color:var(--green)}
@@ -786,6 +793,17 @@ function isSuggestedEx(name){if(!CUR)return false;return computeAlerts().stretch
 function isPriorityEx(name){if(!CUR)return false;const ex=NAME_INDEX[name];return !!(ex&&computeAlerts().priority.some(p=>p.today.includes(name)));}
 // Plan volume per muscle for one full rotation (= roughly your week):
 // must-have sets and the total including optional exercises.
+function muscleWeekSplit(m){
+  const from=weekStartTs();let man=0,opt=0;
+  HISTORY.filter(h=>h.date>=from).forEach(h=>{const plan=PLAN[h.day];const pn=plan?plan.ex.map(e=>e.n):[];
+    Object.keys(h.ex||{}).forEach(n=>{const e=NAME_INDEX[n];if(!e||e.m!==m)return;const lg=h.ex[n];if(!lg||lg.skipped)return;
+      const dn=lg.sets.filter(x=>setComplete(e,x)).length;if(!dn)return;
+      const k=pn.indexOf(n);
+      // a same-muscle swap/extra stands in for a must-have that was left undone in that session
+      const isMan=k>=0?(k<OPTIONAL_FROM||e.main):plan&&plan.ex.some((pe,pk)=>(pk<OPTIONAL_FROM||pe.main)&&pe.m===m&&!(h.ex[pe.n]&&h.ex[pe.n].sets.some(x=>setComplete(pe,x))));
+      if(isMan)man+=dn;else opt+=dn;});});
+  return{man,opt};
+}
 function planVolume(){const r={};for(const d in PLAN)PLAN[d].ex.forEach((e,k)=>{const o=r[e.m]=r[e.m]||{man:0,tot:0};o.tot+=e.sets;if(k<OPTIONAL_FROM||e.main)o.man+=e.sets;});return r;}
 function computeAlerts(){
 
@@ -810,7 +828,8 @@ function computeAlerts(){
     const stretch=[];
     CUR.order.forEach(n=>{if(!isOptionalEx(CUR.day,n))return;const e=NAME_INDEX[n];if(!e||out.priority.some(p=>p.muscle===e.m))return;const p=pv[e.m];if(!p)return;const v=Math.round(vol[e.m]||0);
       if(v>=p.tot)return;const lg=CUR.ex[n];if(lg&&(lg.skipped||lg.sets.every(x=>setComplete(e,x))))return;
-      stretch.push({name:n,muscle:e.m,v,tot:p.tot,add:e.sets,ratio:v/p.tot});});
+      const sp=muscleWeekSplit(e.m);
+      stretch.push({name:n,muscle:e.m,v,tot:p.tot,man:p.man,optTot:p.tot-p.man,manDone:sp.man,optDone:sp.opt,add:e.sets,ratio:v/p.tot});});
     out.stretch=stretch.sort((a,b)=>a.ratio-b.ratio);
   }
   return out;
@@ -847,7 +866,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v94";
+const APP_VERSION="v95";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1404,7 +1423,9 @@ function renderSession(){
   // exercise today that adds the most toward the plan's full volume.
   const AL=computeAlerts();
   AL.priority.forEach((p,k)=>{html+=alertHtml("pri",k,`<b>Priority · ${esc(p.muscle)} ${p.v}/${p.man}</b> must-have sets this week. Skipped: ${p.skipped.map(x=>`${esc(x.name)} (${x.day}, ${fmtDate(x.date).replace(/^\w+, /,"")})`).join(", ")}.`,p.muscle);});
-  if(AL.stretch.length){const muscles=[...new Set(AL.stretch.map(st=>st.muscle))];html+=alertHtml("str",0,`<b>Stretch goals</b> (optional) — must-haves are covered; do these if you have the energy:${AL.stretch.map(st=>`<br>✱ <b>${esc(st.name)}</b> · ${esc(st.muscle)} ${st.v}/${st.tot} → +${st.add}`).join("")}`,muscles);}
+  if(AL.stretch.length){const muscles=[...new Set(AL.stretch.map(st=>st.muscle))];
+    // per exercise: must-have progress (✓ when met) and optional progress, so it's clear what the done sets already include
+    html+=alertHtml("str",0,`<b>Stretch goals</b> — optional extras if you have the energy:${AL.stretch.map(st=>`<div class="sg-row">✱ <b>${esc(st.name)}</b> <span class="sg-m">${esc(st.muscle)}</span><span class="sg-bits"><span class="sg-man${st.manDone>=st.man?" ok":""}">must-have ${Math.min(st.manDone,st.man)}/${st.man}${st.manDone>=st.man?" ✓":""}</span><span class="sg-opt">optional ${st.optDone}/${st.optTot}</span><span class="sg-add">this +${st.add}</span></span></div>`).join("")}`,muscles);}
   html+=`<div class="list" id="exList">${cardioInlineHtml()}`;
   names.forEach((name,i)=>{
     const ex=NAME_INDEX[name];
