@@ -139,6 +139,7 @@
   .nudge-detail{margin-top:7px;font-size:12.5px;line-height:1.45;color:var(--ink-dim)}
   .nudge-detail .nw-sum{margin-bottom:4px}
   .nudge-detail .nw-row{display:flex;flex-direction:column;padding:4px 0;border-top:1px solid rgba(242,135,46,.2)}
+  .nudge-detail .nw-mh{font-weight:700;color:var(--amber-bright);margin-top:6px;text-transform:uppercase;font-size:11px;letter-spacing:.06em}
   .nudge-detail .nw-date{font-weight:600;color:var(--ink)}
   .nudge-detail .nw-done{color:var(--green)}
   .nudge-detail .nw-skip{color:var(--red)}
@@ -781,14 +782,14 @@ const uniqNames=a=>a.filter((n,k)=>a.indexOf(n)===k);
    exercises you add yourself count as must-have. Heavy top sets never optional. */
 const OPTIONAL_FROM=6;
 // An optional exercise the weekly-volume nudge is asking you to keep today.
-function isSuggestedEx(name){if(!CUR)return false;const st=computeAlerts().stretch;return !!(st&&st.name===name);}
+function isSuggestedEx(name){if(!CUR)return false;return computeAlerts().stretch.some(st=>st.name===name);}
 function isPriorityEx(name){if(!CUR)return false;const ex=NAME_INDEX[name];return !!(ex&&computeAlerts().priority.some(p=>p.today.includes(name)));}
 // Plan volume per muscle for one full rotation (= roughly your week):
 // must-have sets and the total including optional exercises.
 function planVolume(){const r={};for(const d in PLAN)PLAN[d].ex.forEach((e,k)=>{const o=r[e.m]=r[e.m]||{man:0,tot:0};o.tot+=e.sets;if(k<OPTIONAL_FROM||e.main)o.man+=e.sets;});return r;}
 function computeAlerts(){
 
-  const out={priority:[],stretch:null};
+  const out={priority:[],stretch:[]};
   if(CUR&&PLAN[CUR.day]){
     const from=weekStartTs(),week=HISTORY.filter(h=>h.date>=from);
     const todayMus={};CUR.order.forEach(n=>{const e=NAME_INDEX[n];if(e)(todayMus[e.m]=todayMus[e.m]||[]).push(n);});
@@ -804,12 +805,13 @@ function computeAlerts(){
     // volume for the week (made up elsewhere already = no alert).
     const vol=weeklyVolume(),pv=planVolume();
     for(const m in skipped){if(todayMus[m]&&pv[m]&&(vol[m]||0)<pv[m].man)out.priority.push({muscle:m,skipped:skipped[m],today:todayMus[m],v:Math.round(vol[m]||0),man:pv[m].man});}
-    // stretch: the optional exercise today whose muscle is furthest below the plan's full volume
-    let best=null;
+    // stretch: every optional exercise today whose muscle is still below the plan's
+    // full volume (most-behind first) — not just one.
+    const stretch=[];
     CUR.order.forEach(n=>{if(!isOptionalEx(CUR.day,n))return;const e=NAME_INDEX[n];if(!e||out.priority.some(p=>p.muscle===e.m))return;const p=pv[e.m];if(!p)return;const v=Math.round(vol[e.m]||0);
-      if(v>=p.tot)return;const lg=CUR.ex[n];if(lg&&(lg.skipped||lg.sets.every(x=>setComplete(e,x))))return;const ratio=v/p.tot;
-      if(!best||ratio<best.ratio)best={name:n,muscle:e.m,v,tot:p.tot,add:e.sets,ratio};});
-    out.stretch=best;
+      if(v>=p.tot)return;const lg=CUR.ex[n];if(lg&&(lg.skipped||lg.sets.every(x=>setComplete(e,x))))return;
+      stretch.push({name:n,muscle:e.m,v,tot:p.tot,add:e.sets,ratio:v/p.tot});});
+    out.stretch=stretch.sort((a,b)=>a.ratio-b.ratio);
   }
   return out;
 }
@@ -845,7 +847,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v93";
+const APP_VERSION="v94";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1402,7 +1404,7 @@ function renderSession(){
   // exercise today that adds the most toward the plan's full volume.
   const AL=computeAlerts();
   AL.priority.forEach((p,k)=>{html+=alertHtml("pri",k,`<b>Priority · ${esc(p.muscle)} ${p.v}/${p.man}</b> must-have sets this week. Skipped: ${p.skipped.map(x=>`${esc(x.name)} (${x.day}, ${fmtDate(x.date).replace(/^\w+, /,"")})`).join(", ")}.`,p.muscle);});
-  if(AL.stretch){const st=AL.stretch;html+=alertHtml("str",0,`<b>Stretch goal · ${esc(st.name)}</b> (optional). ${esc(st.muscle)} ${st.v}/${st.tot} this week — must-haves are covered; +${st.add} sets if you have the energy.`,st.muscle);}
+  if(AL.stretch.length){const muscles=[...new Set(AL.stretch.map(st=>st.muscle))];html+=alertHtml("str",0,`<b>Stretch goals</b> (optional) — must-haves are covered; do these if you have the energy:${AL.stretch.map(st=>`<br>✱ <b>${esc(st.name)}</b> · ${esc(st.muscle)} ${st.v}/${st.tot} → +${st.add}`).join("")}`,muscles);}
   html+=`<div class="list" id="exList">${cardioInlineHtml()}`;
   names.forEach((name,i)=>{
     const ex=NAME_INDEX[name];
@@ -2465,6 +2467,7 @@ function toggleNudgeWhy(){const d=document.getElementById("nudgeWhy");if(!d)retu
 // exercise for the muscle, and whether each one was done or skipped.
 function nudgeWhyHtml(n){return muscleWeekHtml(n.muscle);}
 function muscleWeekHtml(m){
+  if(Array.isArray(m))return m.map(x=>`<div class="nw-mh">${esc(x)}</div>`+muscleWeekHtml(x)).join("");
   const from=weekStartTs();
   const rows=HISTORY.filter(h=>h.date>=from).sort((x,y)=>x.date-y.date).map(h=>{
     const names=(h.exOrder&&h.exOrder.length?h.exOrder:Object.keys(h.ex||{})).filter(x=>NAME_INDEX[x]&&NAME_INDEX[x].m===m);
