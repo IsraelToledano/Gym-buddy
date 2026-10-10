@@ -136,7 +136,12 @@
   .nudge b{color:var(--amber-bright)}
   .nudge{cursor:pointer}
   .nudge-chev{margin-left:auto;color:var(--amber-bright);font-size:15px;line-height:1.3;flex:none;padding:0 2px}
-  .nudge-detail p{margin:6px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-dim)}
+  .nudge-detail{margin-top:7px;font-size:12.5px;line-height:1.45;color:var(--ink-dim)}
+  .nudge-detail .nw-sum{margin-bottom:4px}
+  .nudge-detail .nw-row{display:flex;flex-direction:column;padding:4px 0;border-top:1px solid rgba(242,135,46,.2)}
+  .nudge-detail .nw-date{font-weight:600;color:var(--ink)}
+  .nudge-detail .nw-done{color:var(--green)}
+  .nudge-detail .nw-skip{color:var(--red)}
 
   .list{position:relative;margin-top:7px}
   .list::before{content:"";position:absolute;left:18px;top:14px;bottom:14px;width:2px;background:linear-gradient(180deg,var(--amber),var(--line) 16%,var(--line));opacity:.5}
@@ -802,7 +807,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v90";
+const APP_VERSION="v91";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -2419,22 +2424,18 @@ function setNote(name,v){NOTES[name]=v;if(noteT)clearTimeout(noteT);noteT=setTim
 let noteT=null;
 let NUDGE_OPEN=false;
 function toggleNudgeWhy(){const d=document.getElementById("nudgeWhy");if(!d)return;NUDGE_OPEN=d.hidden;d.hidden=!NUDGE_OPEN;const c=document.getElementById("nudgeChev");if(c)c.textContent=NUDGE_OPEN?"▴":"▾";}
-// The reasoning behind the nudge: how far behind the muscle is, where it's
-// normally trained in the split (and when that day was last done), and what
-// doing it today adds.
+// The reasoning behind the nudge, kept short: this week's sessions that had an
+// exercise for the muscle, and whether each one was done or skipped.
 function nudgeWhyHtml(n){
-  const m=n.muscle;const lines=[];
-  lines.push(`<b>${n.v} of ${n.t}</b> weekly target sets for ${m.toLowerCase()} done in the last 7 days.`);
-  const where=[];
-  ["A1","A2","B1","B2"].forEach(d=>{PLAN[d].ex.forEach((e,k)=>{if(e.m!==m)return;const opt=k>=OPTIONAL_FROM&&!e.main;const ld=lastDoneOf(d);
-    where.push(`${d}: ${esc(e.n)}${opt?" (optional)":""} — ${ld?"day last done "+daysAgoTxt(ld):"day not done yet"}`);});});
-  if(where.length)lines.push(`Where it's trained in your split:<br>• ${where.join("<br>• ")}`);
-  const todays=CUR.order.filter(x=>NAME_INDEX[x].m===m);
-  const optToday=todays.filter(x=>isOptionalEx(CUR.day,x));
-  if(optToday.length)lines.push(`Today ${optToday.map(esc).join(" & ")} is only optional, so it's easy to skip — but it's your best chance to catch ${m.toLowerCase()} up before the week resets.`);
-  const add=todays.reduce((a,x)=>a+(CUR.ex[x]?CUR.ex[x].sets.length:0),0);
-  if(add)lines.push(`Doing it today adds about ${add} sets → ${n.v+add}/${n.t}.`);
-  return lines.map(l=>`<p>${l}</p>`).join("");
+  const m=n.muscle,from=Date.now()-7*86400000;
+  const rows=HISTORY.filter(h=>h.date>=from).sort((x,y)=>x.date-y.date).map(h=>{
+    const names=(h.exOrder&&h.exOrder.length?h.exOrder:Object.keys(h.ex||{})).filter(x=>NAME_INDEX[x]&&NAME_INDEX[x].m===m);
+    if(!names.length)return null;
+    const bits=names.map(x=>{const lg=sessionLog(h,x),d=NAME_INDEX[x];const dn=lg&&!lg.skipped?lg.sets.filter(st=>setComplete(d,st)).length:0;
+      return dn?`<span class="nw-done">✓ ${esc(x)} · ${dn} sets</span>`:`<span class="nw-skip">✕ ${esc(x)} · skipped</span>`;});
+    return `<div class="nw-row"><span class="nw-date">${fmtDate(h.date)} · ${h.day}</span>${bits.join("")}</div>`;
+  }).filter(Boolean);
+  return (rows.length?rows.join(""):`<div class="nw-row">No ${m.toLowerCase()} exercise in your sessions this week.</div>`);
 }
 function dismissNudge(){CUR.nudgeDismissed=true;saveCur();renderSession();}
 function computeNudge(){if(!priorSessionThisWeek())return null;const vol=weeklyVolume();const defs=CUR.order.map(n=>NAME_INDEX[n]);const trained=[...new Set(defs.map(e=>e.m))];let best=null;
