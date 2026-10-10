@@ -361,6 +361,9 @@
   .cutline .txt{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);white-space:nowrap}
   .ex.skip .ex-btn{border-style:dashed;border-color:rgba(84,185,168,.55);background:rgba(84,185,168,.10)}
   .ex.sugg .ex-btn{border-style:dashed;border-color:rgba(242,135,46,.6);background:rgba(242,135,46,.10)}
+  .tg.pri{background:rgba(224,112,62,.16);color:var(--red);border:1px solid rgba(224,112,62,.45)}
+  .nudge.pri{background:rgba(224,112,62,.12);border-color:rgba(224,112,62,.5)}
+  .nudge.pri b{color:var(--red)}
   .tg.sugg{background:rgba(242,135,46,.14);color:var(--amber-bright);border:1px solid rgba(242,135,46,.35)}
   .tg.opt{background:rgba(84,185,168,.12);color:var(--teal);border:1px solid rgba(84,185,168,.3)}
   .ex.skip.done .ex-btn,.ex.skip.partial .ex-btn{opacity:1}
@@ -778,7 +781,42 @@ const uniqNames=a=>a.filter((n,k)=>a.indexOf(n)===k);
    exercises you add yourself count as must-have. Heavy top sets never optional. */
 const OPTIONAL_FROM=6;
 // An optional exercise the weekly-volume nudge is asking you to keep today.
-function isSuggestedEx(name){if(!CUR)return false;const n=computeNudge();return !!(n&&NAME_INDEX[name]&&NAME_INDEX[name].m===n.muscle);}
+function isSuggestedEx(name){if(!CUR)return false;const st=computeAlerts().stretch;return !!(st&&st.name===name);}
+function isPriorityEx(name){if(!CUR)return false;const ex=NAME_INDEX[name];return !!(ex&&computeAlerts().priority.some(p=>p.today.includes(name)));}
+// Plan volume per muscle for one full rotation (= roughly your week):
+// must-have sets and the total including optional exercises.
+function planVolume(){const r={};for(const d in PLAN)PLAN[d].ex.forEach((e,k)=>{const o=r[e.m]=r[e.m]||{man:0,tot:0};o.tot+=e.sets;if(k<OPTIONAL_FROM||e.main)o.man+=e.sets;});return r;}
+function computeAlerts(){
+
+  const out={priority:[],stretch:null};
+  if(CUR&&PLAN[CUR.day]){
+    const from=weekStartTs(),week=HISTORY.filter(h=>h.date>=from);
+    const todayMus={};CUR.order.forEach(n=>{const e=NAME_INDEX[n];if(e)(todayMus[e.m]=todayMus[e.m]||[]).push(n);});
+    // must-have exercises skipped in this week's sessions (a same-muscle swap counts as done)
+    const skipped={};
+    week.forEach(h=>{const plan=PLAN[h.day];if(!plan)return;const planNames=plan.ex.map(e=>e.n);
+      plan.ex.forEach((e,k)=>{if(k>=OPTIONAL_FROM&&!e.main)return;
+        const lg=sessionLog(h,e.n);if(!lg)return; // wasn't in that session (e.g. added to the plan later) — not a skip
+        const did=!lg.skipped&&lg.sets.some(x=>setComplete(e,x));
+        const sub=Object.keys(h.ex||{}).some(n=>!planNames.includes(n)&&NAME_INDEX[n]&&NAME_INDEX[n].m===e.m&&(h.ex[n].sets||[]).some(x=>setComplete(NAME_INDEX[n],x)));
+        if(!did&&!sub)(skipped[e.m]=skipped[e.m]||[]).push({name:e.n,day:h.day,date:h.date});});});
+    // Only a priority if the skip still leaves the muscle under its must-have
+    // volume for the week (made up elsewhere already = no alert).
+    const vol=weeklyVolume(),pv=planVolume();
+    for(const m in skipped){if(todayMus[m]&&pv[m]&&(vol[m]||0)<pv[m].man)out.priority.push({muscle:m,skipped:skipped[m],today:todayMus[m],v:Math.round(vol[m]||0),man:pv[m].man});}
+    // stretch: the optional exercise today whose muscle is furthest below the plan's full volume
+    let best=null;
+    CUR.order.forEach(n=>{if(!isOptionalEx(CUR.day,n))return;const e=NAME_INDEX[n];if(!e||out.priority.some(p=>p.muscle===e.m))return;const p=pv[e.m];if(!p)return;const v=Math.round(vol[e.m]||0);
+      if(v>=p.tot)return;const lg=CUR.ex[n];if(lg&&(lg.skipped||lg.sets.every(x=>setComplete(e,x))))return;const ratio=v/p.tot;
+      if(!best||ratio<best.ratio)best={name:n,muscle:e.m,v,tot:p.tot,add:e.sets,ratio};});
+    out.stretch=best;
+  }
+  return out;
+}
+function alertHtml(kind,k,text,muscle){const id=kind+k,open=NUDGE_OPEN_SET.has(id);
+  return `<div class="nudge ${kind}" role="button" onclick="toggleAlert('${id}')"><span>${kind==="pri"?"🔴":"✱"}</span><div style="flex:1"><div>${text}</div><div class="nudge-detail" id="al-${id}"${open?"":" hidden"}>${muscleWeekHtml(muscle)}</div></div><span class="nudge-chev" id="alc-${id}">${open?"▴":"▾"}</span></div>`;}
+const NUDGE_OPEN_SET=new Set();
+function toggleAlert(id){const d=document.getElementById("al-"+id);if(!d)return;const open=d.hidden;d.hidden=!open;if(open)NUDGE_OPEN_SET.add(id);else NUDGE_OPEN_SET.delete(id);const c=document.getElementById("alc-"+id);if(c)c.textContent=open?"▴":"▾";}
 function isOptionalEx(day,name){
   const ex=NAME_INDEX[name];if(ex&&ex.main)return false;
   const src=(CUR&&CUR.swapOf&&CUR.swapOf[name])||name;
@@ -807,7 +845,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v92";
+const APP_VERSION="v93";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1359,17 +1397,12 @@ function renderSession(){
   const p=PLAN[CUR.day];
   const pct=totSets?Math.round(doneSets/totSets*100):0;
   let html=`<div class="shead"><div class="row1"><h2><b>${CUR.day}</b> · ${p.name}</h2><div class="clock" id="clock">0:00</div></div><div class="row2"><div class="prog" id="prog">${doneSets}/${totSets} sets · ${pct}%</div><button class="linkbtn" onclick="renderHome()">Back</button></div><div class="pbar"><div class="pbar-fill" id="progFill" style="width:${pct}%"></div></div></div>`;
-  const n=computeNudge();
-  let nudgeMoved=false;
-  if(n&&!CUR.nudgeDismissed&&!CUR.nudgeReordered){
-    // The nudge is pointless if the flagged exercise still gets auto-tagged "cut
-    // first" — telling the user to keep it in while the order pushes it toward
-    // the cut zone is a straight contradiction. Move it above the cut line once,
-    // the same session the nudge appears, instead of just warning about it.
-    CUR.nudgeReordered=true;saveCur();
-  }
-  // No dismiss: the note stays (it's small) and the chevron expands the reasoning.
-  if(n){html+=`<div class="nudge" role="button" onclick="toggleNudgeWhy()"><span>⚠️</span><div style="flex:1"><div>Try to keep <b>${n.exNames}</b> in today — ${n.muscle.toLowerCase()} is behind this week (${n.v}/${n.t} sets).</div><div class="nudge-detail" id="nudgeWhy"${NUDGE_OPEN?"":' hidden'}>${nudgeWhyHtml(n)}</div></div><span class="nudge-chev" id="nudgeChev">${NUDGE_OPEN?"▴":"▾"}</span></div>`;}
+  // Two kinds of alert at the top: PRIORITY = a must-have exercise for a muscle
+  // you train today was skipped earlier this week; STRETCH = the one optional
+  // exercise today that adds the most toward the plan's full volume.
+  const AL=computeAlerts();
+  AL.priority.forEach((p,k)=>{html+=alertHtml("pri",k,`<b>Priority · ${esc(p.muscle)} ${p.v}/${p.man}</b> must-have sets this week. Skipped: ${p.skipped.map(x=>`${esc(x.name)} (${x.day}, ${fmtDate(x.date).replace(/^\w+, /,"")})`).join(", ")}.`,p.muscle);});
+  if(AL.stretch){const st=AL.stretch;html+=alertHtml("str",0,`<b>Stretch goal · ${esc(st.name)}</b> (optional). ${esc(st.muscle)} ${st.v}/${st.tot} this week — must-haves are covered; +${st.add} sets if you have the energy.`,st.muscle);}
   html+=`<div class="list" id="exList">${cardioInlineHtml()}`;
   names.forEach((name,i)=>{
     const ex=NAME_INDEX[name];
@@ -1378,7 +1411,7 @@ function renderSession(){
     const pastCap=isOptionalEx(CUR.day,name);
     const cls=["ex"];if(ex.main)cls.push("main");if(ex.abs)cls.push("abs");if(pastCap)cls.push(isSuggestedEx(name)?"sugg":"skip");
     if(uskip)cls.push("uskip");else if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
-    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ suggested today</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
+    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(isPriorityEx(name)&&!(dn===total&&total>0)){tags.push('<span class="tg pri">Priority · skipped this week</span>');}else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ stretch goal</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
@@ -2430,8 +2463,9 @@ let NUDGE_OPEN=false;
 function toggleNudgeWhy(){const d=document.getElementById("nudgeWhy");if(!d)return;NUDGE_OPEN=d.hidden;d.hidden=!NUDGE_OPEN;const c=document.getElementById("nudgeChev");if(c)c.textContent=NUDGE_OPEN?"▴":"▾";}
 // The reasoning behind the nudge, kept short: this week's sessions that had an
 // exercise for the muscle, and whether each one was done or skipped.
-function nudgeWhyHtml(n){
-  const m=n.muscle,from=weekStartTs();
+function nudgeWhyHtml(n){return muscleWeekHtml(n.muscle);}
+function muscleWeekHtml(m){
+  const from=weekStartTs();
   const rows=HISTORY.filter(h=>h.date>=from).sort((x,y)=>x.date-y.date).map(h=>{
     const names=(h.exOrder&&h.exOrder.length?h.exOrder:Object.keys(h.ex||{})).filter(x=>NAME_INDEX[x]&&NAME_INDEX[x].m===m);
     if(!names.length)return null;
