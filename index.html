@@ -134,6 +134,8 @@
   .nudge{display:flex;gap:10px;align-items:flex-start;background:rgba(242,135,46,.1);border:1px solid rgba(242,135,46,.34);border-radius:12px;padding:11px 13px;margin:6px 0 2px;font-size:13px;line-height:1.45}
   .nudge .x{margin-left:auto;background:none;border:none;color:var(--amber-bright);font-size:18px;line-height:1;padding:0 2px}
   .nudge b{color:var(--amber-bright)}
+  .nudge-why{background:none;border:none;padding:4px 0 0;color:var(--amber-bright);font-weight:600;font-size:12.5px}
+  .nudge-detail p{margin:6px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-dim)}
 
   .list{position:relative;margin-top:7px}
   .list::before{content:"";position:absolute;left:18px;top:14px;bottom:14px;width:2px;background:linear-gradient(180deg,var(--amber),var(--line) 16%,var(--line));opacity:.5}
@@ -351,7 +353,9 @@
   .cutline{display:flex;align-items:center;gap:10px;margin:4px 0 13px;padding-left:6px}
   .cutline .rule{flex:1;height:0;border-top:2px dashed rgba(242,135,46,.5)}
   .cutline .txt{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);white-space:nowrap}
-  .ex.skip .ex-btn{border-style:dashed;border-color:rgba(84,185,168,.45)}
+  .ex.skip .ex-btn{border-style:dashed;border-color:rgba(84,185,168,.55);background:rgba(84,185,168,.10)}
+  .ex.sugg .ex-btn{border-style:dashed;border-color:rgba(242,135,46,.6);background:rgba(242,135,46,.10)}
+  .tg.sugg{background:rgba(242,135,46,.14);color:var(--amber-bright);border:1px solid rgba(242,135,46,.35)}
   .tg.opt{background:rgba(84,185,168,.12);color:var(--teal);border:1px solid rgba(84,185,168,.3)}
   .ex.skip.done .ex-btn,.ex.skip.partial .ex-btn{opacity:1}
 
@@ -767,6 +771,8 @@ const uniqNames=a=>a.filter((n,k)=>a.indexOf(n)===k);
    reordering never changes it. A swap inherits the status of what it replaced;
    exercises you add yourself count as must-have. Heavy top sets never optional. */
 const OPTIONAL_FROM=6;
+// An optional exercise the weekly-volume nudge is asking you to keep today.
+function isSuggestedEx(name){if(!CUR||CUR.nudgeDismissed)return false;const n=computeNudge();return !!(n&&NAME_INDEX[name]&&NAME_INDEX[name].m===n.muscle);}
 function isOptionalEx(day,name){
   const ex=NAME_INDEX[name];if(ex&&ex.main)return false;
   const src=(CUR&&CUR.swapOf&&CUR.swapOf[name])||name;
@@ -795,7 +801,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v88";
+const APP_VERSION="v89";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1352,16 +1358,16 @@ function renderSession(){
     // the same session the nudge appears, instead of just warning about it.
     CUR.nudgeReordered=true;saveCur();
   }
-  if(n&&!CUR.nudgeDismissed){html+=`<div class="nudge"><span>⚠️</span><div>Try to keep <b>${n.exNames}</b> in today — ${n.muscle.toLowerCase()} is behind this week (${n.v}/${n.t} sets).</div><button class="x" onclick="dismissNudge()">×</button></div>`;}
+  if(n&&!CUR.nudgeDismissed){html+=`<div class="nudge"><span>⚠️</span><div style="flex:1"><div>Try to keep <b>${n.exNames}</b> in today — ${n.muscle.toLowerCase()} is behind this week (${n.v}/${n.t} sets).</div><button class="nudge-why" onclick="toggleNudgeWhy(this)">Why? ▾</button><div class="nudge-detail" id="nudgeWhy"${NUDGE_OPEN?"":' hidden'}>${nudgeWhyHtml(n)}</div></div><button class="x" onclick="dismissNudge()">×</button></div>`;}
   html+=`<div class="list" id="exList">${cardioInlineHtml()}`;
   names.forEach((name,i)=>{
     const ex=NAME_INDEX[name];
     const log=CUR.ex[name];const total=log.sets.length;const dn=log.sets.filter(s=>setComplete(ex,s)).length;
     const uskip=!!log.skipped;
     const pastCap=isOptionalEx(CUR.day,name);
-    const cls=["ex"];if(ex.main)cls.push("main");if(ex.abs)cls.push("abs");if(pastCap)cls.push("skip");
+    const cls=["ex"];if(ex.main)cls.push("main");if(ex.abs)cls.push("abs");if(pastCap)cls.push(isSuggestedEx(name)?"sugg":"skip");
     if(uskip)cls.push("uskip");else if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
-    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
+    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ suggested today</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
@@ -2409,6 +2415,25 @@ let volT=null;function scheduleVolBarsRefresh(i,name){if(volT)clearTimeout(volT)
 function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function setNote(name,v){NOTES[name]=v;if(noteT)clearTimeout(noteT);noteT=setTimeout(()=>sset("notes",NOTES),500);}
 let noteT=null;
+let NUDGE_OPEN=false;
+function toggleNudgeWhy(b){const d=document.getElementById("nudgeWhy");if(!d)return;NUDGE_OPEN=d.hidden;d.hidden=!NUDGE_OPEN;b.textContent=NUDGE_OPEN?"Why? ▴":"Why? ▾";}
+// The reasoning behind the nudge: how far behind the muscle is, where it's
+// normally trained in the split (and when that day was last done), and what
+// doing it today adds.
+function nudgeWhyHtml(n){
+  const m=n.muscle;const lines=[];
+  lines.push(`<b>${n.v} of ${n.t}</b> weekly target sets for ${m.toLowerCase()} done in the last 7 days.`);
+  const where=[];
+  ["A1","A2","B1","B2"].forEach(d=>{PLAN[d].ex.forEach((e,k)=>{if(e.m!==m)return;const opt=k>=OPTIONAL_FROM&&!e.main;const ld=lastDoneOf(d);
+    where.push(`${d}: ${esc(e.n)}${opt?" (optional)":""} — ${ld?"day last done "+daysAgoTxt(ld):"day not done yet"}`);});});
+  if(where.length)lines.push(`Where it's trained in your split:<br>• ${where.join("<br>• ")}`);
+  const todays=CUR.order.filter(x=>NAME_INDEX[x].m===m);
+  const optToday=todays.filter(x=>isOptionalEx(CUR.day,x));
+  if(optToday.length)lines.push(`Today ${optToday.map(esc).join(" & ")} is only optional, so it's easy to skip — but it's your best chance to catch ${m.toLowerCase()} up before the week resets.`);
+  const add=todays.reduce((a,x)=>a+(CUR.ex[x]?CUR.ex[x].sets.length:0),0);
+  if(add)lines.push(`Doing it today adds about ${add} sets → ${n.v+add}/${n.t}.`);
+  return lines.map(l=>`<p>${l}</p>`).join("");
+}
 function dismissNudge(){CUR.nudgeDismissed=true;saveCur();renderSession();}
 function computeNudge(){if(!priorSessionThisWeek())return null;const vol=weeklyVolume();const defs=CUR.order.map(n=>NAME_INDEX[n]);const trained=[...new Set(defs.map(e=>e.m))];let best=null;
   trained.forEach(m=>{const meta=MUSCLES[m];if(!meta||!meta.nudge)return;const v=vol[m]||0,t=meta.t,ratio=v/t;if(v<t&&ratio<0.5){if(!best||ratio<best.ratio){const names=defs.filter(e=>e.m===m).map(e=>e.n);best={muscle:m,v,t,ratio,exNames:names.join(" & ")};}}});return best;}
