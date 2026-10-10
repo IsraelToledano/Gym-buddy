@@ -150,6 +150,7 @@
   .nudge-detail .nw-date{font-weight:600;color:var(--ink)}
   .nudge-detail .nw-done{color:var(--green)}
   .nudge-detail .nw-skip{color:var(--red)}
+  .nudge-detail .nw-opt{color:var(--ink-faint);font-style:italic}
 
   .list{position:relative;margin-top:7px}
   .list::before{content:"";position:absolute;left:18px;top:14px;bottom:14px;width:2px;background:linear-gradient(180deg,var(--amber),var(--line) 16%,var(--line));opacity:.5}
@@ -866,7 +867,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v95";
+const APP_VERSION="v96";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1423,9 +1424,7 @@ function renderSession(){
   // exercise today that adds the most toward the plan's full volume.
   const AL=computeAlerts();
   AL.priority.forEach((p,k)=>{html+=alertHtml("pri",k,`<b>Priority · ${esc(p.muscle)} ${p.v}/${p.man}</b> must-have sets this week. Skipped: ${p.skipped.map(x=>`${esc(x.name)} (${x.day}, ${fmtDate(x.date).replace(/^\w+, /,"")})`).join(", ")}.`,p.muscle);});
-  if(AL.stretch.length){const muscles=[...new Set(AL.stretch.map(st=>st.muscle))];
-    // per exercise: must-have progress (✓ when met) and optional progress, so it's clear what the done sets already include
-    html+=alertHtml("str",0,`<b>Stretch goals</b> — optional extras if you have the energy:${AL.stretch.map(st=>`<div class="sg-row">✱ <b>${esc(st.name)}</b> <span class="sg-m">${esc(st.muscle)}</span><span class="sg-bits"><span class="sg-man${st.manDone>=st.man?" ok":""}">must-have ${Math.min(st.manDone,st.man)}/${st.man}${st.manDone>=st.man?" ✓":""}</span><span class="sg-opt">optional ${st.optDone}/${st.optTot}</span><span class="sg-add">this +${st.add}</span></span></div>`).join("")}`,muscles);}
+  if(AL.stretch.length){const muscles=[...new Set(AL.stretch.map(st=>st.muscle))];html+=alertHtml("str",0,`<b>Stretch goals</b> (optional) — must-haves are covered; do these if you have the energy:${AL.stretch.map(st=>`<br>✱ <b>${esc(st.name)}</b> · ${esc(st.muscle)} ${st.v}/${st.tot} → +${st.add}`).join("")}`,muscles);}
   html+=`<div class="list" id="exList">${cardioInlineHtml()}`;
   names.forEach((name,i)=>{
     const ex=NAME_INDEX[name];
@@ -2493,8 +2492,11 @@ function muscleWeekHtml(m){
   const rows=HISTORY.filter(h=>h.date>=from).sort((x,y)=>x.date-y.date).map(h=>{
     const names=(h.exOrder&&h.exOrder.length?h.exOrder:Object.keys(h.ex||{})).filter(x=>NAME_INDEX[x]&&NAME_INDEX[x].m===m);
     if(!names.length)return null;
+    const plan=PLAN[h.day];const pk=x=>plan?plan.ex.findIndex(e=>e.n===x):-1;
+    const isOpt=x=>{const k=pk(x);return k>=OPTIONAL_FROM&&!(NAME_INDEX[x]&&NAME_INDEX[x].main);};
     const bits=names.map(x=>{const lg=sessionLog(h,x),d=NAME_INDEX[x];const dn=lg&&!lg.skipped?lg.sets.filter(st=>setComplete(d,st)).length:0;
-      return dn?`<span class="nw-done">✓ ${esc(x)} · ${dn} sets</span>`:`<span class="nw-skip">✕ ${esc(x)} · skipped</span>`;});
+      const o=isOpt(x)?` <span class="nw-opt">"optional"</span>`:"";
+      return dn?`<span class="nw-done">✓ ${esc(x)} · ${dn} sets${o}</span>`:`<span class="nw-skip">✕ ${esc(x)} · skipped${o}</span>`;});
     return `<div class="nw-row"><span class="nw-date">${fmtDate(h.date)} · ${h.day}</span>${bits.join("")}</div>`;
   }).filter(Boolean);
   return (rows.length?rows.join(""):`<div class="nw-row">No ${m.toLowerCase()} exercise in your sessions this week.</div>`);
