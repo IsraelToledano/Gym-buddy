@@ -676,7 +676,7 @@ const PLAN={
     {n:"Back extension",m:"Lower back",equip:"machine",sets:3,reps:"10–12",rest:"75–90s",cues:{do:["Set the pad at the hip crease and hinge at the hips.","Rise to a straight line, squeezing glutes and hamstrings.","Add load only once bodyweight reps feel easy."],dont:["Don't hyperextend past a straight line at the top.","Don't round the lower back on the way down."]}},
     {n:"Decline crunch (weighted)",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"12–15",rest:"60–75s",cues:{do:["Hook the feet under the pads, hands or plate at your chest.","Curl the ribs toward the hips — round the spine, not just the hips.","Exhale and squeeze hard at the top."],dont:["Don't swing to build momentum into the next rep.","Don't yank with the neck to initiate the curl."]}},
   ]},
-  B1:{name:"Pull",ex:[
+  B1:{name:"Pull",optFrom:7,ex:[
     {n:"Seated cable row (machine)",m:"Back",equip:"machine",main:1,sets:3,reps:"8–12",rest:"90s",cues:{do:["Sit tall with a slight forward stretch to start.","Row to the lower ribs and squeeze the shoulder blades.","Keep a flat back through the full stretch."],dont:["Don't heave with the lower back to move the weight.","Don't let the shoulders round forward at the stretch."]}},
     {n:"Lat pulldown (machine)",m:"Back",equip:"machine",main:1,sets:4,reps:"8–12",rest:"90–120s",cues:{do:["Grip a bit wider than shoulder width.","Drive the elbows down and back toward the upper chest.","Get a full stretch at the top of every rep."],dont:["Don't lean back excessively to muscle the bar down.","Don't let the shoulders shrug up toward the ears."]}},
     {n:"Rear delt reverse fly",m:"Rear delts",equip:"machine",sets:3,reps:"12–15",rest:"60s",cues:{do:["Keep a fixed, slight bend in the elbows.","Open to shoulder height, leading with the elbows.","Keep the shoulders down — target the rear delts, not the traps."],dont:["Don't shrug the traps to finish the movement.","Don't use momentum to swing the weight open."]}},
@@ -691,7 +691,7 @@ const PLAN={
     {n:"Seated cable row (V-grip)",m:"Back",equip:"machine",main:1,sets:3,reps:"8–12",rest:"90s",cues:{do:["Use a neutral V-grip and row to the navel.","Squeeze the shoulder blades with a brief hold.","Keep the torso upright through the row."],dont:["Don't let the torso rock to help move the weight.","Don't shortcut the stretch forward between reps."]}},
     {n:"Dumbbell Romanian deadlift",m:"Hamstrings",equip:"dumbbell",leg:1,sets:3,reps:"10–12",rest:"90s",cues:{do:["Hold a dumbbell in each hand in front of the thighs, soft knees.","Push the hips back until you feel a strong hamstring stretch.","Keep the dumbbells close to the legs and drive the hips forward to stand."],dont:["Don't round the lower back to reach lower.","Don't turn it into a squat — the knees stay mostly fixed."]}},
     {n:"Rear delt reverse fly",m:"Rear delts",equip:"machine",sets:3,reps:"12–15",rest:"60s",cues:{do:["Keep a fixed, slight bend in the elbows.","Open to shoulder height, leading with the elbows.","Target the rear delts — keep the traps down."],dont:["Don't shrug the traps to finish the movement.","Don't use momentum to swing the weight open."]}},
-    {n:"Machine bicep curl",m:"Biceps",equip:"machine",sets:3,reps:"12–15",rest:"60s",cues:{do:["Pin the elbows against the pad.","Curl through the full range without swinging.","Squeeze hard at the top of every rep."],dont:["Don't let the elbows lift off the pad.","Don't rush the negative back to the stretch."]}},
+    {n:"Machine bicep curl",m:"Biceps",equip:"machine",sets:4,reps:"12–15",rest:"60s",cues:{do:["Pin the elbows against the pad.","Curl through the full range without swinging.","Squeeze hard at the top of every rep."],dont:["Don't let the elbows lift off the pad.","Don't rush the negative back to the stretch."]}},
     {n:"Captain knee raise",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:{do:["Keep the back flat, no swinging.","Curl the pelvis up, not just the legs.","Squeeze hard at the top of the raise."],dont:["Don't use momentum to swing into the next rep.","Don't let the lower back arch away from the pads."]}},
     {n:"Seated incline curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60–75s",cues:{do:["Let the arms hang for a full stretch at the bottom.","Squeeze hard at the top of each rep.","Control the descent all the way down."],dont:["Don't let the elbows travel forward as you curl.","Don't rush through the stretch at the bottom."]}}
   ]}
@@ -789,6 +789,8 @@ const uniqNames=a=>a.filter((n,k)=>a.indexOf(n)===k);
    reordering never changes it. A swap inherits the status of what it replaced;
    exercises you add yourself count as must-have. Heavy top sets never optional. */
 const OPTIONAL_FROM=6;
+// Per-day override: a day can have more must-haves (B1 keeps Concentration curl as a 7th).
+const optFrom=day=>(PLAN[day]&&PLAN[day].optFrom)||OPTIONAL_FROM;
 // An optional exercise the weekly-volume nudge is asking you to keep today.
 function isSuggestedEx(name){if(!CUR)return false;return computeAlerts().stretch.some(st=>st.name===name);}
 function isPriorityEx(name){if(!CUR)return false;const ex=NAME_INDEX[name];return !!(ex&&computeAlerts().priority.some(p=>p.today.includes(name)));}
@@ -801,11 +803,11 @@ function muscleWeekSplit(m){
       const dn=lg.sets.filter(x=>setComplete(e,x)).length;if(!dn)return;
       const k=pn.indexOf(n);
       // a same-muscle swap/extra stands in for a must-have that was left undone in that session
-      const isMan=k>=0?(k<OPTIONAL_FROM||e.main):plan&&plan.ex.some((pe,pk)=>(pk<OPTIONAL_FROM||pe.main)&&pe.m===m&&!(h.ex[pe.n]&&h.ex[pe.n].sets.some(x=>setComplete(pe,x))));
+      const isMan=k>=0?(k<optFrom(h.day)||e.main):plan&&plan.ex.some((pe,pk)=>(pk<optFrom(h.day)||pe.main)&&pe.m===m&&!(h.ex[pe.n]&&h.ex[pe.n].sets.some(x=>setComplete(pe,x))));
       if(isMan)man+=dn;else opt+=dn;});});
   return{man,opt};
 }
-function planVolume(){const r={};for(const d in PLAN)PLAN[d].ex.forEach((e,k)=>{const o=r[e.m]=r[e.m]||{man:0,tot:0};o.tot+=e.sets;if(k<OPTIONAL_FROM||e.main)o.man+=e.sets;});return r;}
+function planVolume(){const r={};for(const d in PLAN)PLAN[d].ex.forEach((e,k)=>{const o=r[e.m]=r[e.m]||{man:0,tot:0};o.tot+=e.sets;if(k<optFrom(d)||e.main)o.man+=e.sets;});return r;}
 function computeAlerts(){
 
   const out={priority:[],stretch:[]};
@@ -815,7 +817,7 @@ function computeAlerts(){
     // must-have exercises skipped in this week's sessions (a same-muscle swap counts as done)
     const skipped={};
     week.forEach(h=>{const plan=PLAN[h.day];if(!plan)return;const planNames=plan.ex.map(e=>e.n);
-      plan.ex.forEach((e,k)=>{if(k>=OPTIONAL_FROM&&!e.main)return;
+      plan.ex.forEach((e,k)=>{if(k>=optFrom(h.day)&&!e.main)return;
         const lg=sessionLog(h,e.n);if(!lg)return; // wasn't in that session (e.g. added to the plan later) — not a skip
         const did=!lg.skipped&&lg.sets.some(x=>setComplete(e,x));
         const sub=Object.keys(h.ex||{}).some(n=>!planNames.includes(n)&&NAME_INDEX[n]&&NAME_INDEX[n].m===e.m&&(h.ex[n].sets||[]).some(x=>setComplete(NAME_INDEX[n],x)));
@@ -843,7 +845,7 @@ function isOptionalEx(day,name){
   const ex=NAME_INDEX[name];if(ex&&ex.main)return false;
   const src=(CUR&&CUR.swapOf&&CUR.swapOf[name])||name;
   const idx=PLAN[day]?PLAN[day].ex.findIndex(e=>e.n===src):-1;
-  return idx>=OPTIONAL_FROM;
+  return idx>=optFrom(day);
 }
 function getDayOrderNames(day){
   const planNames=PLAN[day].ex.map(e=>e.n);
@@ -867,7 +869,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v96";
+const APP_VERSION="v97";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -2493,7 +2495,7 @@ function muscleWeekHtml(m){
     const names=(h.exOrder&&h.exOrder.length?h.exOrder:Object.keys(h.ex||{})).filter(x=>NAME_INDEX[x]&&NAME_INDEX[x].m===m);
     if(!names.length)return null;
     const plan=PLAN[h.day];const pk=x=>plan?plan.ex.findIndex(e=>e.n===x):-1;
-    const isOpt=x=>{const k=pk(x);return k>=OPTIONAL_FROM&&!(NAME_INDEX[x]&&NAME_INDEX[x].main);};
+    const isOpt=x=>{const k=pk(x);return k>=optFrom(h.day)&&!(NAME_INDEX[x]&&NAME_INDEX[x].main);};
     const bits=names.map(x=>{const lg=sessionLog(h,x),d=NAME_INDEX[x];const dn=lg&&!lg.skipped?lg.sets.filter(st=>setComplete(d,st)).length:0;
       const o=isOpt(x)?` <span class="nw-opt">"optional"</span>`:"";
       return dn?`<span class="nw-done">✓ ${esc(x)} · ${dn} sets${o}</span>`:`<span class="nw-skip">✕ ${esc(x)} · skipped${o}</span>`;});
