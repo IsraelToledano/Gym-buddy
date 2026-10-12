@@ -339,6 +339,9 @@
   .ef-note{font-size:11px;color:var(--ink-faint);margin-top:8px}
   .addset{margin-top:6px;width:100%;background:var(--bg);border:1px dashed var(--line);border-radius:10px;color:var(--ink-dim);font-weight:600;font-size:13px;padding:6px}
   .addset:hover{border-color:var(--amber);color:var(--amber-bright)}
+  .setrow.newset input{border-color:var(--amber);border-style:dashed}
+  .setrow.newset .sn{color:var(--amber)}
+  .newset-note{font-size:11.5px;color:var(--amber);margin:2px 0 4px 31px;line-height:1.3}
   .rmset{width:30px;height:38px;border:none;background:none;color:var(--ink-faint);font-size:15px;border-radius:8px}
   .rmset:hover{color:var(--red);background:rgba(224,112,62,.1)}
   .tg.note{background:rgba(84,185,168,.1);color:var(--teal);border:1px solid rgba(84,185,168,.28)}
@@ -872,7 +875,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v98";
+const APP_VERSION="v99";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -904,6 +907,11 @@ function sessionLog(s,name){
   if(!s.exOrder){const p=LEGACY_PLAN_NAMES[s.day];if(p){const idx=p.indexOf(name);if(idx>=0&&s.ex&&s.ex[idx]!==undefined)return s.ex[idx];}}
   return null;
 }
+// Sets recently added to the plan. Row gets a one-time "new set" tag (and no ✕)
+// until that set has been logged once in a finished session.
+const NEW_SETS={"Triceps V-cable pushdown":{set:4,since:"2026-10-03",label:"Oct 3"},"Machine triceps extension":{set:4,since:"2026-10-03",label:"Oct 3"},"Standing DB calf raise":{set:4,since:"2026-10-03",label:"Oct 3"},"Machine bicep curl":{set:4,since:"2026-10-10",label:"Oct 10"}};
+function newSetPending(name){const ns=NEW_SETS[name];if(!ns)return 0;const t=new Date(ns.since+"T00:00:00").getTime();const ex=NAME_INDEX[name];
+  const did=HISTORY.some(s=>s.date>=t&&(()=>{const l=sessionLog(s,name);return l&&!l.skipped&&l.sets.filter(x=>setComplete(ex,x)).length>=ns.set;})());return did?0:ns.set;}
 function isBodyweight(name,hist){const pe=getPlanEx(name);const flag=pe&&(pe.abs||pe.reps==="to failure");if(hist&&hist.length)return hist.every(h=>!h.anyW);return!!flag;}
 function setComplete(ex,s){const wOk=s.weight!==""&&s.weight!=null;const rOk=s.reps!==""&&s.reps!=null;return SETTINGS.logReps?rOk:wOk;}
 
@@ -1461,7 +1469,8 @@ function renderSession(){
       }
     }
     let rows=`<div class="setrow head"><span></span><span>Weight (kg)</span><span>${SETTINGS.logReps?"Reps":""}</span><span></span></div>`;
-    log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" onblur="setInputBlur(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" onblur="setInputBlur(${i},${j})" onkeydown="if(event.key==='Enter')this.blur()" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${(extra||(j===log.sets.length-1&&log.sets.length>1&&!done))?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>`;});
+    const nsIdx=newSetPending(name)-1;
+    log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const isNew=j===nsIdx&&!done;const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""} ${isNew?"newset":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" onblur="setInputBlur(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" onblur="setInputBlur(${i},${j})" onkeydown="if(event.key==='Enter')this.blur()" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${(!isNew&&(extra||(j===log.sets.length-1&&log.sets.length>1&&!done)))?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>${isNew?`<div class="newset-note">✱ New set — added to your plan ${NEW_SETS[name].label}. Log it once and this tag goes away.</div>`:""}`;});
     const cues=`${ex.cues.do&&ex.cues.do.length?`<div class="cuesub cue-do"><div class="cuelabel">✓ Do</div><ul>${ex.cues.do.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}${ex.cues.dont&&ex.cues.dont.length?`<div class="cuesub cue-dont"><div class="cuelabel">✕ Don't</div><ul>${ex.cues.dont.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}`;
     // Notes are edited in place, in the box under the photo — no separate editor.
     const noteBtnHtml=`<button class="formtog notetog" onclick="editNote(${i})">Note \u270e</button>`;
