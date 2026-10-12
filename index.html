@@ -510,7 +510,10 @@
 
   .timer-dock{pointer-events:none;position:fixed;left:0;right:0;bottom:0;z-index:50;transform:translateY(120%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
   .timer-dock.up{transform:translateY(0)}
-  body.typing .cardio-bar{visibility:hidden}
+  body.typing .cardio-bar,body.typing .timer-dock{visibility:hidden}
+  .rest-mini{display:none;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;color:var(--teal);background:rgba(84,185,168,.14);border:1px solid rgba(84,185,168,.4);border-radius:8px;padding:1px 8px;margin-right:8px;align-self:center}
+  .rest-mini.go{color:var(--green);border-color:var(--green)}
+  body.typing.resting .rest-mini{display:inline-block}
   .timer-dock.vv{bottom:auto}
   .dock-in{max-width:600px;margin:0 auto;padding:0 13px calc(9px + env(safe-area-inset-bottom))}
   .timer{pointer-events:auto;background:var(--card-hi);border:1px solid var(--amber);border-radius:15px;padding:9px 13px;box-shadow:0 -10px 40px -12px rgba(0,0,0,.7),0 0 0 1px rgba(242,135,46,.25)}
@@ -869,7 +872,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v97";
+const APP_VERSION="v98";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1420,7 +1423,7 @@ function renderSession(){
   names.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];if(log.skipped)return;const sets=log.sets;totSets+=sets.length;doneSets+=sets.filter(s=>setComplete(ex,s)).length;});
   const p=PLAN[CUR.day];
   const pct=totSets?Math.round(doneSets/totSets*100):0;
-  let html=`<div class="shead"><div class="row1"><h2><b>${CUR.day}</b> · ${p.name}</h2><div class="clock" id="clock">0:00</div></div><div class="row2"><div class="prog" id="prog">${doneSets}/${totSets} sets · ${pct}%</div><button class="linkbtn" onclick="renderHome()">Back</button></div><div class="pbar"><div class="pbar-fill" id="progFill" style="width:${pct}%"></div></div></div>`;
+  let html=`<div class="shead"><div class="row1"><h2><b>${CUR.day}</b> · ${p.name}</h2><div style="display:flex;align-items:center"><span class="rest-mini" id="restMini"></span><div class="clock" id="clock">0:00</div></div></div><div class="row2"><div class="prog" id="prog">${doneSets}/${totSets} sets · ${pct}%</div><button class="linkbtn" onclick="renderHome()">Back</button></div><div class="pbar"><div class="pbar-fill" id="progFill" style="width:${pct}%"></div></div></div>`;
   // Two kinds of alert at the top: PRIORITY = a must-have exercise for a muscle
   // you train today was skipped earlier this week; STRETCH = the one optional
   // exercise today that adds the most toward the plan's full volume.
@@ -2654,11 +2657,11 @@ const tCount=document.getElementById("timerCount"),tBar=document.getElementById(
 let restEndAt=0,restTotal=0,restFired=false,restActive=false,restLabel="",restTickHandle=null,restBeepScheduled=false;
 
 function startTimer(sec,ex,i,j){
-  restTotal=sec;restEndAt=Date.now()+sec*1000;restFired=false;restActive=true;
+  restTotal=sec;restEndAt=Date.now()+sec*1000;restFired=false;restActive=true;document.body.classList.add("resting");
   const nm=(CUR&&CUR.order)?CUR.order[i]:null;const tot=(nm&&CUR.ex[nm])?CUR.ex[nm].sets.length:ex.sets;const lastSet=j>=tot-1;
   restLabel=`Rest done — ${ex.n}`;
   tCtx.innerHTML=`Rest · <b>${ex.n}</b><br>${lastSet?"next: next exercise":"next: set "+(j+2)+" of "+tot}`;
-  timer.classList.remove("go");dock.classList.add("up");placeDock();if(isField(document.activeElement))setTimeout(keepFieldAboveDock,50);
+  timer.classList.remove("go");dock.classList.add("up");placeDock();
   initAudio();
   restBeepScheduled=scheduleBeep(sec);
   if(restBeepScheduled)startKeepAlive();
@@ -2676,6 +2679,7 @@ function syncTimer(){
   if(!restActive)return;
   const left=Math.max(0,Math.round((restEndAt-Date.now())/1000));
   tCount.textContent=left>0?fmtClock(left):"GO";
+  const rm=document.getElementById("restMini");if(rm){rm.textContent="Rest "+(left>0?fmtClock(left):"GO");rm.classList.toggle("go",left<=0);}
   tBar.style.width=(restTotal?Math.min(left/restTotal,1)*100:0)+"%";
   if(left<=0){
     timer.classList.add("go");
@@ -2685,7 +2689,7 @@ function syncTimer(){
   }
 }
 function stopTimer(hide){
-  restActive=false;
+  restActive=false;document.body.classList.remove("resting");
   cancelScheduledBeep();stopKeepAlive();restBeepScheduled=false;
   if(restTickHandle){clearInterval(restTickHandle);restTickHandle=null;}
   if(hide){dock.classList.remove("up");timer.classList.remove("go");cancelBgAlert();}
@@ -2777,7 +2781,10 @@ async function appRefresh(){
    So the dock is placed against the visual viewport instead: just above the
    number pad while it's open, at the very bottom once it closes. */
 const isField=el=>!!el&&(el.tagName==="INPUT"||el.tagName==="TEXTAREA");
-document.addEventListener("focusin",e=>{if(isField(e.target)){document.body.classList.add("typing");setTimeout(keepFieldAboveDock,350);}});
+document.addEventListener("focusin",e=>{if(isField(e.target)){document.body.classList.add("typing");
+  // Tapping a weight/reps box selects what's in it, so typing replaces it (15 -> 16, not 115).
+  // Done once right after focus (and again on the click iOS fires after focus).
+  const el=e.target;if(el.tagName==="INPUT"&&el.closest(".setrow")){const sel=()=>{try{el.setSelectionRange(0,el.value.length);}catch(_){}};setTimeout(sel,0);el.addEventListener("click",sel,{once:true});}}});
 document.addEventListener("focusout",()=>{setTimeout(()=>{if(!isField(document.activeElement))document.body.classList.remove("typing");placeDock();},0);});
 function placeDock(){
   const d=document.getElementById("dock");const vv=window.visualViewport;if(!d||!vv)return;
@@ -2793,7 +2800,7 @@ function keepFieldAboveDock(){
   if(fieldBottom>dockTop-8)window.scrollBy(0,fieldBottom-(dockTop-8));
 }
 if(window.visualViewport){
-  window.visualViewport.addEventListener("resize",()=>{placeDock();if(isField(document.activeElement))keepFieldAboveDock();});
+  window.visualViewport.addEventListener("resize",placeDock);
   window.visualViewport.addEventListener("scroll",placeDock);
   window.addEventListener("scroll",placeDock,{passive:true});
   window.addEventListener("resize",placeDock);
