@@ -897,9 +897,24 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v102";
+const APP_VERSION="v103";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
-function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
+function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
+/* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
+   tapping a set box, record where the page is (scrollY, visual viewport, page
+   height, the box's position) plus any scroll the app itself asks for. Last 8
+   taps kept on the device and sent along with the normal backup. */
+function focusTraces(){try{return JSON.parse(localStorage.getItem("gymbuddy:focusTrace")||"[]");}catch(_){return[];}}
+let FT=null;
+(function(){const wrap=(o,k,label)=>{const f=o[k];o[k]=function(...a){if(FT)FT.calls.push([Math.round(performance.now()-FT.t0),label,JSON.stringify(a).slice(0,60),((new Error).stack||"").split("\n").slice(2,4).map(x=>x.trim().split(" ")[1]).join("<")]);return f.apply(this,a);};};
+  wrap(window,"scrollTo","scrollTo");wrap(window,"scrollBy","scrollBy");wrap(Element.prototype,"scrollIntoView","scrollIntoView");})();
+function startFocusTrace(el){
+  if(FT)return;const vv=window.visualViewport;const t0=performance.now();
+  FT={t0,at:Date.now(),v:APP_VERSION,id:el.id,ua:navigator.userAgent.slice(0,90),samples:[],calls:[]};
+  const snap=()=>{const r=el.getBoundingClientRect();FT.samples.push([Math.round(performance.now()-t0),Math.round(scrollY),vv?Math.round(vv.offsetTop):null,vv?Math.round(vv.height):null,document.documentElement.scrollHeight,Math.round(r.top),document.activeElement===el?1:0]);};
+  snap();const iv=setInterval(snap,100);
+  setTimeout(()=>{clearInterval(iv);try{const a=focusTraces();a.push(FT);localStorage.setItem("gymbuddy:focusTrace",JSON.stringify(a.slice(-8)));}catch(_){}FT=null;},2500);
+}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
 let TENNIS=[];
 let CARDIO=[];
@@ -2836,7 +2851,7 @@ const isField=el=>!!el&&(el.tagName==="INPUT"||el.tagName==="TEXTAREA");
 document.addEventListener("focusin",e=>{if(isField(e.target)){document.body.classList.add("typing");
   // Tapping a weight/reps box selects what's in it, so typing replaces it (15 -> 16, not 115).
   // Done once right after focus (and again on the click iOS fires after focus).
-  const el=e.target;if(el.tagName==="INPUT"&&el.closest(".setrow")){const sel=()=>{try{el.setSelectionRange(0,el.value.length);}catch(_){}};setTimeout(sel,0);el.addEventListener("click",sel,{once:true});}}});
+  const el=e.target;if(el.tagName==="INPUT"&&el.closest(".setrow")){startFocusTrace(el);const sel=()=>{try{el.setSelectionRange(0,el.value.length);}catch(_){}};setTimeout(sel,0);el.addEventListener("click",sel,{once:true});}}});
 document.addEventListener("focusout",()=>{setTimeout(()=>{if(!isField(document.activeElement))document.body.classList.remove("typing");placeDock();},0);});
 function placeDock(){const d=document.getElementById("dock");if(!d)return;d.classList.remove("vv");d.style.top="";}
 // With the dock sitting above the number pad, make sure it isn't covering the
