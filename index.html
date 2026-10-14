@@ -519,6 +519,10 @@
   .rest-mini{display:none;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;color:var(--teal);background:rgba(84,185,168,.14);border:1px solid rgba(84,185,168,.4);border-radius:8px;padding:1px 8px;margin-right:8px;align-self:center}
   .rest-mini.go{color:var(--green);border-color:var(--green)}
   body.typing.resting .rest-mini{display:inline-block}
+  .setrow.head{position:relative}
+  .setrow.head .rest-pill{display:none;position:absolute;right:0;top:-4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:0;text-transform:none;color:var(--teal);background:rgba(84,185,168,.14);border:1px solid rgba(84,185,168,.4);border-radius:8px;padding:1px 8px}
+  .setrow.head .rest-pill.go{color:var(--green);border-color:var(--green)}
+  body.resting .setrow.head .rest-pill{display:inline-block}
   .timer-dock.vv{bottom:auto}
   .dock-in{max-width:600px;margin:0 auto;padding:0 13px calc(9px + env(safe-area-inset-bottom))}
   .timer{pointer-events:auto;background:var(--card-hi);border:1px solid var(--amber);border-radius:15px;padding:9px 13px;box-shadow:0 -10px 40px -12px rgba(0,0,0,.7),0 0 0 1px rgba(242,135,46,.25)}
@@ -893,7 +897,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v101";
+const APP_VERSION="v102";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1357,6 +1361,7 @@ function muscleColor(r){if(r>=1)return"var(--green)";if(r>=0.5)return"var(--teal
 let showExport=false,showImport=false;
 
 function renderHome(summary){
+  if(window.__swPendingReload&&!summary){window.__swPendingReload=false;location.reload();return;}
   stopTimer(true);releaseWake();closeOverlay();
   titleEl.textContent="Training";kickEl.textContent="Push / Pull · Tracker";
   subEl.textContent="Pick a day to start. Sets, weights and rest are tracked here.";
@@ -1486,7 +1491,7 @@ function renderSession(){
         else{statsHtml=`<div class="prstrip"><div class="pr top"><div class="lab">Top</div><div class="val">${prs.top} <small>kg</small></div></div><div class="pr vol"><div class="lab">Best vol</div><div class="val">${prs.vol} <small>kg</small></div></div><div class="pr e1"><div class="lab">1RM</div><div class="val">${prs.e1} <small>kg</small></div></div></div>`;}
       }
     }
-    let rows=`<div class="setrow head"><span></span><span>Weight (kg)</span><span>${SETTINGS.logReps?"Reps":""}</span><span></span></div>`;
+    let rows=`<div class="setrow head"><span></span><span>Weight (kg)</span><span>${SETTINGS.logReps?"Reps":""}</span><span></span><span class="rest-pill">${restPillText()}</span></div>`;
     const nsIdx=newSetPending(name)-1;
     log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const isNew=j===nsIdx&&!done;const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""} ${isNew?"newset":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" onblur="setInputBlur(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" onblur="setInputBlur(${i},${j})" onkeydown="if(event.key==='Enter')this.blur()" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${(!isNew&&(extra||(j===log.sets.length-1&&log.sets.length>1&&!done)))?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>${isNew?`<div class="newset-note">✱ New set — added to your plan ${NEW_SETS[name].label}. Log it once and this tag goes away.</div>`:""}`;});
     const cues=`${ex.cues.do&&ex.cues.do.length?`<div class="cuesub cue-do"><div class="cuelabel">✓ Do</div><ul>${ex.cues.do.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}${ex.cues.dont&&ex.cues.dont.length?`<div class="cuesub cue-dont"><div class="cuelabel">✕ Don't</div><ul>${ex.cues.dont.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}`;
@@ -2717,8 +2722,10 @@ function runTick(){
 }
 // The single source of truth: called on every tick AND every time the app
 // becomes visible again. Computes remaining time from real elapsed time.
+function restPillText(){if(!restActive)return"";const left=Math.max(0,Math.round((restEndAt-Date.now())/1000));return"Rest "+(left>0?fmtClock(left):"GO");}
 function syncTimer(){
   if(!restActive)return;
+  document.querySelectorAll(".rest-pill").forEach(p=>{p.textContent=restPillText();p.classList.toggle("go",restEndAt<=Date.now());});
   const left=Math.max(0,Math.round((restEndAt-Date.now())/1000));
   tCount.textContent=left>0?fmtClock(left):"GO";
   const rm=document.getElementById("restMini");if(rm){rm.textContent="Rest "+(left>0?fmtClock(left):"GO");rm.classList.toggle("go",left<=0);}
@@ -2791,7 +2798,10 @@ if("serviceWorker" in navigator){
   // actually makes deploys show up reliably after a close/reopen.
   let swRefreshing=false;
   navigator.serviceWorker.addEventListener("controllerchange",()=>{
-    if(swRefreshing)return;swRefreshing=true;location.reload();
+    if(swRefreshing)return;
+    // Never reload under you mid-workout — pick the new version up on the home screen.
+    if(CUR&&app.querySelector(".shead")){window.__swPendingReload=true;return;}
+    swRefreshing=true;location.reload();
   });
   document.addEventListener("visibilitychange",()=>{
     if(document.visibilityState==="visible"){
@@ -2828,11 +2838,7 @@ document.addEventListener("focusin",e=>{if(isField(e.target)){document.body.clas
   // Done once right after focus (and again on the click iOS fires after focus).
   const el=e.target;if(el.tagName==="INPUT"&&el.closest(".setrow")){const sel=()=>{try{el.setSelectionRange(0,el.value.length);}catch(_){}};setTimeout(sel,0);el.addEventListener("click",sel,{once:true});}}});
 document.addEventListener("focusout",()=>{setTimeout(()=>{if(!isField(document.activeElement))document.body.classList.remove("typing");placeDock();},0);});
-function placeDock(){
-  const d=document.getElementById("dock");const vv=window.visualViewport;if(!d||!vv)return;
-  d.classList.add("vv");
-  d.style.top=Math.round(vv.offsetTop+vv.height-d.offsetHeight)+"px";
-}
+function placeDock(){const d=document.getElementById("dock");if(!d)return;d.classList.remove("vv");d.style.top="";}
 // With the dock sitting above the number pad, make sure it isn't covering the
 // field you're typing in (iOS only lifts the field above the keyboard).
 function keepFieldAboveDock(){
