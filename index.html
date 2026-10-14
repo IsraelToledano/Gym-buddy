@@ -515,14 +515,16 @@
 
   .timer-dock{pointer-events:none;position:fixed;left:0;right:0;bottom:0;z-index:50;transform:translateY(120%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
   .timer-dock.up{transform:translateY(0)}
-  body.typing .cardio-bar,body.typing .timer-dock{visibility:hidden}
+  body.typing .cardio-bar,body.dock-covers .timer-dock{visibility:hidden}
+  body.typing .timer .bar,body.typing .timer .ctrls{display:none}
+  body.typing .timer{padding:6px 13px}
   .rest-mini{display:none;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;color:var(--teal);background:rgba(84,185,168,.14);border:1px solid rgba(84,185,168,.4);border-radius:8px;padding:1px 8px;margin-right:8px;align-self:center}
   .rest-mini.go{color:var(--green);border-color:var(--green)}
-  body.typing.resting .rest-mini{display:inline-block}
+
   .setrow.head{position:relative}
   .setrow.head .rest-pill{display:none;position:absolute;right:0;top:-4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:0;text-transform:none;color:var(--teal);background:rgba(84,185,168,.14);border:1px solid rgba(84,185,168,.4);border-radius:8px;padding:1px 8px}
   .setrow.head .rest-pill.go{color:var(--green);border-color:var(--green)}
-  body.resting .setrow.head .rest-pill{display:inline-block}
+  body.resting.typing.dock-covers .setrow.head .rest-pill{display:inline-block}
   .timer-dock.vv{bottom:auto}
   .dock-in{max-width:600px;margin:0 auto;padding:0 13px calc(9px + env(safe-area-inset-bottom))}
   .timer{pointer-events:auto;background:var(--card-hi);border:1px solid var(--amber);border-radius:15px;padding:9px 13px;box-shadow:0 -10px 40px -12px rgba(0,0,0,.7),0 0 0 1px rgba(242,135,46,.25)}
@@ -897,7 +899,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v103";
+const APP_VERSION="v104";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -2757,6 +2759,7 @@ function stopTimer(hide){
   cancelScheduledBeep();stopKeepAlive();restBeepScheduled=false;
   if(restTickHandle){clearInterval(restTickHandle);restTickHandle=null;}
   if(hide){dock.classList.remove("up");timer.classList.remove("go");cancelBgAlert();}
+  placeDock();
 }
 document.getElementById("tMinus").onclick=()=>{if(!restActive)return;restEndAt-=15000;syncTimer();reschedule();};
 document.getElementById("tSkip").onclick=()=>stopTimer(true);
@@ -2853,7 +2856,29 @@ document.addEventListener("focusin",e=>{if(isField(e.target)){document.body.clas
   // Done once right after focus (and again on the click iOS fires after focus).
   const el=e.target;if(el.tagName==="INPUT"&&el.closest(".setrow")){startFocusTrace(el);const sel=()=>{try{el.setSelectionRange(0,el.value.length);}catch(_){}};setTimeout(sel,0);el.addEventListener("click",sel,{once:true});}}});
 document.addEventListener("focusout",()=>{setTimeout(()=>{if(!isField(document.activeElement))document.body.classList.remove("typing");placeDock();},0);});
-function placeDock(){const d=document.getElementById("dock");if(!d)return;d.classList.remove("vv");d.style.top="";}
+document.addEventListener("focusin",()=>{setTimeout(placeDock,0);});
+/* Rest timer placement. Default: pinned to the bottom. While the keyboard is
+   open (and a rest is running) it rides just above the keyboard as a compact
+   bar. Only a transform on the inner box is used — never top/scroll — so it
+   can't make the page longer or move it. If that compact bar would sit over
+   the box you're typing in, it hides and the countdown shows in the card. */
+function placeDock(){
+  const d=document.getElementById("dock");if(!d)return;const di=d.firstElementChild;const vv=window.visualViewport;
+  d.classList.remove("vv");d.style.top="";
+  let lift=0;
+  if(vv&&document.body.classList.contains("typing")&&d.classList.contains("up"))lift=Math.max(0,Math.round(window.innerHeight-(vv.offsetTop+vv.height)));
+  di.style.transform=lift?`translateY(${-lift}px)`:"";
+  let covers=false;
+  if(lift){const a=document.activeElement;
+    const over=()=>{if(!isField(a))return false;const fr=a.getBoundingClientRect(),dr=di.getBoundingClientRect();return fr.bottom>dr.top-4&&fr.top<dr.bottom+4;};
+    if(over()){
+      // Field sits right above the keyboard — put the compact bar at the top of the visible area instead.
+      const h=di.offsetHeight,base=window.innerHeight-h;const up=Math.max(0,Math.round(base-(vv.offsetTop+6)));
+      di.style.transform=`translateY(${-up}px)`;
+      covers=over();
+    }}
+  document.body.classList.toggle("dock-covers",covers);
+}
 // With the dock sitting above the number pad, make sure it isn't covering the
 // field you're typing in (iOS only lifts the field above the keyboard).
 function keepFieldAboveDock(){
