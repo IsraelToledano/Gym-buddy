@@ -377,6 +377,8 @@
   .nudge.pri{background:rgba(224,112,62,.12);border-color:rgba(224,112,62,.5)}
   .nudge.pri b{color:var(--red)}
   .tg.sugg{background:rgba(242,135,46,.14);color:var(--amber-bright);border:1px solid rgba(242,135,46,.35)}
+  .recent-box{font-size:13px;color:var(--teal);background:rgba(84,185,168,.08);border:1px solid rgba(84,185,168,.3);border-radius:10px;padding:8px 10px;margin:6px 0 10px;line-height:1.35}
+  .recent-box .rb-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
   .tg.opt{background:rgba(84,185,168,.12);color:var(--teal);border:1px solid rgba(84,185,168,.3)}
   .ex.skip.done .ex-btn,.ex.skip.partial .ex-btn{opacity:1}
 
@@ -835,7 +837,7 @@ function computeAlerts(){
     // stretch: every optional exercise today whose muscle is still below the plan's
     // full volume (most-behind first) — not just one.
     const stretch=[];
-    CUR.order.forEach(n=>{if(!isOptionalEx(CUR.day,n))return;const e=NAME_INDEX[n];if(!e||out.priority.some(p=>p.muscle===e.m))return;const p=pv[e.m];if(!p)return;const v=Math.round(vol[e.m]||0);
+    CUR.order.forEach(n=>{if(!isOptionalEx(CUR.day,n)||recentExtra(n))return;const e=NAME_INDEX[n];if(!e||out.priority.some(p=>p.muscle===e.m))return;const p=pv[e.m];if(!p)return;const v=Math.round(vol[e.m]||0);
       if(v>=p.tot)return;const lg=CUR.ex[n];if(lg&&(lg.skipped||lg.sets.every(x=>setComplete(e,x))))return;
       const sp=muscleWeekSplit(e.m);
       stretch.push({name:n,muscle:e.m,v,tot:p.tot,man:p.man,optTot:p.tot-p.man,manDone:sp.man,optDone:sp.opt,add:e.sets,ratio:v/p.tot});});
@@ -847,8 +849,24 @@ function alertHtml(kind,k,text,muscle){const id=kind+k,open=NUDGE_OPEN_SET.has(i
   return `<div class="nudge ${kind}" role="button" onclick="toggleAlert('${id}')"><span>${kind==="pri"?"🔴":"✱"}</span><div style="flex:1"><div>${text}</div><div class="nudge-detail" id="al-${id}"${open?"":" hidden"}>${muscleWeekHtml(muscle)}</div></div><span class="nudge-chev" id="alc-${id}">${open?"▴":"▾"}</span></div>`;}
 const NUDGE_OPEN_SET=new Set();
 function toggleAlert(id){const d=document.getElementById("al-"+id);if(!d)return;const open=d.hidden;d.hidden=!open;if(open)NUDGE_OPEN_SET.add(id);else NUDGE_OPEN_SET.delete(id);const c=document.getElementById("alc-"+id);if(c)c.textContent=open?"▴":"▾";}
+/* Done recently out of schedule: a plan exercise you already did as an extra
+   (not in that day's plan) in the last 3 days becomes optional today, moves
+   to the bottom, and offers a fresh same-muscle swap. Snapshotted per session. */
+const RECENT_DAYS=3;
+function computeRecentExtras(day,order){
+  const now=Date.now(),from=now-RECENT_DAYS*864e5,out={};
+  HISTORY.filter(h=>h.date>=from&&h.date<=now).forEach(h=>{const pn=PLAN[h.day]?PLAN[h.day].ex.map(e=>e.n):[];
+    order.forEach(n=>{const e=NAME_INDEX[n];if(!e||e.main||pn.includes(n))return;const lg=sessionLog(h,n);
+      if(!lg||lg.skipped||!lg.sets.some(x=>setComplete(e,x)))return;
+      if(!out[n]||out[n].date<h.date)out[n]={day:h.day,date:h.date};});});
+  return out;
+}
+function recentExtra(name){if(!CUR||!CUR.recent)return null;const src=(CUR.swapOf&&CUR.swapOf[name])||name;return CUR.recent[src]||null;}
+// Fresh alternatives: same muscle, not in today's list, not done in the last 7 days.
+function freshSwaps(name){const from=Date.now()-7*864e5;return getSwapOptions(name).filter(n=>!CUR.order.includes(n)&&!HISTORY.some(h=>h.date>=from&&(()=>{const l=sessionLog(h,n);return l&&l.sets.some(x=>setComplete(NAME_INDEX[n],x));})())).slice(0,2);}
 function isOptionalEx(day,name){
   const ex=NAME_INDEX[name];if(ex&&ex.main)return false;
+  if(recentExtra(name))return true;
   const src=(CUR&&CUR.swapOf&&CUR.swapOf[name])||name;
   const idx=PLAN[day]?PLAN[day].ex.findIndex(e=>e.n===src):-1;
   return idx>=optFrom(day);
@@ -875,7 +893,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v100";
+const APP_VERSION="v101";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1446,7 +1464,7 @@ function renderSession(){
     const pastCap=isOptionalEx(CUR.day,name);
     const cls=["ex"];if(ex.main)cls.push("main");if(ex.abs)cls.push("abs");if(pastCap)cls.push(isSuggestedEx(name)?"sugg":"skip");
     if(uskip)cls.push("uskip");else if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
-    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(isPriorityEx(name)&&!(dn===total&&total>0)){tags.push('<span class="tg pri">Priority · skipped this week</span>');}else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ stretch goal</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
+    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(recentExtra(name)){const r=recentExtra(name);tags.push(`<span class="tg opt">↺ Done ${daysAgoTxt(r.date)} (${r.day}) · optional</span>`);}else if(isPriorityEx(name)&&!(dn===total&&total>0)){tags.push('<span class="tg pri">Priority · skipped this week</span>');}else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ stretch goal</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
@@ -1478,7 +1496,7 @@ function renderSession(){
     const swapOpts=getSwapOptions(name);
     const liveVB=uskip?null:computeExVolumeInsight(name);
     const hlHtml=`<div id="hl-${i}">${liveVB?renderHighlightBadge(liveVB):""}</div>`;
-    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}<div id="ef-${i}">${effortHtml(i)}</div><button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="btnrow"><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo":"⤼ Skip"}</button><button class="formtog" onclick="toggleCues(this)">Cues ▾</button>${trendBtnHtml}${noteBtnHtml}</div><div class="cues">${cues}</div>${noteBlock}</div></div></div></div>`;
+    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${(exp&&recentExtra(name)&&!uskip&&dn===0)?recentBoxHtml(i,name):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}<div id="ef-${i}">${effortHtml(i)}</div><button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="btnrow"><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo":"⤼ Skip"}</button><button class="formtog" onclick="toggleCues(this)">Cues ▾</button>${trendBtnHtml}${noteBtnHtml}</div><div class="cues">${cues}</div>${noteBlock}</div></div></div></div>`;
   });
   html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button>${cardioFinisherHtml()}<div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
   app.innerHTML=html;tickClock();attachDragHandlers();initExImg();
@@ -1871,7 +1889,9 @@ function startSession(day){
   // start stays null until the first set is actually logged (or cardio kicks off) — see
   // markSessionStarted(). Otherwise time spent getting ready before the first rep counts
   // toward the session clock, inflating the duration.
-  CUR={day,start:null,nudgeDismissed:false,order,defaultOrder:order.slice(),ex:{}};
+  const recent=computeRecentExtras(day,order);
+  order.sort((a,b)=>(recent[a]?1:0)-(recent[b]?1:0));
+  CUR={day,start:null,nudgeDismissed:false,order,defaultOrder:order.slice(),ex:{},recent};
   order.forEach(name=>{const def=NAME_INDEX[name];const prev=lastLog(name);CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};});
   setOpenIdx(0);initAudio();requestWake();renderSession();}
 // Remove duplicate entries and put the list in progress order, keeping the
@@ -1879,6 +1899,10 @@ function startSession(day){
 // a workout (refresh / relaunch), which previously skipped it.
 function tidyCur(){
   if(!CUR||!CUR.order)return;
+  if(CUR&&!CUR.recent){const from=CUR.start||Date.now();CUR.recent=computeRecentExtras(CUR.day,CUR.order);
+    const untouched=n=>{const lg=CUR.ex[n],d=NAME_INDEX[n];return!(lg&&d&&(lg.skipped||lg.sets.some(x=>setComplete(d,x))));};
+    const mv=CUR.order.filter(n=>CUR.recent[n]&&untouched(n));if(mv.length){const openName=(CUR.openIdx!=null&&CUR.openIdx>=0)?CUR.order[CUR.openIdx]:null;CUR.order=CUR.order.filter(n=>!mv.includes(n)).concat(mv);if(openName)CUR.openIdx=CUR.order.indexOf(openName);}
+    saveCur();}
   const openName=(CUR.openIdx!=null&&CUR.openIdx>=0)?CUR.order[CUR.openIdx]:null;
   let u=uniqNames(CUR.order);
   if(PLAN[CUR.day]){const plan=PLAN[CUR.day].ex.map(e=>e.n),keep=new Set([...(CUR.added||[]),...Object.keys(CUR.swapOf||{})]);
@@ -1887,7 +1911,8 @@ function tidyCur(){
   if(normalizeOrder())ch=true;
   if(ch){if(openName!=null)CUR.openIdx=CUR.order.indexOf(openName);saveCur();}
 }
-function openSession(){if(CUR&&!CUR.order){CUR.order=getDayOrderNames(CUR.day);CUR.defaultOrder=CUR.order.slice();}tidyCur();openIdx=(CUR&&CUR.openIdx!=null&&CUR.openIdx>=-1&&CUR.openIdx<CUR.order.length)?CUR.openIdx:nextOpenIdx();renderSession();requestWake();}
+function openSession(){if(CUR&&!CUR.order){CUR.order=getDayOrderNames(CUR.day);CUR.defaultOrder=CUR.order.slice();}
+  tidyCur();openIdx=(CUR&&CUR.openIdx!=null&&CUR.openIdx>=-1&&CUR.openIdx<CUR.order.length)?CUR.openIdx:nextOpenIdx();renderSession();requestWake();}
 function previewDay(day){
   closeOverlay();
   const p=PLAN[day];
@@ -2374,7 +2399,15 @@ function finishDrag(){
   }
 }
 
+function recentBoxHtml(i,name){const r=recentExtra(name);const alts=freshSwaps(name);
+  return `<div class="recent-box">↺ You did this ${daysAgoTxt(r.date)} on ${r.day} — optional today.<div class="rb-btns">${alts.map(n=>`<button class="formtog" onclick="event.stopPropagation();swapTo(${i},'${escLibName(n)}')">Swap → ${esc(n)}</button>`).join("")}<button class="formtog" onclick="event.stopPropagation();toggleSkipEx(${i})">⤼ Skip</button></div></div>`;}
 /* ---------------- exercise swap ---------------- */
+async function swapTo(i,newName){const name=CUR.order[i];const oldDef=NAME_INDEX[name];
+  if(CUR.ex[name].sets.some(s=>setComplete(oldDef,s))){const ok=await showConfirm(`Swap to ${newName}? Sets already logged for ${name} this session will be cleared.`);if(!ok)return;}
+  const def=NAME_INDEX[newName];const prev=lastLog(newName);
+  CUR.order[i]=newName;CUR.swapOf=CUR.swapOf||{};CUR.swapOf[newName]=CUR.swapOf[name]||name;delete CUR.ex[name];
+  CUR.ex[newName]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
+  saveCur();renderSession();}
 async function openSwap(i){
   const name=CUR.order[i];const alts=getSwapOptions(name).filter(n=>!CUR.order.includes(n));
   if(!alts.length){await showAlert("No swap options set up for "+name+" yet.");return;}
