@@ -875,7 +875,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v99";
+const APP_VERSION="v100";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX});}
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -1946,7 +1946,7 @@ function scrollExToTop(idx,smooth){
   const top=el.getBoundingClientRect().top+window.scrollY-off;
   window.scrollTo({top:Math.max(0,top),behavior:smooth?"smooth":"auto"});
 }
-function toggleEx(i){setOpenIdx(openIdx===i?-1:i);renderSession();if(openIdx>=0)scrollExToTop(openIdx,false);}
+function toggleEx(i){const target=openIdx===i?null:CUR.order[i];if(normalizeOrder())saveCur();setOpenIdx(target?CUR.order.indexOf(target):-1);renderSession();if(openIdx>=0)scrollExToTop(openIdx,false);}
 /* In-place note editing: tap the note under the photo (or "Note ✎") and it
    turns into a text box right there; tap away and it shows the new text
    immediately, saved straight away. */
@@ -1992,8 +1992,8 @@ function commitSet(i,j){
   startTimer(rs(ex.rest),ex,i,j);
   const doneCount=sets.filter(x=>setComplete(ex,x)).length;
   if(!CUR.ex[name].skipped&&doneCount===sets.length)collapseAndAdvance(i,"done");
-  else if(doneCount===1)settleOrder(name,j); // just started this one — bring it up under the finished ones
-  else revealNextSet(i,j);
+  // Mid-exercise nothing moves: no re-ordering, no scrolling. The list catches
+  // up with your progress when you leave this card (open another / collapse).
 }
 /* List order follows progress: finished (or skipped) exercises first, then the
    one(s) you've started, then everything not started yet in your planned order.
