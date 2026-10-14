@@ -513,8 +513,14 @@
   .rep-sub{font-size:11.5px;color:var(--ink-faint);margin-top:2px}
   .rep-tag{font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--amber-bright);background:rgba(242,135,46,.14);border:1px solid rgba(242,135,46,.3);border-radius:5px;padding:1px 6px;margin-left:4px}
 
-  .timer-dock{pointer-events:none;position:fixed;left:0;right:0;bottom:0;z-index:50;transform:translateY(120%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
-  .timer-dock.up{transform:translateY(0)}
+  html,body{overflow-anchor:none}
+  /* The dock exists on screen only while a rest runs (display:none otherwise),
+     so nothing pinned to the screen is around while you type a set. */
+  .timer-dock{pointer-events:none;position:fixed;left:0;right:0;bottom:0;z-index:50;display:none}
+  .timer-dock.up{display:block}
+  .timer-dock.up .timer{animation:dockIn .28s cubic-bezier(.2,.8,.2,1)}
+  @keyframes dockIn{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+  body.typing .dock-in{padding-bottom:4px}
   body.typing .cardio-bar,body.dock-covers .timer-dock{visibility:hidden}
   body.typing .timer .bar,body.typing .timer .ctrls{display:none}
   body.typing .timer{padding:6px 13px}
@@ -525,7 +531,6 @@
   .setrow.head .rest-pill{display:none;position:absolute;right:0;top:-4px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:0;text-transform:none;color:var(--teal);background:rgba(84,185,168,.14);border:1px solid rgba(84,185,168,.4);border-radius:8px;padding:1px 8px}
   .setrow.head .rest-pill.go{color:var(--green);border-color:var(--green)}
   body.resting.typing.dock-covers .setrow.head .rest-pill{display:inline-block}
-  .timer-dock.vv{bottom:auto}
   .dock-in{max-width:600px;margin:0 auto;padding:0 13px calc(9px + env(safe-area-inset-bottom))}
   .timer{pointer-events:auto;background:var(--card-hi);border:1px solid var(--amber);border-radius:15px;padding:9px 13px;box-shadow:0 -10px 40px -12px rgba(0,0,0,.7),0 0 0 1px rgba(242,135,46,.25)}
   .timer.go{border-color:var(--green);box-shadow:0 -10px 40px -12px rgba(0,0,0,.7),0 0 0 2px var(--green)}
@@ -611,6 +616,7 @@
   <footer>All weights in kg · saved on this device · back up to a file anytime · rest timer keeps the screen awake during a session, and the end-of-rest chime is queued in advance so it still sounds if you lock the phone.</footer>
 </div>
 
+<div id="satProbe" style="position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top);visibility:hidden;pointer-events:none"></div>
 <div class="timer-dock" id="dock"><div class="dock-in"><div class="timer" id="timer">
   <div class="tr1"><div class="ctx" id="timerCtx"></div><div class="count" id="timerCount">0:00</div></div>
   <div class="bar"><div class="barfill" id="timerBar"></div></div>
@@ -632,6 +638,7 @@ function animHtml(n){const f=EX_IMG[n];if(!f)return"";
 /* ---- exercise photo frame cycler: alternates start/end frames, visible cards only ---- */
 var EXIMG_IO=null, EXIMG_TIMER=null, EXIMG_LIVE=new Set();
 function exImgTick(){
+  if(document.body.classList.contains("typing"))return; // keep the page perfectly still while you type
   EXIMG_LIVE.forEach(function(box){
     var img=box.querySelector("img.exframe");if(!img)return;
     var on1=img.dataset.cur==="1";
@@ -899,7 +906,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v104";
+const APP_VERSION="v105";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -910,12 +917,47 @@ function focusTraces(){try{return JSON.parse(localStorage.getItem("gymbuddy:focu
 let FT=null;
 (function(){const wrap=(o,k,label)=>{const f=o[k];o[k]=function(...a){if(FT)FT.calls.push([Math.round(performance.now()-FT.t0),label,JSON.stringify(a).slice(0,60),((new Error).stack||"").split("\n").slice(2,4).map(x=>x.trim().split(" ")[1]).join("<")]);return f.apply(this,a);};};
   wrap(window,"scrollTo","scrollTo");wrap(window,"scrollBy","scrollBy");wrap(Element.prototype,"scrollIntoView","scrollIntoView");})();
+let TRACE_UPLOADED=false;
+function traceNote(...a){if(FT){FT.calls.push([Math.round(performance.now()-FT.t0),...a]);if(a[0]==="guard")FT.jump=true;}}
+let FT_END=null;
 function startFocusTrace(el){
-  if(FT)return;const vv=window.visualViewport;const t0=performance.now();
-  FT={t0,at:Date.now(),v:APP_VERSION,id:el.id,ua:navigator.userAgent.slice(0,90),samples:[],calls:[]};
-  const snap=()=>{const r=el.getBoundingClientRect();FT.samples.push([Math.round(performance.now()-t0),Math.round(scrollY),vv?Math.round(vv.offsetTop):null,vv?Math.round(vv.height):null,document.documentElement.scrollHeight,Math.round(r.top),document.activeElement===el?1:0]);};
+  if(FT_END)FT_END();                                  // a new tap closes the previous trace
+  const vv=window.visualViewport;const t0=performance.now();
+  const ft=FT={t0,at:Date.now(),v:APP_VERSION,id:el.id,ua:navigator.userAgent.slice(0,140),
+    cols:"ms,scrollY,vvTop,vvH,innerH,clientH,docH,fieldTop,focused,dockTop,dockTy",samples:[],calls:[],scrolls:[]};
+  let lastY=scrollY;
+  const snap=()=>{const r=el.getBoundingClientRect();const di=document.querySelector("#dock .dock-in");const dr=di?di.getBoundingClientRect():null;
+    ft.samples.push([Math.round(performance.now()-t0),Math.round(scrollY),vv?Math.round(vv.offsetTop):null,vv?Math.round(vv.height):null,window.innerHeight,document.documentElement.clientHeight,document.documentElement.scrollHeight,Math.round(r.top),document.activeElement===el?1:0,dr&&dr.height?Math.round(dr.top):null,di?(di.dataset.ty||"0"):null]);
+    if(Math.abs(scrollY-lastY)>250&&!(FG&&FG.user))ft.jump=true;lastY=scrollY;};
+  const onS=e=>{if(ft.scrolls.length<220)ft.scrolls.push([Math.round(performance.now()-t0),!e||e.target===window||e.target===document?"w":"vv:"+e.type,Math.round(scrollY),vv?Math.round(vv.offsetTop):null,vv?Math.round(vv.height):null]);};
+  window.addEventListener("scroll",onS,{passive:true});if(vv){vv.addEventListener("scroll",onS);vv.addEventListener("resize",onS);}
   snap();const iv=setInterval(snap,100);
-  setTimeout(()=>{clearInterval(iv);try{const a=focusTraces();a.push(FT);localStorage.setItem("gymbuddy:focusTrace",JSON.stringify(a.slice(-8)));}catch(_){}FT=null;},2500);
+  let done=false;
+  const end=()=>{if(done)return;done=true;clearTimeout(tt);clearInterval(iv);window.removeEventListener("scroll",onS);if(vv){vv.removeEventListener("scroll",onS);vv.removeEventListener("resize",onS);}
+    try{const a=focusTraces();a.push(ft);localStorage.setItem("gymbuddy:focusTrace",JSON.stringify(a.slice(-8)));}catch(_){}
+    if(FT===ft)FT=null;if(FT_END===end)FT_END=null;
+    // A jump was caught — send the trace along right away (once per app start).
+    if(ft.jump&&!TRACE_UPLOADED&&SETTINGS.ghToken){TRACE_UPLOADED=true;setTimeout(()=>githubBackup(),300);}
+  };
+  const tt=setTimeout(end,4000);FT_END=end;
+}
+/* Safety net for "the page jumps away from the box I'm typing in": once the
+   keyboard has settled, if that box is out of sight on two checks in a row and
+   you didn't scroll yourself, bring it back to the middle of what you see.
+   At most twice per tap. */
+let FG=null;
+document.addEventListener("touchmove",()=>{if(FG)FG.user=true;},{passive:true});
+function startFocusGuard(el){
+  if(FG)clearInterval(FG.iv);
+  const g=FG={el,user:false,fixes:0,miss:0,t0:Date.now()};
+  g.iv=setInterval(()=>{
+    if(FG!==g||document.activeElement!==el){clearInterval(g.iv);if(FG===g)FG=null;return;}
+    if(Date.now()-g.t0<800||g.user||g.fixes>=2)return;
+    const vv=window.visualViewport;const vTop=vv?vv.offsetTop:0,vBot=vv?vv.offsetTop+vv.height:window.innerHeight;
+    const r=el.getBoundingClientRect();
+    g.miss=(r.bottom<vTop+4||r.top>vBot-4)?g.miss+1:0;
+    if(g.miss>=2){g.miss=0;g.fixes++;const dy=Math.round(r.top-(vTop+(vBot-vTop)*0.4));traceNote("guard",dy,Math.round(r.top),Math.round(vTop),Math.round(vBot));window.scrollBy(0,dy);}
+  },250);
 }
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
 let TENNIS=[];
@@ -2725,7 +2767,7 @@ function startTimer(sec,ex,i,j){
   const nm=(CUR&&CUR.order)?CUR.order[i]:null;const tot=(nm&&CUR.ex[nm])?CUR.ex[nm].sets.length:ex.sets;const lastSet=j>=tot-1;
   restLabel=`Rest done — ${ex.n}`;
   tCtx.innerHTML=`Rest · <b>${ex.n}</b><br>${lastSet?"next: next exercise":"next: set "+(j+2)+" of "+tot}`;
-  timer.classList.remove("go");dock.classList.add("up");placeDock();
+  timer.classList.remove("go");dock.classList.add("up");scheduleDockFix();
   initAudio();
   restBeepScheduled=scheduleBeep(sec);
   if(restBeepScheduled)startKeepAlive();
@@ -2742,6 +2784,7 @@ function runTick(){
 function restPillText(){if(!restActive)return"";const left=Math.max(0,Math.round((restEndAt-Date.now())/1000));return"Rest "+(left>0?fmtClock(left):"GO");}
 function syncTimer(){
   if(!restActive)return;
+  placeDock(); // backstop: keeps the dock on the visible bottom even if iOS misreports a resize
   document.querySelectorAll(".rest-pill").forEach(p=>{p.textContent=restPillText();p.classList.toggle("go",restEndAt<=Date.now());});
   const left=Math.max(0,Math.round((restEndAt-Date.now())/1000));
   tCount.textContent=left>0?fmtClock(left):"GO";
@@ -2854,45 +2897,54 @@ const isField=el=>!!el&&(el.tagName==="INPUT"||el.tagName==="TEXTAREA");
 document.addEventListener("focusin",e=>{if(isField(e.target)){document.body.classList.add("typing");
   // Tapping a weight/reps box selects what's in it, so typing replaces it (15 -> 16, not 115).
   // Done once right after focus (and again on the click iOS fires after focus).
-  const el=e.target;if(el.tagName==="INPUT"&&el.closest(".setrow")){startFocusTrace(el);const sel=()=>{try{el.setSelectionRange(0,el.value.length);}catch(_){}};setTimeout(sel,0);el.addEventListener("click",sel,{once:true});}}});
-document.addEventListener("focusout",()=>{setTimeout(()=>{if(!isField(document.activeElement))document.body.classList.remove("typing");placeDock();},0);});
-document.addEventListener("focusin",()=>{setTimeout(placeDock,0);});
-/* Rest timer placement. Default: pinned to the bottom. While the keyboard is
-   open (and a rest is running) it rides just above the keyboard as a compact
-   bar. Only a transform on the inner box is used — never top/scroll — so it
-   can't make the page longer or move it. If that compact bar would sit over
-   the box you're typing in, it hides and the countdown shows in the card. */
+  const el=e.target;if(el.tagName==="INPUT"&&el.closest(".setrow")){startFocusTrace(el);startFocusGuard(el);const sel=()=>{try{el.setSelectionRange(0,el.value.length);}catch(_){}};setTimeout(sel,0);el.addEventListener("click",sel,{once:true});}}});
+document.addEventListener("focusout",()=>{setTimeout(()=>{if(!isField(document.activeElement))document.body.classList.remove("typing");scheduleDockFix();},0);});
+document.addEventListener("focusin",()=>{setTimeout(scheduleDockFix,0);});
+/* Rest timer placement — built around iOS 26's keyboard bugs.
+   The dock's box is pinned with bottom:0, but on iOS that anchor can't be
+   trusted around the keyboard (a known iOS 26 bug leaves fixed elements
+   floating mid-screen or below the screen after the keyboard closes — that's
+   the "timer lingering / missing" you saw). So whenever the viewport changes we
+   measure where the dock really is and shift it (transform only) so its bottom
+   edge sits on the bottom of what you can actually see. While you type it turns
+   into a compact bar just above the keyboard; if that would cover the box you're
+   typing in, it moves to the top of the visible area instead. iOS reports the
+   viewport size late, so every change is re-checked a few times, and the rest
+   tick re-checks it 4x a second as a backstop. */
+function satTop(){const p=document.getElementById("satProbe");return p?p.offsetHeight:0;}
 function placeDock(){
-  const d=document.getElementById("dock");if(!d)return;const di=d.firstElementChild;const vv=window.visualViewport;
-  d.classList.remove("vv");d.style.top="";
-  let lift=0;
-  if(vv&&document.body.classList.contains("typing")&&d.classList.contains("up"))lift=Math.max(0,Math.round(window.innerHeight-(vv.offsetTop+vv.height)));
-  di.style.transform=lift?`translateY(${-lift}px)`:"";
-  let covers=false;
-  if(lift){const a=document.activeElement;
-    const over=()=>{if(!isField(a))return false;const fr=a.getBoundingClientRect(),dr=di.getBoundingClientRect();return fr.bottom>dr.top-4&&fr.top<dr.bottom+4;};
-    if(over()){
-      // Field sits right above the keyboard — put the compact bar at the top of the visible area instead.
-      const h=di.offsetHeight,base=window.innerHeight-h;const up=Math.max(0,Math.round(base-(vv.offsetTop+6)));
-      di.style.transform=`translateY(${-up}px)`;
-      covers=over();
-    }}
+  const d=document.getElementById("dock");if(!d)return;const di=d.firstElementChild;if(!di)return;
+  const shown=d.classList.contains("up")&&!document.body.classList.contains("ov-open");
+  if(!shown){if(di.dataset.ty&&di.dataset.ty!=="0"){di.style.transform="";di.dataset.ty="0";}document.body.classList.remove("dock-covers");return;}
+  const vv=window.visualViewport;const typing=document.body.classList.contains("typing");
+  const cur=parseFloat(di.dataset.ty||"0")||0;
+  const r=di.getBoundingClientRect();if(!r.height)return;
+  const baseBottom=r.bottom-cur;                       // where bottom:0 actually put it
+  const vTop=vv?vv.offsetTop:0,vBot=vv?vv.offsetTop+vv.height:window.innerHeight;
+  let ty=vBot-baseBottom,covers=false;                 // bottom edge -> bottom of what you see
+  if(typing){
+    if(ty>0)ty=0;                                      // with the keyboard up, only ever lift it
+    const a=document.activeElement;
+    if(isField(a)){
+      const fr=a.getBoundingClientRect();
+      const hits=t=>{const top=baseBottom+t-r.height,bot=baseBottom+t;return fr.bottom>top-4&&fr.top<bot+4;};
+      if(hits(ty)){const t2=(vTop+satTop()+4+r.height)-baseBottom;if(t2<=0&&!hits(t2))ty=t2;else covers=true;}
+    }
+  }
+  ty=Math.round(ty);
+  if(Math.abs(ty-cur)>=1){di.style.transform=ty?`translateY(${ty}px)`:"";di.dataset.ty=String(ty);}
   document.body.classList.toggle("dock-covers",covers);
 }
-// With the dock sitting above the number pad, make sure it isn't covering the
-// field you're typing in (iOS only lifts the field above the keyboard).
-function keepFieldAboveDock(){
-  const a=document.activeElement;const d=document.getElementById("dock");const vv=window.visualViewport;
-  if(!isField(a)||!d||!d.classList.contains("up")||!vv)return;
-  const fieldBottom=a.getBoundingClientRect().bottom, dockTop=d.getBoundingClientRect().top;
-  if(fieldBottom>dockTop-8)window.scrollBy(0,fieldBottom-(dockTop-8));
-}
-if(window.visualViewport){
-  window.visualViewport.addEventListener("resize",placeDock);
-  window.visualViewport.addEventListener("scroll",placeDock);
-  window.addEventListener("scroll",placeDock,{passive:true});
-  window.addEventListener("resize",placeDock);
-}
+let dockFixTimers=[];
+function scheduleDockFix(){placeDock();dockFixTimers.forEach(clearTimeout);dockFixTimers=[60,200,500,1000].map(ms=>setTimeout(placeDock,ms));}
+let dockMoveT=null;
+function onViewportMove(){placeDock();clearTimeout(dockMoveT);dockMoveT=setTimeout(placeDock,150);}
+if(window.visualViewport){window.visualViewport.addEventListener("resize",scheduleDockFix);window.visualViewport.addEventListener("scroll",onViewportMove);}
+window.addEventListener("scroll",onViewportMove,{passive:true});
+window.addEventListener("resize",scheduleDockFix);
+window.addEventListener("orientationchange",scheduleDockFix);
+window.addEventListener("pageshow",scheduleDockFix);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)scheduleDockFix();});
 /* ---------------- alert ---------------- */
 let audioCtx=null;
 function initAudio(){try{const AC=window.AudioContext||window.webkitAudioContext;if(AC&&!audioCtx)audioCtx=new AC();if(audioCtx&&audioCtx.state==="suspended")audioCtx.resume();}catch(e){}}
