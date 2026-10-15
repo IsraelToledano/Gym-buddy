@@ -13,13 +13,13 @@
   :root{
     --bg:#131110; --bg2:#0E0C0B; --card:#1E1A16; --card-hi:#272118;
     --line:#322C25; --ink:#F1EBE0; --ink-dim:#A39A8E; --ink-faint:#6E665C;
-    --amber:#F2872E; --amber-bright:#FFA350; --teal:#54B9A8; --green:#6FBF73; --red:#E0703E;
+    --amber:#F2872E; --amber-bright:#FFA350; --teal:#54B9A8; --green:#6FBF73; --red:#E0703E; --violet:#A796E0;
     --r:14px;
   }
   html[data-theme="light"]{
     --bg:#F7F3EC; --bg2:#EFE9DE; --card:#FFFFFF; --card-hi:#FBF7EF;
     --line:#E1D8C7; --ink:#22201C; --ink-dim:#5B5347; --ink-faint:#8C8374;
-    --amber:#D9701C; --amber-bright:#C25F0F; --teal:#2B8E7C; --green:#3E8E43; --red:#C24A2A;
+    --amber:#D9701C; --amber-bright:#C25F0F; --teal:#2B8E7C; --green:#3E8E43; --red:#C24A2A; --violet:#5B4BA8;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{-webkit-text-size-adjust:100%}
@@ -374,6 +374,9 @@
   .ex.skip .ex-btn{border-style:dashed;border-color:var(--line);background:rgba(128,122,110,.07)}
   .ex.doptrow .ex-btn{border-style:dashed;border-color:rgba(84,185,168,.55);background:rgba(84,185,168,.10)}
   .ex.sugg .ex-btn{border-style:dashed;border-color:rgba(242,135,46,.6);background:rgba(242,135,46,.10)}
+  /* carried-over skip: a fifth state, kept clear of the other four */
+  .tg.carry{background:rgba(150,130,220,.16);color:var(--violet);border:1px solid rgba(150,130,220,.45)}
+  .ex.carryrow .ex-btn{border-style:dashed;border-color:rgba(150,130,220,.6);background:rgba(150,130,220,.10)}
   .ex.prirow .ex-btn{border-style:dashed;border-color:rgba(224,112,62,.6);background:rgba(224,112,62,.10)}
   .tg.pri{background:rgba(224,112,62,.16);color:var(--red);border:1px solid rgba(224,112,62,.45)}
   .nudge.pri{background:rgba(224,112,62,.12);border-color:rgba(224,112,62,.5)}
@@ -892,9 +895,40 @@ function computeRecentExtras(day,order){
   return out;
 }
 function recentExtra(name){if(!CUR||!CUR.recent)return null;const src=(CUR.swapOf&&CUR.swapOf[name])||name;return CUR.recent[src]||null;}
+/* ---- carry-over of skipped mandatory work ----
+   A mandatory exercise (above its day's cut line, or a heavy top set) that
+   went unlogged in the previous session is pulled into the NEXT session as
+   an optional extra, so a skip doesn't silently disappear until that routine
+   comes round again. It is added below the cut line and tagged with where it
+   came from — it never displaces anything mandatory for today. When its own
+   routine does come round, the existing priority/star logic takes over. */
+function wasMandatoryOn(day,name){
+  const ex=NAME_INDEX[name];if(!ex)return false;
+  if(ex.main)return true;
+  const idx=PLAN[day]?PLAN[day].ex.findIndex(e=>e.n===name):-1;
+  return idx>=0&&idx<optFrom(day);
+}
+function computeCarryOver(day,order){
+  const out={};
+  const last=HISTORY[HISTORY.length-1];
+  if(!last)return out;
+  sessionExNames(last).forEach(n=>{
+    const e=NAME_INDEX[n];if(!e)return;
+    if(order.includes(n))return;                    // already on today's list
+    if(!wasMandatoryOn(last.day,n))return;          // optional skips don't carry
+    const lg=sessionLog(last,n);
+    if(lg&&!lg.skipped&&lg.sets.some(x=>setComplete(e,x)))return; // it did get done
+    out[n]={day:last.day,date:last.date};
+  });
+  return out;
+}
+function carriedOver(name){if(!CUR||!CUR.carried)return null;const src=(CUR.swapOf&&CUR.swapOf[name])||name;return CUR.carried[src]||null;}
 // Fresh alternatives: same muscle, not in today's list, not done in the last 7 days.
 function freshSwaps(name){const from=Date.now()-7*864e5;return getSwapOptions(name).filter(n=>!CUR.order.includes(n)&&!HISTORY.some(h=>h.date>=from&&(()=>{const l=sessionLog(h,n);return l&&l.sets.some(x=>setComplete(NAME_INDEX[n],x));})())).slice(0,2);}
 function isOptionalEx(day,name){
+  // A carried-over skip is always optional today, even a heavy top set —
+  // it isn't part of this day's plan, so it must never sit above the cut.
+  if(carriedOver(name))return true;
   const ex=NAME_INDEX[name];if(ex&&ex.main)return false;
   if(recentExtra(name))return true;
   const src=(CUR&&CUR.swapOf&&CUR.swapOf[name])||name;
@@ -923,7 +957,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v107";
+const APP_VERSION="v108";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -1570,9 +1604,9 @@ function renderSession(){
     const cls=["ex"];if(ex.main)cls.push("main");if(ex.abs)cls.push("abs");
     // Row border must agree with the tag chosen below — a red "Priority" tag
     // inside a teal "optional" row reads as a contradiction.
-    if(pastCap)cls.push(recentExtra(name)?"doptrow":((isPriorityEx(name)&&!uskip&&!(dn===total&&total>0))?"prirow":(isSuggestedEx(name)?"sugg":"skip")));
+    if(pastCap)cls.push(carriedOver(name)?"carryrow":(recentExtra(name)?"doptrow":((isPriorityEx(name)&&!uskip&&!(dn===total&&total>0))?"prirow":(isSuggestedEx(name)?"sugg":"skip"))));
     if(uskip)cls.push("uskip");else if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
-    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(recentExtra(name)){const r=recentExtra(name);tags.push(`<span class="tg dopt">↺ Done ${daysAgoTxt(r.date)} (${r.day}) · optional</span>`);}else if(isPriorityEx(name)&&!(dn===total&&total>0)){tags.push('<span class="tg pri">Priority · skipped this week</span>');}else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ stretch goal</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
+    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(carriedOver(name)){const c=carriedOver(name);tags.push(`<span class="tg carry">↩ Skipped ${esc(c.day)} ${daysAgoTxt(c.date)} · optional</span>`);}else if(recentExtra(name)){const r=recentExtra(name);tags.push(`<span class="tg dopt">↺ Done ${daysAgoTxt(r.date)} (${r.day}) · optional</span>`);}else if(isPriorityEx(name)&&!(dn===total&&total>0)){tags.push('<span class="tg pri">Priority · skipped this week</span>');}else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ stretch goal</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
@@ -1999,7 +2033,11 @@ function startSession(day){
   // toward the session clock, inflating the duration.
   const recent=computeRecentExtras(day,order);
   order.sort((a,b)=>(recent[a]?1:0)-(recent[b]?1:0));
-  CUR={day,start:null,nudgeDismissed:false,order,defaultOrder:order.slice(),ex:{},recent};
+  // Carried-over skips go on the end, after the recent-extras sort, so they
+  // land in the optional zone rather than pushing today's own work down.
+  const carried=computeCarryOver(day,order);
+  Object.keys(carried).forEach(n=>{if(!order.includes(n))order.push(n);});
+  CUR={day,start:null,nudgeDismissed:false,order,defaultOrder:order.slice(),ex:{},recent,carried};
   order.forEach(name=>{const def=NAME_INDEX[name];const prev=lastLog(name);CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};});
   setOpenIdx(0);initAudio();requestWake();renderSession();}
 // Remove duplicate entries and put the list in progress order, keeping the
@@ -2013,7 +2051,9 @@ function tidyCur(){
     saveCur();}
   const openName=(CUR.openIdx!=null&&CUR.openIdx>=0)?CUR.order[CUR.openIdx]:null;
   let u=uniqNames(CUR.order);
-  if(PLAN[CUR.day]){const plan=PLAN[CUR.day].ex.map(e=>e.n),keep=new Set([...(CUR.added||[]),...Object.keys(CUR.swapOf||{})]);
+  // Carried-over skips are deliberately NOT in this day's plan, so they must
+  // be kept explicitly or the tidy pass below would strip them straight back out.
+  if(PLAN[CUR.day]){const plan=PLAN[CUR.day].ex.map(e=>e.n),keep=new Set([...(CUR.added||[]),...Object.keys(CUR.swapOf||{}),...Object.keys(CUR.carried||{})]);
     u=u.filter(n=>{if(plan.includes(n)||keep.has(n))return true;const lg=CUR.ex[n],d=NAME_INDEX[n];return !!(lg&&d&&(lg.skipped||lg.sets.some(x=>setComplete(d,x))));});}
   let ch=u.length!==CUR.order.length;CUR.order=u;
   if(normalizeOrder())ch=true;
@@ -2895,16 +2935,30 @@ async function testPush(){if(!SETTINGS.pushSub)return enablePush();try{const r=a
 function armSwAlert(sec,label){
   if(swReady())navigator.serviceWorker.controller.postMessage({type:"schedule-rest-alert",ms:sec*1000,label});
 }
+// Every start/−15s/+15s re-arms the alert. The push worker is only asked to
+// schedule, never to forget the previous one first, so if it queues rather
+// than replaces you get one notification per re-arm — two buzzes from a
+// single rest. Always cancel before scheduling, and chain them so they can't
+// land out of order (a late /cancel would otherwise kill the new schedule).
+let pushSeq=0;
 function scheduleBgAlert(sec,label){
   if(!SETTINGS.pushSub){armSwAlert(sec,label);return;}
-  pushPost("/schedule",{sub:SETTINGS.pushSub,delayMs:Math.round(sec*1000)})
+  const seq=++pushSeq;
+  pushPost("/cancel",{sub:SETTINGS.pushSub})
+    .catch(()=>{})
+    .then(()=>{
+      if(seq!==pushSeq)return null;              // a newer re-arm superseded this one
+      return pushPost("/schedule",{sub:SETTINGS.pushSub,delayMs:Math.round(sec*1000)});
+    })
     .then(async r=>{
+      if(!r)return;                              // superseded — the newer call owns the alert
       let ok=r.ok;
       try{const j=await r.json();if(j&&j.ok===false)ok=false;}catch(e){}
       if(!ok)throw new Error("push service rejected the schedule");
       pushHealthy=true;
     })
     .catch(()=>{
+      if(seq!==pushSeq)return;                   // don't let a stale failure arm a second alert
       // The push didn't take — cover this rest with the local timer instead,
       // then try to repair the subscription for next time.
       pushHealthy=false;
