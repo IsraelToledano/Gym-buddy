@@ -534,6 +534,13 @@
   body.typing .cardio-bar,body.dock-covers .timer-dock{visibility:hidden}
   body.typing .timer .bar,body.typing .timer .ctrls{display:none}
   body.typing .timer{padding:6px 13px}
+  /* The sticky session header carries its own rest readout. It is the ONLY
+     always-visible one: the bottom dock is display:none when not resting,
+     hidden outright while it would cover the field you're typing in, and on
+     iOS can be mispositioned by the keyboard. This had a display:none with
+     no rule ever turning it back on, so syncTimer dutifully updated an
+     element nobody could see — hence "I can't see the timer in the app". */
+  body.resting .rest-mini{display:inline-block}
   .rest-mini{display:none;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;color:var(--teal);background:rgba(84,185,168,.14);border:1px solid rgba(84,185,168,.4);border-radius:8px;padding:1px 8px;margin-right:8px;align-self:center}
   .rest-mini.go{color:var(--green);border-color:var(--green)}
 
@@ -916,7 +923,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v106";
+const APP_VERSION="v107";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -962,11 +969,35 @@ function startFocusGuard(el){
   const g=FG={el,user:false,fixes:0,miss:0,t0:Date.now()};
   g.iv=setInterval(()=>{
     if(FG!==g||document.activeElement!==el){clearInterval(g.iv);if(FG===g)FG=null;return;}
-    if(Date.now()-g.t0<800||g.user||g.fixes>=2)return;
+    if(Date.now()-g.t0<800||g.user||g.fixes>=4)return;
     const vv=window.visualViewport;const vTop=vv?vv.offsetTop:0,vBot=vv?vv.offsetTop+vv.height:window.innerHeight;
     const r=el.getBoundingClientRect();
+    // Where the field sits INSIDE the visible window — the only thing the
+    // user actually perceives.
+    const vis=r.top-vTop, winH=vBot-vTop, target=winH*0.4;
+    // Calibrate how far the field really moves per pixel of scrollBy. On iOS
+    // with the keyboard up, scrolling the layout viewport drags the visual
+    // viewport with it, so the field shifts by TWO pixels per pixel scrolled.
+    // The old code assumed one, overshot by exactly 2x, and threw the field
+    // off the other edge — which is the jump in the captured trace.
+    if(g.pend){
+      const moved=vis-g.pend.vis, applied=-g.pend.dy;
+      if(Math.abs(applied)>8&&Math.abs(moved)>1){
+        const ratio=moved/applied;
+        if(ratio>0.4&&ratio<4)g.ratio=ratio;
+      }
+      g.pend=null;
+    }
     g.miss=(r.bottom<vTop+4||r.top>vBot-4)?g.miss+1:0;
-    if(g.miss>=2){g.miss=0;g.fixes++;const dy=Math.round(r.top-(vTop+(vBot-vTop)*0.4));traceNote("guard",dy,Math.round(r.top),Math.round(vTop),Math.round(vBot));window.scrollBy(0,dy);}
+    if(g.miss>=2){
+      g.miss=0;g.fixes++;
+      const ratio=g.ratio||2;                     // assume the iOS behaviour until measured
+      const dy=Math.round(-(target-vis)/ratio);
+      if(!dy)return;
+      g.pend={vis,dy};
+      traceNote("guard",dy,Math.round(r.top),Math.round(vTop),Math.round(vBot),Math.round(vis),Math.round(ratio*100));
+      window.scrollBy(0,dy);
+    }
   },250);
 }
 let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{}},CUR=null,NOTES={},BACKMETA={at:0,count:0,lastError:null,lastAttempt:0};
@@ -2855,16 +2886,17 @@ async function enablePush(){
   }catch(e){await showAlert("Couldn't turn on notifications: "+(e&&e.message||e));}
 }
 async function testPush(){if(!SETTINGS.pushSub)return enablePush();try{const r=await pushPost("/test",{sub:SETTINGS.pushSub});const j=await r.json();if(!j.ok)throw new Error("push service answered "+j.status);await showAlert("Test sent — it should arrive in a second or two.");}catch(e){await showAlert("Test failed: "+(e&&e.message||e)+". Tap Turn on again to re-register.");SETTINGS.pushSub=null;await sset("settings",SETTINGS);}}
-// Belt AND braces: arm BOTH the in-SW timer and the push. They were
-// previously mutually exclusive — having a push subscription meant the SW
-// timer was never armed, so a silently-dead subscription (iOS rotates them,
-// and a reinstall or long idle invalidates them) left NO alert at all, with
-// the failure swallowed by an empty .catch. The two can't double-fire in
-// practice: both notifications use the same tag ("rest-timer"), so the OS
-// collapses them into one.
-function scheduleBgAlert(sec,label){
+// EXACTLY ONE alert path may be armed at a time. Arming both (push + the
+// in-SW timer) on the theory that the shared notification tag would dedupe
+// them does NOT work on iOS — a web-push notification and a local
+// showNotification from the SW are delivered independently and you get two
+// buzzes. So: push when we have a subscription, and fall back to the SW
+// timer only if the push schedule actually fails.
+function armSwAlert(sec,label){
   if(swReady())navigator.serviceWorker.controller.postMessage({type:"schedule-rest-alert",ms:sec*1000,label});
-  if(!SETTINGS.pushSub)return;
+}
+function scheduleBgAlert(sec,label){
+  if(!SETTINGS.pushSub){armSwAlert(sec,label);return;}
   pushPost("/schedule",{sub:SETTINGS.pushSub,delayMs:Math.round(sec*1000)})
     .then(async r=>{
       let ok=r.ok;
@@ -2872,7 +2904,13 @@ function scheduleBgAlert(sec,label){
       if(!ok)throw new Error("push service rejected the schedule");
       pushHealthy=true;
     })
-    .catch(()=>{pushHealthy=false;revivePushSub();});
+    .catch(()=>{
+      // The push didn't take — cover this rest with the local timer instead,
+      // then try to repair the subscription for next time.
+      pushHealthy=false;
+      armSwAlert(Math.max(0,Math.round((restEndAt-Date.now())/1000)),label);
+      revivePushSub();
+    });
 }
 function cancelBgAlert(){
   if(swReady())navigator.serviceWorker.controller.postMessage({type:"cancel-rest-alert"});
