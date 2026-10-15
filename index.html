@@ -371,15 +371,25 @@
   .cutline{display:flex;align-items:center;gap:10px;margin:4px 0 13px;padding-left:6px}
   .cutline .rule{flex:1;height:0;border-top:2px dashed rgba(242,135,46,.5)}
   .cutline .txt{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);white-space:nowrap}
-  .ex.skip .ex-btn{border-style:dashed;border-color:rgba(84,185,168,.55);background:rgba(84,185,168,.10)}
+  .ex.skip .ex-btn{border-style:dashed;border-color:var(--line);background:rgba(128,122,110,.07)}
+  .ex.doptrow .ex-btn{border-style:dashed;border-color:rgba(84,185,168,.55);background:rgba(84,185,168,.10)}
   .ex.sugg .ex-btn{border-style:dashed;border-color:rgba(242,135,46,.6);background:rgba(242,135,46,.10)}
+  .ex.prirow .ex-btn{border-style:dashed;border-color:rgba(224,112,62,.6);background:rgba(224,112,62,.10)}
   .tg.pri{background:rgba(224,112,62,.16);color:var(--red);border:1px solid rgba(224,112,62,.45)}
   .nudge.pri{background:rgba(224,112,62,.12);border-color:rgba(224,112,62,.5)}
   .nudge.pri b{color:var(--red)}
   .tg.sugg{background:rgba(242,135,46,.14);color:var(--amber-bright);border:1px solid rgba(242,135,46,.35)}
   .recent-box{font-size:13px;color:var(--teal);background:rgba(84,185,168,.08);border:1px solid rgba(84,185,168,.3);border-radius:10px;padding:8px 10px;margin:6px 0 10px;line-height:1.35}
   .recent-box .rb-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
-  .tg.opt{background:rgba(84,185,168,.12);color:var(--teal);border:1px solid rgba(84,185,168,.3)}
+  /* Four distinct priority levels — these must stay visually separable at a
+     glance, since they're the whole point of the cut-line zone:
+       pri  (red)    must do, skipped this week
+       sugg (amber)  stretch goal
+       opt  (grey)   plain optional — deliberately NOT teal, it used to
+                     collide with the "already done" tag below
+       dopt (teal)   already done recently, so genuinely skippable */
+  .tg.opt{background:rgba(128,122,110,.16);color:var(--ink-dim);border:1px solid var(--line)}
+  .tg.dopt{background:rgba(84,185,168,.12);color:var(--teal);border:1px solid rgba(84,185,168,.3)}
   .ex.skip.done .ex-btn,.ex.skip.partial .ex-btn{opacity:1}
 
   /* user-marked skip (distinct from the auto "cut first" suggestion above) */
@@ -906,7 +916,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v105";
+const APP_VERSION="v106";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -1526,9 +1536,12 @@ function renderSession(){
     const log=CUR.ex[name];const total=log.sets.length;const dn=log.sets.filter(s=>setComplete(ex,s)).length;
     const uskip=!!log.skipped;
     const pastCap=isOptionalEx(CUR.day,name);
-    const cls=["ex"];if(ex.main)cls.push("main");if(ex.abs)cls.push("abs");if(pastCap)cls.push(isSuggestedEx(name)?"sugg":"skip");
+    const cls=["ex"];if(ex.main)cls.push("main");if(ex.abs)cls.push("abs");
+    // Row border must agree with the tag chosen below — a red "Priority" tag
+    // inside a teal "optional" row reads as a contradiction.
+    if(pastCap)cls.push(recentExtra(name)?"doptrow":((isPriorityEx(name)&&!uskip&&!(dn===total&&total>0))?"prirow":(isSuggestedEx(name)?"sugg":"skip")));
     if(uskip)cls.push("uskip");else if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
-    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(recentExtra(name)){const r=recentExtra(name);tags.push(`<span class="tg opt">↺ Done ${daysAgoTxt(r.date)} (${r.day}) · optional</span>`);}else if(isPriorityEx(name)&&!(dn===total&&total>0)){tags.push('<span class="tg pri">Priority · skipped this week</span>');}else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ stretch goal</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
+    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(recentExtra(name)){const r=recentExtra(name);tags.push(`<span class="tg dopt">↺ Done ${daysAgoTxt(r.date)} (${r.day}) · optional</span>`);}else if(isPriorityEx(name)&&!(dn===total&&total>0)){tags.push('<span class="tg pri">Priority · skipped this week</span>');}else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ stretch goal</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
@@ -2842,15 +2855,66 @@ async function enablePush(){
   }catch(e){await showAlert("Couldn't turn on notifications: "+(e&&e.message||e));}
 }
 async function testPush(){if(!SETTINGS.pushSub)return enablePush();try{const r=await pushPost("/test",{sub:SETTINGS.pushSub});const j=await r.json();if(!j.ok)throw new Error("push service answered "+j.status);await showAlert("Test sent — it should arrive in a second or two.");}catch(e){await showAlert("Test failed: "+(e&&e.message||e)+". Tap Turn on again to re-register.");SETTINGS.pushSub=null;await sset("settings",SETTINGS);}}
+// Belt AND braces: arm BOTH the in-SW timer and the push. They were
+// previously mutually exclusive — having a push subscription meant the SW
+// timer was never armed, so a silently-dead subscription (iOS rotates them,
+// and a reinstall or long idle invalidates them) left NO alert at all, with
+// the failure swallowed by an empty .catch. The two can't double-fire in
+// practice: both notifications use the same tag ("rest-timer"), so the OS
+// collapses them into one.
 function scheduleBgAlert(sec,label){
-  if(SETTINGS.pushSub){pushPost("/schedule",{sub:SETTINGS.pushSub,delayMs:Math.round(sec*1000)}).catch(()=>{});return;}
-  if(!swReady())return;navigator.serviceWorker.controller.postMessage({type:"schedule-rest-alert",ms:sec*1000,label});}
+  if(swReady())navigator.serviceWorker.controller.postMessage({type:"schedule-rest-alert",ms:sec*1000,label});
+  if(!SETTINGS.pushSub)return;
+  pushPost("/schedule",{sub:SETTINGS.pushSub,delayMs:Math.round(sec*1000)})
+    .then(async r=>{
+      let ok=r.ok;
+      try{const j=await r.json();if(j&&j.ok===false)ok=false;}catch(e){}
+      if(!ok)throw new Error("push service rejected the schedule");
+      pushHealthy=true;
+    })
+    .catch(()=>{pushHealthy=false;revivePushSub();});
+}
 function cancelBgAlert(){
-  if(SETTINGS.pushSub){pushPost("/cancel",{sub:SETTINGS.pushSub}).catch(()=>{});return;}
-  if(!swReady())return;navigator.serviceWorker.controller.postMessage({type:"cancel-rest-alert"});}
+  if(swReady())navigator.serviceWorker.controller.postMessage({type:"cancel-rest-alert"});
+  if(SETTINGS.pushSub)pushPost("/cancel",{sub:SETTINGS.pushSub}).catch(()=>{});
+}
+// Silently re-register the push subscription when the stored one goes stale.
+// Permission is already granted at this point, so this needs no user action;
+// if it genuinely can't be revived we clear it so the Profile row stops
+// claiming lock-screen alerts are on when they aren't.
+let pushHealthy=true;
+// Catch a stale subscription when the app is opened, rather than discovering
+// it mid-rest at the gym. Compares what the browser actually holds against
+// what we stored; only acts when they've drifted apart.
+async function verifyPushSub(){
+  if(!SETTINGS.pushSub||!("serviceWorker" in navigator)||!("PushManager" in window))return;
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    const live=await reg.pushManager.getSubscription();
+    if(!live){await revivePushSub();return;}
+    if(live.endpoint!==SETTINGS.pushSub.endpoint){SETTINGS.pushSub=live.toJSON();await sset("settings",SETTINGS);}
+  }catch(e){}
+}
+async function revivePushSub(){
+  try{
+    if(!("serviceWorker" in navigator)||!("PushManager" in window))return;
+    if(!("Notification" in window)||Notification.permission!=="granted"){SETTINGS.pushSub=null;await sset("settings",SETTINGS);return;}
+    const reg=await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(sub){try{await sub.unsubscribe();}catch(e){}}
+    const {key}=await (await fetch(PUSH_URL+"/vapid-public")).json();
+    sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64urlToBytes(key)});
+    SETTINGS.pushSub=sub.toJSON();await sset("settings",SETTINGS);
+    pushHealthy=true;
+  }catch(e){SETTINGS.pushSub=null;try{await sset("settings",SETTINGS);}catch(e2){}}
+}
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).catch(()=>{});
-  navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="rest-alert-fired"&&restActive&&!restFired){restFired=true;fireAlert();}});
+  navigator.serviceWorker.addEventListener("message",e=>{
+    if(!e.data)return;
+    if(e.data.type==="rest-alert-fired"&&restActive&&!restFired){restFired=true;fireAlert();}
+    else if(e.data.type==="push-sub-changed")revivePushSub();
+  });
   // iOS often just suspends (rather than fully reloads) a Home Screen web
   // app when it's closed/reopened, so a newly-activated service worker can
   // sit ready without the on-screen page ever picking up the new code.
@@ -2867,6 +2931,7 @@ if("serviceWorker" in navigator){
   document.addEventListener("visibilitychange",()=>{
     if(document.visibilityState==="visible"){
       navigator.serviceWorker.getRegistration().then(reg=>reg&&reg.update());
+      verifyPushSub();
     }
   });
 }

@@ -1,4 +1,4 @@
-const CACHE = "gym-buddy-v105";
+const CACHE = "gym-buddy-v106";
 const IMG_CACHE = "gym-buddy-exercise-img-v2";
 const IMG_PATH = "/Gym-buddy/img/exercises/";
 const ASSETS = ["./", "./index.html", "./manifest.json"];
@@ -108,6 +108,17 @@ self.addEventListener("push", (e) => {
       badge: "icon-192.png",
       tag: "rest-timer",
       renotify: true,
+    })
+  );
+});
+
+// iOS/Android can rotate a push subscription at any time. Without this the
+// app keeps posting a dead subscription to the push worker forever and the
+// rest alert silently stops arriving. Tell any open page so it re-registers.
+self.addEventListener("pushsubscriptionchange", (e) => {
+  e.waitUntil(
+    self.clients.matchAll().then((clients) => {
+      clients.forEach((c) => c.postMessage({ type: "push-sub-changed" }));
     })
   );
 });
