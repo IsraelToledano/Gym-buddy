@@ -178,6 +178,9 @@
      banner. Hidden once the exercise is done or skipped. */
   .ex.haspri .rank::after{content:"";position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--red);border:2px solid var(--bg);box-shadow:0 0 0 1px rgba(224,112,62,.5)}
   .ex.haspri.done .rank::after,.ex.haspri.uskip .rank::after{display:none}
+  /* A finished priority keeps its red dot, now carrying a check. */
+  .ex.pridone .rank::after{content:"✓";position:absolute;top:-6px;right:-6px;width:14px;height:14px;border-radius:50%;background:var(--red);color:#fff;border:2px solid var(--bg);font-family:'Manrope',sans-serif;font-size:9px;font-weight:800;line-height:14px;text-align:center;display:block;box-shadow:0 0 0 1px rgba(224,112,62,.5)}
+  .tg.pridone{background:rgba(111,191,115,.14);color:var(--green);border:1px solid rgba(111,191,115,.4)}
   .ex-name{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:17.5px;line-height:1.1}
   .ex.main .ex-name{font-weight:700}
   .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
@@ -974,7 +977,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v112";
+const APP_VERSION="v113";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -1626,8 +1629,15 @@ function renderSession(){
     // with its own tag. The red dot is independent of the cut line: a
     // priority exercise above the line gets marked too.
     const prioRow=isPriorityEx(name)&&!uskip&&!(dn===total&&total>0);
+    // Once a priority is done the weekly alert clears (the muscle has hit its
+    // must-have), so isPriorityEx goes false and the row used to fall back to
+    // the purple carry tag — hiding that the priority work was done. Remember
+    // it for the session instead, and show it as a completed priority.
+    if(prioRow&&!(CUR.wasPri&&CUR.wasPri[name])){CUR.wasPri=CUR.wasPri||{};CUR.wasPri[name]=1;saveCur();}
+    const priDone=!uskip&&dn===total&&total>0&&!!(CUR.wasPri&&CUR.wasPri[name]);
     if(prioRow)cls.push("haspri");
-    if(pastCap)cls.push(prioRow?"prirow":(carriedOver(name)?"carryrow":(recentExtra(name)?"doptrow":(isSuggestedEx(name)?"sugg":"skip"))));
+    if(priDone)cls.push("pridone");
+    if(pastCap&&!priDone)cls.push(prioRow?"prirow":(carriedOver(name)?"carryrow":(recentExtra(name)?"doptrow":(isSuggestedEx(name)?"sugg":"skip"))));
     if(uskip)cls.push("uskip");else if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
     const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');// Priority is checked BEFORE the carry/recent tags. Those two also mean
 // "you skipped this", so an exercise is routinely both — and when the chain
@@ -1635,7 +1645,7 @@ function renderSession(){
 // "optional". Priority is the stronger claim, so it wins and absorbs the
 // carry/recent context into its label instead of contradicting it.
     const prio=isPriorityEx(name)&&!(dn===total&&total>0);
-    if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(prio){const c=carriedOver(name)||recentExtra(name);tags.push(`<span class="tg pri">● Priority${c?` · skipped ${esc(c.day)} ${daysAgoTxt(c.date)}`:" · skipped this week"}</span>`);}else if(carriedOver(name)){const c=carriedOver(name);tags.push(`<span class="tg carry">↩ Skipped ${esc(c.day)} ${daysAgoTxt(c.date)} · optional</span>`);}else if(recentExtra(name)){const r=recentExtra(name);tags.push(`<span class="tg dopt">↺ Done ${daysAgoTxt(r.date)} (${r.day}) · optional</span>`);}else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ stretch goal</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
+    if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(priDone){tags.push('<span class="tg pridone">✓ Priority done</span>');}else if(prio){const c=carriedOver(name)||recentExtra(name);tags.push(`<span class="tg pri">● Priority${c?` · skipped ${esc(c.day)} ${daysAgoTxt(c.date)}`:" · skipped this week"}</span>`);}else if(carriedOver(name)){const c=carriedOver(name);tags.push(`<span class="tg carry">↩ Skipped ${esc(c.day)} ${daysAgoTxt(c.date)} · optional</span>`);}else if(recentExtra(name)){const r=recentExtra(name);tags.push(`<span class="tg dopt">↺ Done ${daysAgoTxt(r.date)} (${r.day}) · optional</span>`);}else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ stretch goal</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
