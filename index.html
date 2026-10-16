@@ -974,7 +974,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v111";
+const APP_VERSION="v112";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -2867,13 +2867,14 @@ async function askCapture(){
 // screen) followed by the full backup JSON. Tokens and push keys are already
 // stripped by backupSettings().
 function askData(meta){
-  return `GYM BUDDY REPORT\n\n${askSnapshot()}\n\nMETA: ${JSON.stringify(meta)}\n\n--- FULL DATA ---\n${backupBlob()}`;
+  let snap;try{snap=askSnapshot();}catch(e){snap="(snapshot failed: "+(e&&e.message||e)+")";}
+  return `GYM BUDDY REPORT\n\n${snap}\n\nMETA: ${JSON.stringify(meta)}\n\n--- FULL DATA ---\n${backupBlob()}`;
 }
 async function askFiles(){
   const stamp=askStamp(),files=[];
   const meta={screen:CUR&&document.body.classList.contains("in-session")?`session ${CUR.day}`:"home",
     viewport:{w:window.innerWidth,h:window.innerHeight,scrollY:Math.round(window.scrollY)}};
-  try{const png=await askCapture();files.push(new File([png],`gym-buddy-screen-${stamp}.png`,{type:"image/png"}));}
+  try{const png=await Promise.race([askCapture(),new Promise((_,rej)=>setTimeout(()=>rej(new Error("screen capture timed out")),6000))]);files.push(new File([png],`gym-buddy-screen-${stamp}.png`,{type:"image/png"}));}
   catch(e){meta.captureError=String(e&&e.message||e);}
   files.push(new File([askData(meta)],`gym-buddy-data-${stamp}.txt`,{type:"text/plain"}));
   return files;
@@ -2898,16 +2899,35 @@ async function askHandle(result,files){
   askPending=null;askSetState("idle");
   if(result==="shared-data-only")askSetMsg("Sent the data — the screen image isn't supported here");
   if(result==="unsupported"||result==="failed"){
-    try{await navigator.clipboard.writeText(await files.find(f=>f.type==="text/plain").text());askSetMsg("Copied — paste it into the Claude chat");}
+    try{const tf=files&&files.find(f=>f.type==="text/plain");await navigator.clipboard.writeText(await tf.text());askSetMsg("Copied — paste it into the Claude chat");}
     catch(e){askSetMsg("Couldn't share or copy the report on this device");}
   }
 }
+// The button must never be left stuck on "…". Two ways it was: the screen
+// capture never settling (html2canvas waiting on a slow cross-origin exercise
+// photo on iOS), and anything throwing while the report was built — both left
+// askState at "working", which made every later tap a no-op until a reload.
+// Now the capture is time-boxed, every step is guarded, the state always
+// resolves, and a tap on a button that has been busy too long resets it.
+let askBusySince=0;
 async function askTap(){
-  if(askState==="working")return;
-  if(askState==="ready"&&askPending){const f=askPending;askSetState("working");return askHandle(await askShare(f),f);}
-  askSetState("working");
-  const files=await askFiles();
-  return askHandle(await askShare(files),files);
+  if(askState==="working"){
+    if(Date.now()-askBusySince<15000)return;
+    askSetState("idle");askPending=null;              // stale — let this tap start fresh
+  }
+  askBusySince=Date.now();
+  let files=null;
+  try{
+    if(askState==="ready"&&askPending){files=askPending;askSetState("working");}
+    else{askSetState("working");files=await askFiles();}
+    await askHandle(await askShare(files),files);
+  }catch(e){
+    askPending=null;askSetState("idle");
+    if(files)await askHandle("failed",files);
+    else askSetMsg("Couldn't build the report — "+(e&&e.message||e));
+  }finally{
+    if(askState==="working")askSetState("idle");
+  }
 }
 function b64utf8(str){return btoa(unescape(encodeURIComponent(str)));}
 async function githubBackup(){
