@@ -974,7 +974,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v110";
+const APP_VERSION="v111";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -2819,6 +2819,11 @@ function askSnapshot(){
       // the tag the row is actually showing, straight from the DOM
       const el=document.querySelector(`#exList .ex[data-name="${CSS.escape(n)}"] .tags .tg`);
       L.push(`${String(i+1).padStart(2)}. ${n}  [${e.m}]  ${dn}/${lg.sets.length} sets  {${f.join(",")||"-"}}${el?`  tag="${el.textContent.trim()}"`:""}`);
+      // The actual numbers logged today, and last time — without these a
+      // "I did fewer reps than before" question can't be answered from the report.
+      const today=lg.sets.filter(x=>setComplete(e,x)).map(x=>`${x.weight||"–"}×${x.reps}`).join(" ");
+      const prev=lastLog(n);const prevS=prev?prev.filter(x=>x.reps!==""&&x.reps!=null).map(x=>`${x.weight||"–"}×${x.reps}`).join(" "):"";
+      if(today||prevS)L.push(`      today: ${today||"-"}   last: ${prevS||"-"}`);
     });
   }
   const vol=weeklyVolume(),pv=planVolume();
