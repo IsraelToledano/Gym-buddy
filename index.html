@@ -39,6 +39,14 @@
   .mast{padding:24px 2px 8px;position:relative}
   .profile-btn{position:absolute;top:22px;right:2px;width:38px;height:38px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink-dim)}
   .profile-btn:hover{border-color:var(--amber);color:var(--amber-bright)}
+  .ask-btn{position:absolute;top:22px;right:48px;width:38px;height:38px;border-radius:50%;background:var(--card);border:1px solid rgba(150,130,220,.5);display:grid;place-items:center;color:var(--violet);font-size:17px;line-height:1}
+  .ask-btn:hover{border-color:var(--violet)}
+  .ask-fab{position:fixed;right:14px;bottom:calc(84px + env(safe-area-inset-bottom));width:42px;height:42px;border-radius:50%;background:var(--card);border:1px solid rgba(150,130,220,.5);color:var(--violet);font-size:18px;display:none;place-items:center;z-index:45;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+  body.in-session .ask-fab{display:grid}
+  body.resting .ask-fab{bottom:calc(150px + env(safe-area-inset-bottom))}
+  .ask-note{width:100%;min-height:96px;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:16px;padding:11px 12px;font-family:inherit;line-height:1.45}
+  .ask-note:focus{outline:none;border-color:var(--violet)}
+  .ask-ctx{font-size:11.5px;color:var(--ink-faint);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px;line-height:1.5;white-space:pre-wrap;max-height:190px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   .profile-btn svg{width:19px;height:19px}
   .profile-btn.has-data{border-color:var(--teal);color:var(--teal)}
   .kicker{font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:.22em;text-transform:uppercase;font-size:12px;color:var(--amber)}
@@ -163,6 +171,11 @@
   .ex.abs .rank{border-color:var(--amber-bright);color:var(--amber-bright);font-size:13px}
   .ex.done .rank{background:var(--green);border-color:var(--green);color:#10210f}
   .ex.partial .rank{border-color:var(--amber-bright)}
+  /* Priority marker on the exercise itself — a dot on the rank badge, so the
+     row is identifiable while scrolling without opening it or reading the
+     banner. Hidden once the exercise is done or skipped. */
+  .ex.haspri .rank::after{content:"";position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--red);border:2px solid var(--bg);box-shadow:0 0 0 1px rgba(224,112,62,.5)}
+  .ex.haspri.done .rank::after,.ex.haspri.uskip .rank::after{display:none}
   .ex-name{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:17.5px;line-height:1.1}
   .ex.main .ex-name{font-weight:700}
   .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
@@ -625,6 +638,7 @@
 <body>
 <div class="wrap">
   <header class="mast">
+    <button class="ask-btn" id="askBtn" onclick="openAsk()" aria-label="Ask Claude / send feedback">✦</button>
     <button class="profile-btn" id="profileBtn" aria-label="Profile">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     </button>
@@ -645,6 +659,7 @@
 
 <div id="overlayMount"></div>
 <div id="cardioBarMount"></div>
+<button class="ask-fab" onclick="openAsk()" aria-label="Ask Claude / send feedback">✦</button>
 <div id="modalMount"></div>
 <canvas id="confettiCanvas" aria-hidden="true"></canvas>
 
@@ -957,7 +972,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v108";
+const APP_VERSION="v109";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -1495,6 +1510,7 @@ function muscleColor(r){if(r>=1)return"var(--green)";if(r>=0.5)return"var(--teal
 let showExport=false,showImport=false;
 
 function renderHome(summary){
+  document.body.classList.remove("in-session");
   if(window.__swPendingReload&&!summary){window.__swPendingReload=false;location.reload();return;}
   stopTimer(true);releaseWake();closeOverlay();
   titleEl.textContent="Training";kickEl.textContent="Push / Pull · Tracker";
@@ -1604,9 +1620,20 @@ function renderSession(){
     const cls=["ex"];if(ex.main)cls.push("main");if(ex.abs)cls.push("abs");
     // Row border must agree with the tag chosen below — a red "Priority" tag
     // inside a teal "optional" row reads as a contradiction.
-    if(pastCap)cls.push(carriedOver(name)?"carryrow":(recentExtra(name)?"doptrow":((isPriorityEx(name)&&!uskip&&!(dn===total&&total>0))?"prirow":(isSuggestedEx(name)?"sugg":"skip"))));
+    // Same precedence as the tag chain below, or the row border would argue
+    // with its own tag. The red dot is independent of the cut line: a
+    // priority exercise above the line gets marked too.
+    const prioRow=isPriorityEx(name)&&!uskip&&!(dn===total&&total>0);
+    if(prioRow)cls.push("haspri");
+    if(pastCap)cls.push(prioRow?"prirow":(carriedOver(name)?"carryrow":(recentExtra(name)?"doptrow":(isSuggestedEx(name)?"sugg":"skip"))));
     if(uskip)cls.push("uskip");else if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
-    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(carriedOver(name)){const c=carriedOver(name);tags.push(`<span class="tg carry">↩ Skipped ${esc(c.day)} ${daysAgoTxt(c.date)} · optional</span>`);}else if(recentExtra(name)){const r=recentExtra(name);tags.push(`<span class="tg dopt">↺ Done ${daysAgoTxt(r.date)} (${r.day}) · optional</span>`);}else if(isPriorityEx(name)&&!(dn===total&&total>0)){tags.push('<span class="tg pri">Priority · skipped this week</span>');}else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ stretch goal</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
+    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');// Priority is checked BEFORE the carry/recent tags. Those two also mean
+// "you skipped this", so an exercise is routinely both — and when the chain
+// let them win, the banner called it a priority while its own row said
+// "optional". Priority is the stronger claim, so it wins and absorbs the
+// carry/recent context into its label instead of contradicting it.
+    const prio=isPriorityEx(name)&&!(dn===total&&total>0);
+    if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(prio){const c=carriedOver(name)||recentExtra(name);tags.push(`<span class="tg pri">● Priority${c?` · skipped ${esc(c.day)} ${daysAgoTxt(c.date)}`:" · skipped this week"}</span>`);}else if(carriedOver(name)){const c=carriedOver(name);tags.push(`<span class="tg carry">↩ Skipped ${esc(c.day)} ${daysAgoTxt(c.date)} · optional</span>`);}else if(recentExtra(name)){const r=recentExtra(name);tags.push(`<span class="tg dopt">↺ Done ${daysAgoTxt(r.date)} (${r.day}) · optional</span>`);}else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ stretch goal</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
@@ -1641,6 +1668,7 @@ function renderSession(){
     html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${(exp&&recentExtra(name)&&!uskip&&dn===0)?recentBoxHtml(i,name):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}<div id="ef-${i}">${effortHtml(i)}</div><button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="btnrow"><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo":"⤼ Skip"}</button><button class="formtog" onclick="toggleCues(this)">Cues ▾</button>${trendBtnHtml}${noteBtnHtml}</div><div class="cues">${cues}</div>${noteBlock}</div></div></div></div>`;
   });
   html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button>${cardioFinisherHtml()}<div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
+  document.body.classList.add("in-session");
   app.innerHTML=html;tickClock();attachDragHandlers();initExImg();
 }
 
@@ -2759,6 +2787,87 @@ async function finishSession(){
 }
 /* ---------------- GitHub auto-backup ---------------- */
 const BACKUP_REPO="IsraelToledano/Gym-buddy";
+
+/* ---------------- Ask Claude (in-app feedback) ----------------
+   Captures what is actually on screen as structured text and pushes it to
+   feedback/ in the repo, where Claude reads it next session. Deliberately a
+   state snapshot rather than a pixel screenshot: an image needs a ~200KB
+   external library (this app is one offline-capable file) and would show the
+   tags without the reasoning behind them. The text below carries the
+   computed flags — why a row is priority, what carried over, which alerts
+   fired — which is what actually gets a bug diagnosed. */
+function askSnapshot(){
+  const L=[];
+  L.push(`app: ${APP_VERSION}   when: ${new Date().toISOString()}`);
+  L.push(`screen: ${CUR?`session ${CUR.day} (${PLAN[CUR.day]?PLAN[CUR.day].name:"?"})`:"home"}`);
+  L.push(`ua: ${navigator.userAgent}`);
+  if(CUR){
+    const AL=computeAlerts();
+    if(AL.priority.length)L.push(`\nPRIORITY ALERTS: ${AL.priority.map(p=>`${p.muscle} ${p.v}/${p.man} → ${p.today.join(", ")}`).join(" | ")}`);
+    if(AL.stretch.length)L.push(`STRETCH: ${AL.stretch.map(s=>`${s.name} (${s.muscle} ${s.v}/${s.tot})`).join(", ")}`);
+    L.push(`\nORDER (cut line after ${optFrom(CUR.day)} of this day's plan):`);
+    CUR.order.forEach((n,i)=>{
+      const e=NAME_INDEX[n],lg=CUR.ex[n];if(!e||!lg)return;
+      const dn=lg.sets.filter(x=>setComplete(e,x)).length;
+      const f=[];
+      if(e.main)f.push("main");
+      if(e.abs)f.push("abs");
+      if(lg.skipped)f.push("SKIPPED");
+      if(isOptionalEx(CUR.day,n))f.push("optional");
+      if(isPriorityEx(n))f.push("PRIORITY");
+      if(isSuggestedEx(n))f.push("stretch");
+      const c=carriedOver(n);if(c)f.push(`carried<${c.day} ${daysAgoTxt(c.date)}>`);
+      const r=recentExtra(n);if(r)f.push(`recent<${r.day} ${daysAgoTxt(r.date)}>`);
+      // the tag the row is actually showing, straight from the DOM
+      const el=document.querySelector(`#exList .ex[data-name="${CSS.escape(n)}"] .tags .tg`);
+      L.push(`${String(i+1).padStart(2)}. ${n}  [${e.m}]  ${dn}/${lg.sets.length} sets  {${f.join(",")||"-"}}${el?`  tag="${el.textContent.trim()}"`:""}`);
+    });
+  }
+  const vol=weeklyVolume(),pv=planVolume();
+  L.push(`\nWEEK VOLUME (done / must-have / plan-total):`);
+  DASH_ORDER.forEach(m=>{const p=pv[m];if(p)L.push(`  ${m}: ${Math.round(vol[m]||0)} / ${p.man} / ${p.tot}`);});
+  L.push(`\nLAST 5 SESSIONS:`);
+  HISTORY.slice(-5).reverse().forEach(h=>{
+    const names=sessionExNames(h);
+    const miss=names.filter(n=>{const e=NAME_INDEX[n];if(!e)return false;const lg=sessionLog(h,n);return !(lg&&!lg.skipped&&lg.sets.some(x=>setComplete(e,x)));});
+    L.push(`  ${fmtDate(h.date)} ${h.day} — ${names.length-miss.length}/${names.length} done${miss.length?`; missed: ${miss.join(", ")}`:""}`);
+  });
+  return L.join("\n");
+}
+function openAsk(){
+  closeOverlay();
+  const snap=askSnapshot();
+  document.getElementById("overlayMount").innerHTML=`<div class="overlay"><div class="ov-head">${BACK_BTN}<div class="ti"><span>Goes to the Gym Buddy repo</span>✦ Ask Claude</div></div><div class="ov-body">
+    <div class="field"><label>What's up?</label><textarea class="ask-note" id="askNote" placeholder="e.g. lateral raises shows priority and optional at the same time — why?"></textarea></div>
+    <button class="btn primary" style="width:100%" onclick="sendAsk(this)">Send to Claude</button>
+    <div class="section-h">What gets sent with it</div>
+    <div class="ask-ctx">${esc(snap)}</div>
+  </div></div>`;
+  setTimeout(()=>{const t=document.getElementById("askNote");if(t)t.focus();},60);
+}
+async function sendAsk(btn){
+  const t=document.getElementById("askNote");
+  const note=(t&&t.value||"").trim();
+  if(!note){await showAlert("Add a line about what you're seeing first.");return;}
+  const token=SETTINGS.ghToken;
+  if(!token){await showAlert("Add a GitHub token in Profile first — that's how this reaches Claude.");return;}
+  btn.disabled=true;btn.textContent="Sending…";
+  const stamp=new Date().toISOString().replace(/[:T]/g,"-").slice(0,16);
+  const body=`# ${note.split("\n")[0].slice(0,80)}\n\n_${new Date().toString()}_\n\n## Note\n\n${note}\n\n## App state\n\n\`\`\`\n${askSnapshot()}\n\`\`\`\n`;
+  try{
+    const r=await fetch(`https://api.github.com/repos/${BACKUP_REPO}/contents/feedback/${stamp}.md`,{
+      method:"PUT",
+      headers:{Authorization:`token ${token}`,"Content-Type":"application/json"},
+      body:JSON.stringify({message:`Feedback ${stamp}`,content:b64utf8(body)})
+    });
+    if(!r.ok){let m="";try{const j=await r.json();m=j.message||"";}catch(_){}throw new Error(`HTTP ${r.status} ${m}`);}
+    closeOverlay();
+    await showAlert("Sent ✓ Claude will pick it up next session.");
+  }catch(e){
+    btn.disabled=false;btn.textContent="Send to Claude";
+    await showAlert("Couldn't send: "+(e&&e.message||e));
+  }
+}
 function b64utf8(str){return btoa(unescape(encodeURIComponent(str)));}
 async function githubBackup(){
   const token=SETTINGS.ghToken;
