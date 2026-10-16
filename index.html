@@ -39,14 +39,16 @@
   .mast{padding:24px 2px 8px;position:relative}
   .profile-btn{position:absolute;top:22px;right:2px;width:38px;height:38px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink-dim)}
   .profile-btn:hover{border-color:var(--amber);color:var(--amber-bright)}
-  .ask-btn{position:absolute;top:22px;right:48px;width:38px;height:38px;border-radius:50%;background:var(--card);border:1px solid rgba(150,130,220,.5);display:grid;place-items:center;color:var(--violet);font-size:17px;line-height:1}
-  .ask-btn:hover{border-color:var(--violet)}
-  .ask-fab{position:fixed;right:14px;bottom:calc(84px + env(safe-area-inset-bottom));width:42px;height:42px;border-radius:50%;background:var(--card);border:1px solid rgba(150,130,220,.5);color:var(--violet);font-size:18px;display:none;place-items:center;z-index:45;box-shadow:0 4px 14px rgba(0,0,0,.3)}
-  body.in-session .ask-fab{display:grid}
+  /* Ask Claude — same pattern as the Skin Ritual app: one floating button
+     on every screen, bottom-left, lifted above the rest dock while resting. */
+  .ask-fab{position:fixed;left:12px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:60;height:38px;min-width:38px;padding:0;border-radius:100px;border:1.5px solid var(--violet);background:var(--card);color:var(--violet);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.25);font-weight:700;font-size:17px;line-height:1}
+  .ask-fab svg{width:20px;height:20px;display:block}
+  .ask-fab.ready{background:var(--violet);color:#fff;padding:0 14px;font-size:12px}
   body.resting .ask-fab{bottom:calc(150px + env(safe-area-inset-bottom))}
-  .ask-note{width:100%;min-height:96px;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:16px;padding:11px 12px;font-family:inherit;line-height:1.45}
-  .ask-note:focus{outline:none;border-color:var(--violet)}
-  .ask-ctx{font-size:11.5px;color:var(--ink-faint);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px;line-height:1.5;white-space:pre-wrap;max-height:190px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  body.typing .ask-fab{display:none}
+  .ask-msg{position:fixed;left:58px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:60;background:var(--ink);color:var(--bg);font-size:12px;padding:7px 11px;border-radius:10px;max-width:240px;display:none}
+  body.resting .ask-msg{bottom:calc(154px + env(safe-area-inset-bottom))}
+  .ask-msg.show{display:block}
   .profile-btn svg{width:19px;height:19px}
   .profile-btn.has-data{border-color:var(--teal);color:var(--teal)}
   .kicker{font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:.22em;text-transform:uppercase;font-size:12px;color:var(--amber)}
@@ -638,7 +640,6 @@
 <body>
 <div class="wrap">
   <header class="mast">
-    <button class="ask-btn" id="askBtn" onclick="openAsk()" aria-label="Ask Claude / send feedback">✦</button>
     <button class="profile-btn" id="profileBtn" aria-label="Profile">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     </button>
@@ -659,7 +660,8 @@
 
 <div id="overlayMount"></div>
 <div id="cardioBarMount"></div>
-<button class="ask-fab" onclick="openAsk()" aria-label="Ask Claude / send feedback">✦</button>
+<button class="ask-fab" id="askFab" data-report-ui="1" onclick="askTap()" aria-label="Ask Claude" title="Ask Claude — sends a screenshot and your data"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 2.5l1.9 5.6 5.6 1.9-5.6 1.9L10 17.5l-1.9-5.6L2.5 10l5.6-1.9z"/><path d="M18.5 13.5l.95 2.55 2.55.95-2.55.95-.95 2.55-.95-2.55-2.55-.95 2.55-.95z"/></svg></button>
+<div class="ask-msg" id="askMsg" data-report-ui="1"></div>
 <div id="modalMount"></div>
 <canvas id="confettiCanvas" aria-hidden="true"></canvas>
 
@@ -972,7 +974,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v109";
+const APP_VERSION="v110";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -2788,14 +2790,10 @@ async function finishSession(){
 /* ---------------- GitHub auto-backup ---------------- */
 const BACKUP_REPO="IsraelToledano/Gym-buddy";
 
-/* ---------------- Ask Claude (in-app feedback) ----------------
-   Captures what is actually on screen as structured text and pushes it to
-   feedback/ in the repo, where Claude reads it next session. Deliberately a
-   state snapshot rather than a pixel screenshot: an image needs a ~200KB
-   external library (this app is one offline-capable file) and would show the
-   tags without the reasoning behind them. The text below carries the
-   computed flags — why a row is priority, what carried over, which alerts
-   fired — which is what actually gets a bug diagnosed. */
+/* ---------------- Ask Claude ----------------
+   askSnapshot() is the readable half of the report's data file: the computed
+   flags behind each row (why it's priority, what carried over, which alerts
+   fired), which a screenshot alone can't show. */
 function askSnapshot(){
   const L=[];
   L.push(`app: ${APP_VERSION}   when: ${new Date().toISOString()}`);
@@ -2834,39 +2832,77 @@ function askSnapshot(){
   });
   return L.join("\n");
 }
-function openAsk(){
-  closeOverlay();
-  const snap=askSnapshot();
-  document.getElementById("overlayMount").innerHTML=`<div class="overlay"><div class="ov-head">${BACK_BTN}<div class="ti"><span>Goes to the Gym Buddy repo</span>✦ Ask Claude</div></div><div class="ov-body">
-    <div class="field"><label>What's up?</label><textarea class="ask-note" id="askNote" placeholder="e.g. lateral raises shows priority and optional at the same time — why?"></textarea></div>
-    <button class="btn primary" style="width:100%" onclick="sendAsk(this)">Send to Claude</button>
-    <div class="section-h">What gets sent with it</div>
-    <div class="ask-ctx">${esc(snap)}</div>
-  </div></div>`;
-  setTimeout(()=>{const t=document.getElementById("askNote");if(t)t.focus();},60);
+/* Share flow ported from the Skin Ritual app's Report to Claude: one tap
+   captures the visible screen as a PNG plus a data file, and opens the share
+   sheet so both go straight into a Claude chat — you pick Claude and type
+   your message there. A failed capture never blocks the report (the data
+   still goes); no share sheet = copy the data to the clipboard instead. */
+const ASK_CAPTURE_LIB="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+let askLibP=null;
+function askLoadLib(){
+  if(window.html2canvas)return Promise.resolve(window.html2canvas);
+  if(!askLibP)askLibP=new Promise((res,rej)=>{const el=document.createElement("script");el.src=ASK_CAPTURE_LIB;el.async=true;
+    el.onload=()=>window.html2canvas?res(window.html2canvas):rej(new Error("capture library missing"));
+    el.onerror=()=>{askLibP=null;rej(new Error("capture library failed to load"));};document.head.appendChild(el);});
+  return askLibP;
 }
-async function sendAsk(btn){
-  const t=document.getElementById("askNote");
-  const note=(t&&t.value||"").trim();
-  if(!note){await showAlert("Add a line about what you're seeing first.");return;}
-  const token=SETTINGS.ghToken;
-  if(!token){await showAlert("Add a GitHub token in Profile first — that's how this reaches Claude.");return;}
-  btn.disabled=true;btn.textContent="Sending…";
-  const stamp=new Date().toISOString().replace(/[:T]/g,"-").slice(0,16);
-  const body=`# ${note.split("\n")[0].slice(0,80)}\n\n_${new Date().toString()}_\n\n## Note\n\n${note}\n\n## App state\n\n\`\`\`\n${askSnapshot()}\n\`\`\`\n`;
-  try{
-    const r=await fetch(`https://api.github.com/repos/${BACKUP_REPO}/contents/feedback/${stamp}.md`,{
-      method:"PUT",
-      headers:{Authorization:`token ${token}`,"Content-Type":"application/json"},
-      body:JSON.stringify({message:`Feedback ${stamp}`,content:b64utf8(body)})
-    });
-    if(!r.ok){let m="";try{const j=await r.json();m=j.message||"";}catch(_){}throw new Error(`HTTP ${r.status} ${m}`);}
-    closeOverlay();
-    await showAlert("Sent ✓ Claude will pick it up next session.");
-  }catch(e){
-    btn.disabled=false;btn.textContent="Send to Claude";
-    await showAlert("Couldn't send: "+(e&&e.message||e));
+// Preload in the background so the tap is fast — iOS stops treating a slow
+// tap as a tap by the time share() is called.
+setTimeout(()=>{askLoadLib().catch(()=>{});},2500);
+function askStamp(d=new Date()){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`;}
+async function askCapture(){
+  const h2c=await askLoadLib();
+  const bg=getComputedStyle(document.body).backgroundColor||getComputedStyle(document.documentElement).getPropertyValue("--bg");
+  const canvas=await h2c(document.body,{x:window.scrollX,y:window.scrollY,width:window.innerWidth,height:window.innerHeight,
+    windowWidth:document.documentElement.clientWidth,scale:Math.min(2,window.devicePixelRatio||1),backgroundColor:bg,logging:false,useCORS:true,
+    ignoreElements:el=>!!(el&&el.getAttribute&&el.getAttribute("data-report-ui")==="1")});
+  return new Promise((res,rej)=>canvas.toBlob(b=>b?res(b):rej(new Error("empty capture")),"image/png"));
+}
+// The data half: the readable snapshot (computed flags behind what's on
+// screen) followed by the full backup JSON. Tokens and push keys are already
+// stripped by backupSettings().
+function askData(meta){
+  return `GYM BUDDY REPORT\n\n${askSnapshot()}\n\nMETA: ${JSON.stringify(meta)}\n\n--- FULL DATA ---\n${backupBlob()}`;
+}
+async function askFiles(){
+  const stamp=askStamp(),files=[];
+  const meta={screen:CUR&&document.body.classList.contains("in-session")?`session ${CUR.day}`:"home",
+    viewport:{w:window.innerWidth,h:window.innerHeight,scrollY:Math.round(window.scrollY)}};
+  try{const png=await askCapture();files.push(new File([png],`gym-buddy-screen-${stamp}.png`,{type:"image/png"}));}
+  catch(e){meta.captureError=String(e&&e.message||e);}
+  files.push(new File([askData(meta)],`gym-buddy-data-${stamp}.txt`,{type:"text/plain"}));
+  return files;
+}
+// "shared" | "shared-data-only" | "cancelled" | "needs-tap" | "unsupported" | "failed"
+async function askShare(files){
+  const nav=navigator;
+  if(!nav||typeof nav.share!=="function"||!files.length)return "unsupported";
+  const can=l=>typeof nav.canShare!=="function"||!!nav.canShare({files:l});
+  let list=files;
+  if(!can(list)){list=files.filter(f=>f.type==="text/plain");if(!list.length||!can(list))return "unsupported";}
+  try{await nav.share({files:list,title:"Gym Buddy report"});return list.length===files.length?"shared":"shared-data-only";}
+  catch(e){const n=e&&e.name;if(n==="AbortError")return "cancelled";if(n==="NotAllowedError")return "needs-tap";return "failed";}
+}
+let askState="idle",askPending=null,askMsgT=null;
+function askSetMsg(t){const m=document.getElementById("askMsg");if(!m)return;m.textContent=t;m.classList.toggle("show",!!t);clearTimeout(askMsgT);if(t)askMsgT=setTimeout(()=>askSetMsg(""),4000);}
+const ASK_ICON='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 2.5l1.9 5.6 5.6 1.9-5.6 1.9L10 17.5l-1.9-5.6L2.5 10l5.6-1.9z"/><path d="M18.5 13.5l.95 2.55 2.55.95-2.55.95-.95 2.55-.95-2.55-2.55-.95 2.55-.95z"/></svg>';
+function askSetState(st){askState=st;const b=document.getElementById("askFab");if(!b)return;
+  b.classList.toggle("ready",st==="ready");b.innerHTML=st==="working"?"…":st==="ready"?"Tap to send":ASK_ICON;}
+async function askHandle(result,files){
+  if(result==="needs-tap"){askPending=files;askSetState("ready");return;}
+  askPending=null;askSetState("idle");
+  if(result==="shared-data-only")askSetMsg("Sent the data — the screen image isn't supported here");
+  if(result==="unsupported"||result==="failed"){
+    try{await navigator.clipboard.writeText(await files.find(f=>f.type==="text/plain").text());askSetMsg("Copied — paste it into the Claude chat");}
+    catch(e){askSetMsg("Couldn't share or copy the report on this device");}
   }
+}
+async function askTap(){
+  if(askState==="working")return;
+  if(askState==="ready"&&askPending){const f=askPending;askSetState("working");return askHandle(await askShare(f),f);}
+  askSetState("working");
+  const files=await askFiles();
+  return askHandle(await askShare(files),files);
 }
 function b64utf8(str){return btoa(unescape(encodeURIComponent(str)));}
 async function githubBackup(){
