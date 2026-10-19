@@ -550,6 +550,30 @@
      so nothing pinned to the screen is around while you type a set. */
   .timer-dock{pointer-events:none;position:fixed;left:0;right:0;bottom:0;z-index:50;display:none}
   .timer-dock.up{display:block}
+  /* ---- built-in number pad (replaces the iOS keyboard for weight/reps) ---- */
+  .cellw{min-width:0}
+  .cellw input{pointer-events:none;caret-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  .cellw{border-radius:9px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .cellw.kp-active input{border-color:var(--amber);box-shadow:0 0 0 3px rgba(242,135,46,.30)}
+  .kp{position:fixed;left:0;right:0;bottom:0;z-index:70;display:none;background:var(--card-hi);border-top:1px solid var(--line);box-shadow:0 -10px 30px -12px rgba(0,0,0,.55);touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  body.kp-open .kp{display:block}
+  .kp-in{max-width:600px;margin:0 auto;padding:8px 10px calc(10px + env(safe-area-inset-bottom))}
+  .kp-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .kp-top .kp-lbl{flex:1;min-width:0;font-size:12px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kp-top .kp-lbl b{color:var(--ink)}
+  .kp button{font-family:'JetBrains Mono',ui-monospace,monospace;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:11px;font-size:22px;font-weight:600;height:50px;padding:0;touch-action:none;-webkit-tap-highlight-color:transparent}
+  .kp button.p{background:var(--card);border-color:var(--amber)}
+  .kp .kp-nav{width:46px;height:38px;font-size:22px;color:var(--ink-dim)}
+  .kp .kp-done{height:38px;padding:0 18px;font-family:'Manrope',system-ui,sans-serif;font-size:15px;font-weight:700;background:var(--amber);color:#1a120a;border-color:var(--amber)}
+  .kp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  .kp-grid button.off{opacity:.3}
+  .kp-grid .kp-del{font-size:20px;color:var(--ink-dim)}
+  body.kp-open .wrap{padding-bottom:calc(var(--kp-h,0px) + 150px)}
+  body.kp-open .timer-dock{bottom:var(--kp-h,0px)}
+  body.kp-open .dock-in{padding-bottom:6px}
+  body.kp-open .timer .bar,body.kp-open .timer .ctrls{display:none}
+  body.kp-open .timer{padding:6px 13px}
+  body.kp-open .cardio-bar,body.kp-open .ask-fab,body.kp-open .ask-msg{display:none}
   .timer-dock.up .timer{animation:dockIn .28s cubic-bezier(.2,.8,.2,1)}
   @keyframes dockIn{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
   body.typing .dock-in{padding-bottom:4px}
@@ -595,6 +619,10 @@
   .theme-row .td{font-size:11.5px;color:var(--ink-faint);margin-top:2px}
   .theme-switch{position:relative;width:52px;height:30px;border-radius:16px;background:var(--bg);border:1px solid var(--line);flex:none}
   .theme-switch .knob{position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:var(--amber);transition:transform .2s}
+  .sw2{position:relative;width:52px;height:30px;border-radius:16px;background:var(--bg);border:1px solid var(--line);flex:none}
+  .sw2 .knob{position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:var(--ink-faint);transition:transform .2s,background .2s}
+  .sw2.on{border-color:var(--amber)}
+  .sw2.on .knob{transform:translateX(22px);background:var(--amber)}
   html[data-theme="light"] .theme-switch .knob{transform:translateX(22px)}
 
   /* up next chip */
@@ -656,6 +684,15 @@
 </div>
 
 <div id="satProbe" style="position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top);visibility:hidden;pointer-events:none"></div>
+<div class="kp" id="kp" aria-hidden="true"><div class="kp-in">
+  <div class="kp-top"><button type="button" class="kp-nav" data-k="prev" aria-label="previous box">‹</button><button type="button" class="kp-nav" data-k="next" aria-label="next box">›</button><div class="kp-lbl" id="kpLbl"></div><button type="button" class="kp-done" data-k="done">Done</button></div>
+  <div class="kp-grid">
+    <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
+    <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
+    <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
+    <button type="button" data-k="." id="kpDot">.</button><button type="button" data-k="0">0</button><button type="button" class="kp-del" data-k="del" aria-label="delete">⌫</button>
+  </div>
+</div></div>
 <div class="timer-dock" id="dock"><div class="dock-in"><div class="timer" id="timer">
   <div class="tr1"><div class="ctx" id="timerCtx"></div><div class="count" id="timerCount">0:00</div></div>
   <div class="bar"><div class="barfill" id="timerBar"></div></div>
@@ -980,7 +1017,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v115";
+const APP_VERSION="v116";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -1518,7 +1555,7 @@ function muscleColor(r){if(r>=1)return"var(--green)";if(r>=0.5)return"var(--teal
 let showExport=false,showImport=false;
 
 function renderHome(summary){
-  document.body.classList.remove("in-session");
+  document.body.classList.remove("in-session");kpClose();
   if(window.__swPendingReload&&!summary){window.__swPendingReload=false;location.reload();return;}
   stopTimer(true);releaseWake();closeOverlay();
   titleEl.textContent="Training";kickEl.textContent="Push / Pull · Tracker";
@@ -1670,9 +1707,10 @@ function renderSession(){
         else{statsHtml=`<div class="prstrip"><div class="pr top"><div class="lab">Top</div><div class="val">${prs.top} <small>kg</small></div></div><div class="pr vol"><div class="lab">Best vol</div><div class="val">${prs.vol} <small>kg</small></div></div><div class="pr e1"><div class="lab">1RM</div><div class="val">${prs.e1} <small>kg</small></div></div></div>`;}
       }
     }
+    const KPM=useKp();
     let rows=`<div class="setrow head"><span></span><span>Weight (kg)</span><span>${SETTINGS.logReps?"Reps":""}</span><span></span><span class="rest-pill">${restPillText()}</span></div>`;
     const nsIdx=newSetPending(name)-1;
-    log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const isNew=j===nsIdx&&!done;const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""} ${isNew?"newset":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div><input type="text" inputmode="decimal" id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" onblur="setInputBlur(${i},${j})" aria-label="weight kg set ${j+1}">${SETTINGS.logReps?`<input type="text" inputmode="numeric" id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" oninput="setVal(${i},${j},'reps',this.value)" onblur="setInputBlur(${i},${j})" onkeydown="if(event.key==='Enter')this.blur()" aria-label="reps set ${j+1}">`:`<div class="reps-target">${ex.reps}</div>`}${(!isNew&&(extra||(j===log.sets.length-1&&log.sets.length>1&&!done)))?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>${isNew?`<div class="newset-note">✱ New set — added to your plan ${NEW_SETS[name].label}. Log it once and this tag goes away.</div>`:""}`;});
+    log.sets.forEach((s,j)=>{const done=setComplete(ex,s);const isNew=j===nsIdx&&!done;const extra=j>=ex.sets;rows+=`<div class="setrow ${done?"set-done":""} ${isNew?"newset":""}" id="row-${i}-${j}"><div class="sn">${j+1}</div>${kpCell(i,j,"weight",`<input type="text" ${KPM?'readonly inputmode="none" tabindex="-1"':'inputmode="decimal"'} id="w-${i}-${j}" placeholder="${s.ph||"–"}" value="${s.weight??""}" ${KPM?"":`oninput="setVal(${i},${j},'weight',this.value)" onchange="propWeight(${i},${j})" onblur="setInputBlur(${i},${j})"`} aria-label="weight kg set ${j+1}">`)}${SETTINGS.logReps?kpCell(i,j,"reps",`<input type="text" ${KPM?'readonly inputmode="none" tabindex="-1"':'inputmode="numeric"'} id="r-${i}-${j}" placeholder="${s.phReps||ex.reps}" value="${s.reps??""}" ${KPM?"":`oninput="setVal(${i},${j},'reps',this.value)" onblur="setInputBlur(${i},${j})" onkeydown="if(event.key==='Enter')this.blur()"`} aria-label="reps set ${j+1}">`):`<div class="reps-target">${ex.reps}</div>`}${(!isNew&&(extra||(j===log.sets.length-1&&log.sets.length>1&&!done)))?`<button class="rmset" onclick="removeSet(${i},${j})" aria-label="remove set">✕</button>`:`<span></span>`}</div>${isNew?`<div class="newset-note">✱ New set — added to your plan ${NEW_SETS[name].label}. Log it once and this tag goes away.</div>`:""}`;});
     const cues=`${ex.cues.do&&ex.cues.do.length?`<div class="cuesub cue-do"><div class="cuelabel">✓ Do</div><ul>${ex.cues.do.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}${ex.cues.dont&&ex.cues.dont.length?`<div class="cuesub cue-dont"><div class="cuelabel">✕ Don't</div><ul>${ex.cues.dont.map(c=>`<li>${c}</li>`).join("")}</ul></div>`:""}`;
     // Notes are edited in place, in the box under the photo — no separate editor.
     const noteBtnHtml=`<button class="formtog notetog" onclick="editNote(${i})">Note \u270e</button>`;
@@ -1684,7 +1722,7 @@ function renderSession(){
   });
   html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button>${cardioFinisherHtml()}<div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
   document.body.classList.add("in-session");
-  app.innerHTML=html;tickClock();attachDragHandlers();initExImg();
+  app.innerHTML=html;tickClock();attachDragHandlers();initExImg();kpAfterRender();
 }
 
 /* ---------------- trend overlay ---------------- */
@@ -1721,6 +1759,7 @@ function openProfile(){
     <div class="theme-row"><div><div class="tl">Appearance</div><div class="td">${SETTINGS.theme==="light"?"Light":"Dark"} mode</div></div><button class="theme-switch" onclick="toggleTheme()" aria-label="toggle theme"><div class="knob"></div></button></div>
     <div class="field" style="margin-top:14px"><label>GitHub backup token</label><div class="tokwrap"><input id="pGhToken" type="password" autocomplete="off" placeholder="Fine-grained PAT, Contents read/write" value="${esc(SETTINGS.ghToken||"")}" oninput="setGhToken(this.value)"><textarea id="pGhTokenTa" class="tok-ta" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off" style="display:none" oninput="setGhToken(this.value)">${esc(SETTINGS.ghToken||"")}</textarea><button type="button" class="eyebtn" id="ghTokenEye" aria-label="show token" onclick="toggleGhTokenVis()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div><div class="tokhint" id="ghTokenHint" style="display:none">Full token shown above — check carefully for missing/extra characters, especially at the start and end.</div></div>
     <div class="prof-saved hidden" id="ghTokenSaved">✓ Saved — will auto-backup at end of each session</div>
+    <div class="theme-row" style="margin-top:14px"><div><div class="tl">Number pad</div><div class="td">${SETTINGS.sysKeyboard?"System keyboard":"Built-in pad (no page jumps)"}</div></div><button class="sw2${SETTINGS.sysKeyboard?"":" on"}" onclick="toggleKeypad()" aria-label="toggle number pad"><div class="knob"></div></button></div>
     <div class="theme-row" style="margin-top:14px"><div><div class="tl">Rest alerts on lock screen</div><div class="td" id="pushState">${SETTINGS.pushSub?"On — a notification when rest is up":"Off"}</div></div><button class="tool-btn" style="flex:none;padding:8px 12px" onclick="${SETTINGS.pushSub?"testPush()":"enablePush()"}">${SETTINGS.pushSub?"Send test":"Turn on"}</button></div>
   </div></div>`;
   document.getElementById("overlayMount").innerHTML=html;
@@ -2157,7 +2196,7 @@ function lastLogInfo(name){
    header at the top, the set rows sit in the upper half of the screen. */
 function scrollExToTop(idx,smooth){
   const el=app.querySelectorAll(".ex")[idx];if(!el)return;
-  const a=document.activeElement;if(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))return; // never fight the keyboard
+  const a=document.activeElement;if(KP.open||(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA")))return; // never fight the keyboard / pad
   const sh=app.querySelector(".shead");const off=(sh?sh.getBoundingClientRect().height:0)+6;
   const top=el.getBoundingClientRect().top+window.scrollY-off;
   window.scrollTo({top:Math.max(0,top),behavior:smooth?"smooth":"auto"});
@@ -2220,7 +2259,7 @@ function normalizeOrder(){const before=CUR.order.join("|");CUR.order=[0,1,2].fla
 function settleOrder(name,j){
   const run=()=>{
     if(!CUR)return;
-    if(dragState||isField(document.activeElement)){setTimeout(run,400);return;}
+    if(dragState||isField(document.activeElement)||KP.open){setTimeout(run,400);return;}
     if(!normalizeOrder()){const i=CUR.order.indexOf(name);if(i>=0)revealNextSet(i,j);return;}
     const i=CUR.order.indexOf(name);saveCur();setOpenIdx(i);renderSession();scrollExToTop(i,false);
     if(i>=0)revealNextSet(i,j);
@@ -2238,7 +2277,7 @@ function revealNextSet(i,j){
     if(k>=sets.length)k=j;
     const row=document.getElementById("row-"+i+"-"+k);const t=document.getElementById("timer");
     if(!row||!t||!document.getElementById("dock").classList.contains("up"))return;
-    const a=document.activeElement;if(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA"))return; // iOS is already positioning the field
+    const a=document.activeElement;if(KP.open||(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA")))return; // iOS is already positioning the field
     const over=row.getBoundingClientRect().bottom-(t.getBoundingClientRect().top-14);
     if(over>0)window.scrollBy(0,over);
   },380);
@@ -2321,7 +2360,7 @@ function collapseAndAdvance(i,kind){
   if(kind==="done"){const h=computeExVolumeInsight(name);if(h){const toastText=h.prText||(h.pct!=null?`Volume ${h.pct>=0?"+":""}${h.pct}% vs last time`:"Logged");showExToast({icon:h.icon,text:toastText});CUR.ex[name].highlight=h;saveCur();}}
   const run=()=>{
     // Never rebuild the list under you: wait while dragging or while a field has focus.
-    if(dragState||isField(document.activeElement)){setTimeout(run,400);return;}
+    if(dragState||isField(document.activeElement)||KP.open){setTimeout(run,400);return;}
     normalizeOrder();
     saveCur();
     setOpenIdx(nextOpenIdx());
@@ -3238,7 +3277,7 @@ document.addEventListener("focusin",e=>{if(isField(e.target)){document.body.clas
   // Tapping a weight/reps box selects what's in it, so typing replaces it (15 -> 16, not 115).
   // Done once right after focus (and again on the click iOS fires after focus).
   const el=e.target;if(el.tagName==="INPUT"&&el.closest(".setrow")){startFocusTrace(el);startFocusGuard(el);const sel=()=>{try{el.setSelectionRange(0,el.value.length);}catch(_){}};setTimeout(sel,0);el.addEventListener("click",sel,{once:true});}}});
-document.addEventListener("focusout",()=>{setTimeout(()=>{if(!isField(document.activeElement))document.body.classList.remove("typing");scheduleDockFix();},0);});
+document.addEventListener("focusout",()=>{setTimeout(()=>{if(!isField(document.activeElement)){if(document.body.classList.contains("typing"))lastTypingEnd=Date.now();document.body.classList.remove("typing");}scheduleDockFix();},0);});
 document.addEventListener("focusin",()=>{setTimeout(scheduleDockFix,0);});
 /* Rest timer placement — built around iOS 26's keyboard bugs.
    The dock's box is pinned with bottom:0, but on iOS that anchor can't be
@@ -3252,18 +3291,25 @@ document.addEventListener("focusin",()=>{setTimeout(scheduleDockFix,0);});
    viewport size late, so every change is re-checked a few times, and the rest
    tick re-checks it 4x a second as a backstop. */
 function satTop(){const p=document.getElementById("satProbe");return p?p.offsetHeight:0;}
+let lastTypingEnd=0;
 function placeDock(){
   const d=document.getElementById("dock");if(!d)return;const di=d.firstElementChild;if(!di)return;
+  const clear=()=>{if(di.dataset.ty&&di.dataset.ty!=="0"){di.style.transform="";di.dataset.ty="0";}document.body.classList.remove("dock-covers");};
   const shown=d.classList.contains("up")&&!document.body.classList.contains("ov-open");
-  if(!shown){if(di.dataset.ty&&di.dataset.ty!=="0"){di.style.transform="";di.dataset.ty="0";}document.body.classList.remove("dock-covers");return;}
-  const vv=window.visualViewport;const typing=document.body.classList.contains("typing");
+  // Built-in pad (or nothing typing): plain CSS pinning — no measuring. Measuring
+  // against iOS's visual viewport is only for the system keyboard, and only while
+  // it is up or just closed; elsewhere (scrolling, Safari's toolbar moving) it
+  // reports transient values that pushed the timer off-screen.
+  const typing=document.body.classList.contains("typing");
+  if(!shown||document.body.classList.contains("kp-open")||!(typing||Date.now()-lastTypingEnd<2500)){clear();return;}
+  const vv=window.visualViewport;
   const cur=parseFloat(di.dataset.ty||"0")||0;
   const r=di.getBoundingClientRect();if(!r.height)return;
-  const baseBottom=r.bottom-cur;                       // where bottom:0 actually put it
+  const baseBottom=r.bottom-cur;
   const vTop=vv?vv.offsetTop:0,vBot=vv?vv.offsetTop+vv.height:window.innerHeight;
-  let ty=vBot-baseBottom,covers=false;                 // bottom edge -> bottom of what you see
+  let ty=vBot-baseBottom,covers=false;
   if(typing){
-    if(ty>0)ty=0;                                      // with the keyboard up, only ever lift it
+    if(ty>0)ty=0;
     const a=document.activeElement;
     if(isField(a)){
       const fr=a.getBoundingClientRect();
@@ -3285,6 +3331,101 @@ window.addEventListener("resize",scheduleDockFix);
 window.addEventListener("orientationchange",scheduleDockFix);
 window.addEventListener("pageshow",scheduleDockFix);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)scheduleDockFix();});
+
+/* ---------------- built-in number pad ----------------
+   The iOS keyboard is what threw the page around (it scrolls the page to
+   "reveal" the box, and on recent iOS gets it wrong — sometimes all the way to
+   the bottom) and what left the rest timer stranded after it closed. For
+   weight / reps entry the app now uses its own pad: nothing is ever focused, so
+   iOS has nothing to scroll and no viewport changes. Tapping a box highlights
+   it, scrolls it into the clear area above the pad once, and the rest timer
+   sits right on top of the pad. Profile → "Number pad" switches back to the
+   system keyboard if you prefer it. */
+const useKp=()=>!SETTINGS.sysKeyboard;
+function kpCell(i,j,f,inner){return useKp()?`<div class="cellw" data-i="${i}" data-j="${j}" data-f="${f}" onclick="kpTap(${i},${j},'${f}')">${inner}</div>`:inner;}
+let KP={open:false,i:-1,j:-1,f:"reps",fresh:false};
+const kpInput=()=>KP.open?document.getElementById((KP.f==="weight"?"w-":"r-")+KP.i+"-"+KP.j):null;
+function kpCellsOf(i){const out=[];const name=CUR&&CUR.order[i];if(!name||!CUR.ex[name])return out;const n=CUR.ex[name].sets.length;
+  for(let j=0;j<n;j++){out.push([j,"weight"]);if(SETTINGS.logReps)out.push([j,"reps"]);}return out;}
+function kpMark(){document.querySelectorAll(".cellw.kp-active").forEach(c=>c.classList.remove("kp-active"));
+  const el=kpInput();if(el&&el.parentElement)el.parentElement.classList.add("kp-active");}
+function kpLabel(){const l=document.getElementById("kpLbl");if(!l||!KP.open||!CUR)return;
+  const name=CUR.order[KP.i]||"";l.innerHTML=`Set <b>${KP.j+1}</b> · <b>${KP.f==="weight"?"weight (kg)":"reps"}</b>`;
+  const d=document.getElementById("kpDot");if(d)d.classList.toggle("off",KP.f!=="weight");}
+function kpSetVar(){const k=document.getElementById("kp");document.documentElement.style.setProperty("--kp-h",(KP.open&&k?k.offsetHeight:0)+"px");}
+// Leave a box: a weight edit carries down to the later sets; leaving the whole
+// set (moving to another set, or closing the pad) is what logs it and starts the rest.
+function kpLeave(prev,next){
+  if(!prev||!CUR)return;
+  if(prev.f==="weight")propWeight(prev.i,prev.j);
+  if(!next||next.i!==prev.i||next.j!==prev.j){if(pendingSet&&pendingSet.i===prev.i&&pendingSet.j===prev.j)commitSet(prev.i,prev.j);}
+}
+function kpTap(i,j,f){
+  if(!CUR)return;
+  if(KP.open&&KP.i===i&&KP.j===j&&KP.f===f)return;
+  const prev=KP.open?Object.assign({},KP):null;
+  if(prev)kpLeave(prev,{i,j,f});
+  KP={open:true,i,j,f,fresh:true};
+  document.body.classList.add("kp-open");
+  const k=document.getElementById("kp");if(k)k.setAttribute("aria-hidden","false");
+  kpMark();kpLabel();kpSetVar();
+  placeDock();
+  kpReveal();
+}
+function kpClose(){
+  if(!KP.open)return;
+  const prev=Object.assign({},KP);KP.open=false;
+  kpLeave(prev,null);
+  document.querySelectorAll(".cellw.kp-active").forEach(c=>c.classList.remove("kp-active"));
+  document.body.classList.remove("kp-open");
+  const k=document.getElementById("kp");if(k)k.setAttribute("aria-hidden","true");
+  kpSetVar();placeDock();
+}
+function kpKey(k){
+  if(!KP.open)return;
+  if(k==="done"){kpClose();return;}
+  if(k==="next"||k==="prev"){
+    const cells=kpCellsOf(KP.i);const idx=cells.findIndex(c=>c[0]===KP.j&&c[1]===KP.f);const ni=idx+(k==="next"?1:-1);
+    if(ni<0)return;if(ni>=cells.length){kpClose();return;}
+    kpTap(KP.i,cells[ni][0],cells[ni][1]);return;
+  }
+  const el=kpInput();if(!el)return;
+  let v=KP.fresh?"":(el.value||"");
+  if(k==="del"){v=KP.fresh?"":v.slice(0,-1);}
+  else if(k==="."){if(KP.f!=="weight")return;if(KP.fresh||v==="")v="0.";else if(!v.includes("."))v+=".";}
+  else{const max=KP.f==="weight"?6:3;if(v.length>=max)return;v=(v==="0"&&k!==".")?k:v+k;}
+  KP.fresh=false;
+  el.value=v;
+  setVal(KP.i,KP.j,KP.f,v);
+}
+// One scroll, only if the box is hidden or low, to put it near the top of the clear area.
+function kpReveal(){
+  requestAnimationFrame(()=>{
+    const el=kpInput();if(!el)return;const r=el.getBoundingClientRect();
+    const sh=app.querySelector(".shead");const T=(sh?sh.getBoundingClientRect().bottom:0)+8;
+    const k=document.getElementById("kp");let B=window.innerHeight-(k?k.offsetHeight:0);
+    const dk=document.getElementById("dock");if(dk&&dk.classList.contains("up")){const t=dk.firstElementChild.getBoundingClientRect().top;if(t>0)B=Math.min(B,t);}
+    B-=10;
+    if(r.top>=T&&r.bottom<=B&&r.top<=T+(B-T)*0.7)return;
+    const want=T+(B-T)*0.18;
+    window.scrollBy({top:Math.round(r.top-want),behavior:"smooth"});
+  });
+}
+function kpAfterRender(){
+  if(!KP.open)return;
+  if(!kpInput()){kpClose();return;}
+  kpMark();kpLabel();kpSetVar();
+}
+(function(){
+  const k=document.getElementById("kp");if(!k)return;
+  const press=e=>{const b=e.target.closest&&e.target.closest("button[data-k]");if(!b)return;e.preventDefault();b.classList.add("p");setTimeout(()=>b.classList.remove("p"),110);kpKey(b.dataset.k);};
+  k.addEventListener("pointerdown",press);
+  k.addEventListener("contextmenu",e=>e.preventDefault());
+  // A tap anywhere else closes the pad (logs the set). Scrolls never reach pointerup.
+  document.addEventListener("pointerup",e=>{if(!KP.open)return;const t=e.target;if(t.closest&&t.closest(".kp,.cellw,.timer-dock"))return;kpClose();},true);
+})();
+function toggleKeypad(){SETTINGS.sysKeyboard=!SETTINGS.sysKeyboard;sset("settings",SETTINGS);kpClose();openProfile();}
+
 /* ---------------- alert ---------------- */
 let audioCtx=null;
 function initAudio(){try{const AC=window.AudioContext||window.webkitAudioContext;if(AC&&!audioCtx)audioCtx=new AC();if(audioCtx&&audioCtx.state==="suspended")audioCtx.resume();}catch(e){}}
