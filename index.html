@@ -1017,7 +1017,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v116";
+const APP_VERSION="v117";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -2635,8 +2635,9 @@ function recentBoxHtml(i,name){const r=recentExtra(name);const alts=freshSwaps(n
 async function swapTo(i,newName){const name=CUR.order[i];const oldDef=NAME_INDEX[name];
   if(CUR.ex[name].sets.some(s=>setComplete(oldDef,s))){const ok=await showConfirm(`Swap to ${newName}? Sets already logged for ${name} this session will be cleared.`);if(!ok)return;}
   const def=NAME_INDEX[newName];const prev=lastLog(newName);
+  const nSets=Math.max(def.sets,0,(oldDef&&oldDef.sets)||0);
   CUR.order[i]=newName;CUR.swapOf=CUR.swapOf||{};CUR.swapOf[newName]=CUR.swapOf[name]||name;delete CUR.ex[name];
-  CUR.ex[newName]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
+  CUR.ex[newName]={sets:Array.from({length:nSets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
   saveCur();renderSession();}
 async function openSwap(i){
   const name=CUR.order[i];const alts=getSwapOptions(name).filter(n=>!CUR.order.includes(n));
@@ -2647,10 +2648,11 @@ async function openSwap(i){
   const hasLogged=CUR.ex[name].sets.some(s=>setComplete(oldDef,s));
   if(hasLogged){const ok=await showConfirm(`Swap to ${newName}? Sets already logged for ${name} this session will be cleared.`);if(!ok)return;}
   const def=NAME_INDEX[newName];const prev=lastLog(newName);
+  const nSets=Math.max(def.sets,0,(oldDef&&oldDef.sets)||0);
   CUR.order[i]=newName;
   CUR.swapOf=CUR.swapOf||{};CUR.swapOf[newName]=CUR.swapOf[name]||name;
   delete CUR.ex[name];
-  CUR.ex[newName]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
+  CUR.ex[newName]={sets:Array.from({length:nSets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
   saveCur();renderSession();
 }
 
