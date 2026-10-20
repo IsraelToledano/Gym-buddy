@@ -395,7 +395,7 @@
   /* carried-over skip: a fifth state, kept clear of the other four */
   .tg.carry{background:rgba(150,130,220,.16);color:var(--violet);border:1px solid rgba(150,130,220,.45)}
   .ex.carryrow .ex-btn{border-style:dashed;border-color:rgba(150,130,220,.6);background:rgba(150,130,220,.10)}
-  .ex.prirow .ex-btn{border-style:dashed;border-color:rgba(224,112,62,.6);background:rgba(224,112,62,.10)}
+  .ex.prirow .ex-btn{border-style:solid;border-color:var(--red)}
   .tg.pri{background:rgba(224,112,62,.16);color:var(--red);border:1px solid rgba(224,112,62,.45)}
   .nudge.pri{background:var(--card);border-color:var(--line)}
   .nudge.pri b{color:var(--red)}
@@ -1017,7 +1017,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v117";
+const APP_VERSION="v118";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
