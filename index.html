@@ -1017,7 +1017,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v118";
+const APP_VERSION="v119";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -1026,20 +1026,25 @@ function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:
    taps kept on the device and sent along with the normal backup. */
 function focusTraces(){try{return JSON.parse(localStorage.getItem("gymbuddy:focusTrace")||"[]");}catch(_){return[];}}
 let FT=null;
-(function(){const wrap=(o,k,label)=>{const f=o[k];o[k]=function(...a){if(FT)FT.calls.push([Math.round(performance.now()-FT.t0),label,JSON.stringify(a).slice(0,60),((new Error).stack||"").split("\n").slice(2,4).map(x=>x.trim().split(" ")[1]).join("<")]);return f.apply(this,a);};};
+let OWN_SCROLL_AT=0;
+(function(){const wrap=(o,k,label)=>{const f=o[k];o[k]=function(...a){OWN_SCROLL_AT=performance.now();if(FT)FT.calls.push([Math.round(performance.now()-FT.t0),label,JSON.stringify(a).slice(0,60),((new Error).stack||"").split("\n").slice(2,4).map(x=>x.trim().split(" ")[1]).join("<")]);return f.apply(this,a);};};
   wrap(window,"scrollTo","scrollTo");wrap(window,"scrollBy","scrollBy");wrap(Element.prototype,"scrollIntoView","scrollIntoView");})();
 let TRACE_UPLOADED=false;
 function traceNote(...a){if(FT){FT.calls.push([Math.round(performance.now()-FT.t0),...a]);if(a[0]==="guard")FT.jump=true;}}
 let FT_END=null;
-function startFocusTrace(el){
+function startFocusTrace(el,ms){
   if(FT_END)FT_END();                                  // a new tap closes the previous trace
   const vv=window.visualViewport;const t0=performance.now();
-  const ft=FT={t0,at:Date.now(),v:APP_VERSION,id:el.id,ua:navigator.userAgent.slice(0,140),
-    cols:"ms,scrollY,vvTop,vvH,innerH,clientH,docH,fieldTop,focused,dockTop,dockTy",samples:[],calls:[],scrolls:[]};
+  const kpm=!!(KP&&KP.open);
+  const ft=FT={t0,at:Date.now(),v:APP_VERSION,id:el.id,mode:kpm?"pad":"sys",
+    sa:(navigator.standalone?1:0)+(window.matchMedia&&matchMedia("(display-mode: standalone)").matches?2:0),
+    ua:navigator.userAgent.slice(0,140),
+    cols:"ms,scrollY,vvTop,vvH,innerH,clientH,docH,fieldTop,focused,dockTop,dockTy,padTop",samples:[],calls:[],scrolls:[]};
   let lastY=scrollY;
   const snap=()=>{const r=el.getBoundingClientRect();const di=document.querySelector("#dock .dock-in");const dr=di?di.getBoundingClientRect():null;
-    ft.samples.push([Math.round(performance.now()-t0),Math.round(scrollY),vv?Math.round(vv.offsetTop):null,vv?Math.round(vv.height):null,window.innerHeight,document.documentElement.clientHeight,document.documentElement.scrollHeight,Math.round(r.top),document.activeElement===el?1:0,dr&&dr.height?Math.round(dr.top):null,di?(di.dataset.ty||"0"):null]);
-    if(Math.abs(scrollY-lastY)>250&&!(FG&&FG.user))ft.jump=true;lastY=scrollY;};
+    ft.samples.push([Math.round(performance.now()-t0),Math.round(scrollY),vv?Math.round(vv.offsetTop):null,vv?Math.round(vv.height):null,window.innerHeight,document.documentElement.clientHeight,document.documentElement.scrollHeight,Math.round(r.top),document.activeElement===el?1:0,dr&&dr.height?Math.round(dr.top):null,di?(di.dataset.ty||"0"):null,(()=>{const k=document.getElementById("kp");const kr=k&&KP.open?k.getBoundingClientRect():null;return kr&&kr.height?Math.round(kr.top):null;})()]);
+    const own=performance.now()-OWN_SCROLL_AT<400;
+    if(Math.abs(scrollY-lastY)>250&&!own&&!(FG&&FG.user)&&!(kpm&&KPG&&KPG.user))ft.jump=true;lastY=scrollY;};
   const onS=e=>{if(ft.scrolls.length<220)ft.scrolls.push([Math.round(performance.now()-t0),!e||e.target===window||e.target===document?"w":"vv:"+e.type,Math.round(scrollY),vv?Math.round(vv.offsetTop):null,vv?Math.round(vv.height):null]);};
   window.addEventListener("scroll",onS,{passive:true});if(vv){vv.addEventListener("scroll",onS);vv.addEventListener("resize",onS);}
   snap();const iv=setInterval(snap,100);
@@ -1050,7 +1055,7 @@ function startFocusTrace(el){
     // A jump was caught — send the trace along right away (once per app start).
     if(ft.jump&&!TRACE_UPLOADED&&SETTINGS.ghToken){TRACE_UPLOADED=true;setTimeout(()=>githubBackup(),300);}
   };
-  const tt=setTimeout(end,4000);FT_END=end;
+  const tt=setTimeout(end,ms||4000);FT_END=end;
 }
 /* Safety net for "the page jumps away from the box I'm typing in": once the
    keyboard has settled, if that box is out of sight on two checks in a row and
@@ -1722,6 +1727,7 @@ function renderSession(){
   });
   html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button>${cardioFinisherHtml()}<div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
   document.body.classList.add("in-session");
+  traceNote("render");
   app.innerHTML=html;tickClock();attachDragHandlers();initExImg();kpAfterRender();
 }
 
@@ -3346,6 +3352,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)scheduleDo
 const useKp=()=>!SETTINGS.sysKeyboard;
 function kpCell(i,j,f,inner){return useKp()?`<div class="cellw" data-i="${i}" data-j="${j}" data-f="${f}" onclick="kpTap(${i},${j},'${f}')">${inner}</div>`:inner;}
 let KP={open:false,i:-1,j:-1,f:"reps",fresh:false};
+let KP_BLOCK_CLICK=0;
 const kpInput=()=>KP.open?document.getElementById((KP.f==="weight"?"w-":"r-")+KP.i+"-"+KP.j):null;
 function kpCellsOf(i){const out=[];const name=CUR&&CUR.order[i];if(!name||!CUR.ex[name])return out;const n=CUR.ex[name].sets.length;
   for(let j=0;j<n;j++){out.push([j,"weight"]);if(SETTINGS.logReps)out.push([j,"reps"]);}return out;}
@@ -3372,10 +3379,13 @@ function kpTap(i,j,f){
   const k=document.getElementById("kp");if(k)k.setAttribute("aria-hidden","false");
   kpMark();kpLabel();kpSetVar();
   placeDock();
+  const inp=kpInput();if(inp)startFocusTrace(inp,9000);
+  KPG={user:false,fixes:0,t0:performance.now()};
   kpReveal();
 }
 function kpClose(){
   if(!KP.open)return;
+  traceNote("close");
   const prev=Object.assign({},KP);KP.open=false;
   kpLeave(prev,null);
   document.querySelectorAll(".cellw.kp-active").forEach(c=>c.classList.remove("kp-active"));
@@ -3396,23 +3406,46 @@ function kpKey(k){
   if(k==="del"){v=KP.fresh?"":v.slice(0,-1);}
   else if(k==="."){if(KP.f!=="weight")return;if(KP.fresh||v==="")v="0.";else if(!v.includes("."))v+=".";}
   else{const max=KP.f==="weight"?6:3;if(v.length>=max)return;v=(v==="0"&&k!==".")?k:v+k;}
-  KP.fresh=false;
+  KP.fresh=false;traceNote("key",k);
   el.value=v;
   setVal(KP.i,KP.j,KP.f,v);
 }
-// One scroll, only if the box is hidden or low, to put it near the top of the clear area.
+// The clear strip between the sticky header and the pad (or the rest timer
+// sitting on top of it), measured from where they really are on screen.
+function kpClearArea(){
+  const sh=app.querySelector(".shead");const T=(sh?Math.max(0,sh.getBoundingClientRect().bottom):0)+8;
+  const k=document.getElementById("kp");const kr=k?k.getBoundingClientRect():null;
+  let B=kr&&kr.height?Math.min(kr.top,window.innerHeight):window.innerHeight;
+  const vv=window.visualViewport;if(vv)B=Math.min(B,vv.offsetTop+vv.height);
+  const dk=document.getElementById("dock");if(dk&&dk.classList.contains("up")){const t=dk.firstElementChild.getBoundingClientRect().top;if(t>T+60)B=Math.min(B,t);}
+  return {T,B:B-10};
+}
+// One instant scroll, only if the box is hidden or low, to put it near the top of the clear area.
 function kpReveal(){
   requestAnimationFrame(()=>{
-    const el=kpInput();if(!el)return;const r=el.getBoundingClientRect();
-    const sh=app.querySelector(".shead");const T=(sh?sh.getBoundingClientRect().bottom:0)+8;
-    const k=document.getElementById("kp");let B=window.innerHeight-(k?k.offsetHeight:0);
-    const dk=document.getElementById("dock");if(dk&&dk.classList.contains("up")){const t=dk.firstElementChild.getBoundingClientRect().top;if(t>0)B=Math.min(B,t);}
-    B-=10;
+    const el=kpInput();if(!el)return;const r=el.getBoundingClientRect();const {T,B}=kpClearArea();
     if(r.top>=T&&r.bottom<=B&&r.top<=T+(B-T)*0.7)return;
-    const want=T+(B-T)*0.18;
-    window.scrollBy({top:Math.round(r.top-want),behavior:"smooth"});
+    window.scrollBy(0,Math.round(r.top-(T+(B-T)*0.18)));
   });
 }
+/* Keep the box in sight while the pad is open. If anything moves the page
+   (iOS, a late re-layout) and you're not touching it yourself, put the box
+   straight back. Each correction is recorded in the trace. */
+let KPG=null;
+document.addEventListener("touchmove",e=>{if(KP.open&&KPG&&!(e.target.closest&&e.target.closest(".kp")))KPG.user=true;},{passive:true,capture:true});
+function kpGuard(){
+  if(!KP.open||!KPG||KPG.user||KPG.fixes>=8)return;
+  const el=kpInput();if(!el)return;const r=el.getBoundingClientRect();if(!r.height)return;
+  const {T,B}=kpClearArea();if(B-T<r.height+20)return;
+  if(r.top>=T-4&&r.bottom<=B+4)return;
+  KPG.fixes++;const want=T+(B-T)*0.18;
+  traceNote("guard","kp",Math.round(r.top),Math.round(T),Math.round(B),Math.round(scrollY),window.innerHeight);
+  window.scrollBy(0,Math.round(r.top-want));
+}
+window.addEventListener("scroll",()=>{if(KP.open)requestAnimationFrame(kpGuard);},{passive:true});
+window.addEventListener("resize",()=>{if(KP.open){kpSetVar();requestAnimationFrame(kpGuard);}});
+if(window.visualViewport)visualViewport.addEventListener("resize",()=>{if(KP.open)requestAnimationFrame(kpGuard);});
+setInterval(()=>{if(KP.open)kpGuard();},250);
 function kpAfterRender(){
   if(!KP.open)return;
   if(!kpInput()){kpClose();return;}
@@ -3420,8 +3453,14 @@ function kpAfterRender(){
 }
 (function(){
   const k=document.getElementById("kp");if(!k)return;
-  const press=e=>{const b=e.target.closest&&e.target.closest("button[data-k]");if(!b)return;e.preventDefault();b.classList.add("p");setTimeout(()=>b.classList.remove("p"),110);kpKey(b.dataset.k);};
+  const press=e=>{const b=e.target.closest&&e.target.closest("button[data-k]");if(!b)return;e.preventDefault();b.classList.add("p");setTimeout(()=>b.classList.remove("p"),110);kpKey(b.dataset.k);
+    // The pad vanishes on the press, so the rest of this same tap (its click)
+    // would land on whatever was underneath — an exercise header, "+ Add
+    // exercise", "Finish" — and throw the page somewhere else. Swallow it.
+    if(!KP.open)KP_BLOCK_CLICK=performance.now()+700;};
   k.addEventListener("pointerdown",press);
+  document.addEventListener("click",e=>{if(KP_BLOCK_CLICK&&performance.now()<KP_BLOCK_CLICK){KP_BLOCK_CLICK=0;e.preventDefault();e.stopPropagation();traceNote("ghost",(e.target.className||e.target.tagName||"").toString().slice(0,30));}},true);
+  document.addEventListener("touchend",e=>{if(KP_BLOCK_CLICK&&performance.now()<KP_BLOCK_CLICK)e.preventDefault();},{capture:true,passive:false});
   k.addEventListener("contextmenu",e=>e.preventDefault());
   // A tap anywhere else closes the pad (logs the set). Scrolls never reach pointerup.
   document.addEventListener("pointerup",e=>{if(!KP.open)return;const t=e.target;if(t.closest&&t.closest(".kp,.cellw,.timer-dock"))return;kpClose();},true);
