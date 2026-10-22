@@ -1,5 +1,8 @@
-const CACHE = "gym-buddy-v119";
+const CACHE = "gym-buddy-v120";
 const IMG_CACHE = "gym-buddy-exercise-img-v2";
+// Small notes the page leaves for the service worker (when the "still working
+// out?" nudge is due, when the current rest ends). Kept across versions.
+const META_CACHE = "gym-buddy-meta";
 const IMG_PATH = "/Gym-buddy/img/exercises/";
 const ASSETS = ["./", "./index.html", "./manifest.json"];
 
@@ -11,7 +14,7 @@ self.addEventListener("install", (e) => {
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE && k !== IMG_CACHE).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k !== CACHE && k !== IMG_CACHE && k !== META_CACHE).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();
@@ -99,15 +102,38 @@ function fireNotification(label) {
   });
 }
 
-// Web Push from the rest-timer worker (no payload): show the rest-is-up notification.
+// Web Push from the push worker. Pushes carry no payload, so which one this is
+// comes from the notes the page left: a rest ending right now wins; otherwise,
+// if the "still working out?" nudge is due, it's that one.
+async function readMeta(key) {
+  try { const c = await caches.open(META_CACHE); const r = await c.match(key); return r ? await r.json() : null; } catch (e) { return null; }
+}
+async function pushKind() {
+  const now = Date.now();
+  const rest = await readMeta("/__rest");
+  if (rest && rest.restAt && Math.abs(now - rest.restAt) < 90000) return { type: "rest" };
+  const idle = await readMeta("/__idle");
+  if (idle && idle.idleAt && now >= idle.idleAt - 120000 && now <= idle.idleAt + 6 * 3600000) return Object.assign({ type: "idle" }, idle);
+  return { type: "rest" };
+}
 self.addEventListener("push", (e) => {
   e.waitUntil(
-    self.registration.showNotification("Rest is up 💪", {
-      body: "Time for your next set.",
-      icon: "icon-192.png",
-      badge: "icon-192.png",
-      tag: "rest-timer",
-      renotify: true,
+    pushKind().then((k) => {
+      if (k.type === "idle")
+        return self.registration.showNotification("Still working out?", {
+          body: `Nothing logged since ${k.lastLabel || "a while"}. Tap to finish — the workout will end at ${k.endLabel || "your last set + 5 min"}.`,
+          icon: "icon-192.png",
+          badge: "icon-192.png",
+          tag: "idle-nudge",
+          renotify: true,
+        });
+      return self.registration.showNotification("Rest is up 💪", {
+        body: "Time for your next set.",
+        icon: "icon-192.png",
+        badge: "icon-192.png",
+        tag: "rest-timer",
+        renotify: true,
+      });
     })
   );
 });

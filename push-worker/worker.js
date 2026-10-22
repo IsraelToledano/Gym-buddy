@@ -6,6 +6,11 @@
 // the notification arrives even if the phone is locked or the app is closed.
 // /cancel clears a pending alarm (rest skipped/done early).
 //
+// Two independent timers per device, by "kind": "rest" (the default — what
+// older app versions send) and "idle" (the "still working out?" nudge 30 min
+// after the last logged set). A Durable Object has a single alarm, so it is
+// set to whichever timer is due first and re-armed after each one fires.
+//
 // The push has no payload (the app's service worker shows a fixed "Rest is up"
 // notification), so only VAPID signing is needed, not payload encryption.
 // The VAPID key pair is generated on first use and stored inside Cloudflare
@@ -43,7 +48,7 @@ export default {
         const r = await stub.fetch("https://do" + url.pathname, { method: "POST", body: JSON.stringify(body) });
         return json(await r.json(), r.status, origin);
       }
-      if (url.pathname === "/") return json({ ok: true, service: "gym-buddy-push" }, 200, origin);
+      if (url.pathname === "/") return json({ ok: true, service: "gym-buddy-push", kinds: ["rest", "idle"] }, 200, origin);
       return json({ error: "not found" }, 404, origin);
     } catch (e) {
       return json({ error: String(e && e.message || e) }, 500, origin);
@@ -60,15 +65,23 @@ export class RestTimer {
     const path = new URL(req.url).pathname;
     if (path === "/keys") return Response.json(await this.getOrCreateKeys());
     const body = await req.json();
+    const kind = body.kind === "idle" ? "idle" : "rest";
     if (path === "/schedule") {
-      const delay = Math.max(1000, Math.min(15 * 60 * 1000, Number(body.delayMs) || 0));
+      const cap = kind === "idle" ? 6 * 3600 * 1000 : 15 * 60 * 1000;
+      const delay = Math.max(1000, Math.min(cap, Number(body.delayMs) || 0));
       await this.state.storage.put("sub", body.sub);
-      await this.state.storage.setAlarm(Date.now() + delay);
-      return Response.json({ ok: true, at: Date.now() + delay });
+      const timers = await this.timers();
+      timers[kind] = Date.now() + delay;
+      await this.state.storage.put("timers", timers);
+      await this.rearm(timers);
+      return Response.json({ ok: true, at: timers[kind], kind });
     }
     if (path === "/cancel") {
-      await this.state.storage.deleteAlarm();
-      return Response.json({ ok: true });
+      const timers = await this.timers();
+      delete timers[kind];
+      await this.state.storage.put("timers", timers);
+      await this.rearm(timers);
+      return Response.json({ ok: true, kind });
     }
     if (path === "/test") {
       const res = await sendPush(body.sub, await this.vapidKeys());
@@ -77,9 +90,29 @@ export class RestTimer {
     return Response.json({ error: "not found" }, { status: 404 });
   }
 
+  async timers() { return (await this.state.storage.get("timers")) || {}; }
+
+  async rearm(timers) {
+    const ats = Object.values(timers);
+    if (ats.length) await this.state.storage.setAlarm(Math.min(...ats));
+    else await this.state.storage.deleteAlarm();
+  }
+
   async alarm() {
     const sub = await this.state.storage.get("sub");
     if (!sub) return;
+    const stored = await this.state.storage.get("timers");
+    let send = true;
+    if (stored) {
+      // Fire whatever is due now (one push even if both are), keep the rest armed.
+      const now = Date.now();
+      const due = Object.keys(stored).filter((k) => stored[k] <= now + 1500);
+      due.forEach((k) => delete stored[k]);
+      await this.state.storage.put("timers", stored);
+      await this.rearm(stored);
+      send = due.length > 0;
+    } // no timers map: an alarm armed before the multi-timer version — just send it
+    if (!send) return;
     const res = await sendPush(sub, await this.vapidKeys());
     // 404/410: the subscription is gone (permission revoked / app removed) — forget it.
     if (res.status === 404 || res.status === 410) await this.state.storage.delete("sub");

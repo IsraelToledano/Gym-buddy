@@ -1017,7 +1017,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v119";
+const APP_VERSION="v120";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -2043,7 +2043,7 @@ async function startCardioLive(attachDay){
   // constant through the session — so history can splice it in where it
   // actually happened rather than always at the end.
   const doneCount=attachedToLiveSession?CUR.order.filter(n=>{const log=CUR.ex[n];const d=NAME_INDEX[n];return log.skipped||log.sets.filter(s=>setComplete(d,s)).length===log.sets.length;}).length:null;
-  if(attachedToLiveSession)markSessionStarted();
+  if(attachedToLiveSession){markSessionStarted();touchActivity();}
   CARDIO_LIVE={startedAt:Date.now(),type,rpe:type==="Tennis"?null:(rpeBtn?parseInt(rpeBtn.dataset.v,10):null),day:attachDay,sessionStart:attachedToLiveSession?CUR.start:null,seqIndex:doneCount};
   await sset("cardioLive",CARDIO_LIVE);
   closeOverlay();renderCardioBar();
@@ -2100,6 +2100,9 @@ async function saveCardioFinish(skipDetails){
     const rpeBtn=document.querySelector("#cdRpe button.sel");rpe=rpeBtn?parseInt(rpeBtn.dataset.v,10):rpe;
   }
   if(type==="Tennis"){floors=null;hr=null;rpe=null;} // duration is the only metric for tennis
+  // Cardio done as part of the workout counts as activity up to when it ended
+  // (its start + the minutes you confirm), not when you got round to saving it.
+  if(CUR&&CARDIO_LIVE.sessionStart!=null&&CARDIO_LIVE.sessionStart===CUR.start){touchActivity(Math.min(Date.now(),CARDIO_LIVE.startedAt+durMin*60000));saveCur();}
   CARDIO.push({date:Date.now(),type,duration:durMin,hr,rpe,floors,day:CARDIO_LIVE.day,sessionStart:CARDIO_LIVE.sessionStart,seqIndex:CARDIO_LIVE.seqIndex});
   await sset("cardio",CARDIO);
   CARDIO_LIVE=null;await sset("cardioLive",null);
@@ -2304,7 +2307,7 @@ function setVal(i,j,f,v){const name=CUR.order[i];const ex=NAME_INDEX[name];const
     markSessionStarted();pendingSet={i,j};
   }else if(!now&&pendingSet&&pendingSet.i===i&&pendingSet.j===j)pendingSet=null;
   sets.forEach((st,k)=>{const r=document.getElementById("row-"+i+"-"+k);if(r)r.classList.toggle("set-done",setComplete(ex,st));});
-  refreshExHead(i);updateProgress();scheduleSave();
+  refreshExHead(i);updateProgress();touchActivity();scheduleSave();
   scheduleVolBarsRefresh(i,name);
   if(was&&now&&!CUR.ex[name].skipped&&CUR.ex[name].highlight){
     // Editing a set that was already complete (e.g. bumping reps up after the
@@ -2330,7 +2333,7 @@ function refreshExHead(i){const name=CUR.order[i];const ex=NAME_INDEX[name];cons
 function toggleSkipEx(i){
   const name=CUR.order[i];const log=CUR.ex[name];
   log.skipped=!log.skipped;
-  saveCur();
+  touchActivity();saveCur();
   if(log.skipped)collapseAndAdvance(i,"skip");else renderSession();
 }
 function isHandledEx(name){
@@ -2525,7 +2528,7 @@ function effortHtml(i){
     <div class="ef-note">Today only — your saved routine stays at ${NAME_INDEX[e.name].sets} sets.</div>
   </div>`;
 }
-function addSet(i){const name=CUR.order[i];const sets=CUR.ex[name].sets;const last=sets[sets.length-1];sets.push({weight:last?last.weight:"",reps:"",ph:last?last.ph:"–",phReps:last?last.phReps:""});saveCur();renderSession();}
+function addSet(i){touchActivity();const name=CUR.order[i];const sets=CUR.ex[name].sets;const last=sets[sets.length-1];sets.push({weight:last?last.weight:"",reps:"",ph:last?last.ph:"–",phReps:last?last.phReps:""});saveCur();renderSession();}
 function removeSet(i,j){const name=CUR.order[i];CUR.ex[name].sets.splice(j,1);saveCur();renderSession();}
 
 /* ---------------- drag-to-reorder ---------------- */
@@ -2642,7 +2645,7 @@ async function swapTo(i,newName){const name=CUR.order[i];const oldDef=NAME_INDEX
   if(CUR.ex[name].sets.some(s=>setComplete(oldDef,s))){const ok=await showConfirm(`Swap to ${newName}? Sets already logged for ${name} this session will be cleared.`);if(!ok)return;}
   const def=NAME_INDEX[newName];const prev=lastLog(newName);
   const nSets=Math.max(def.sets,0,(oldDef&&oldDef.sets)||0);
-  CUR.order[i]=newName;CUR.swapOf=CUR.swapOf||{};CUR.swapOf[newName]=CUR.swapOf[name]||name;delete CUR.ex[name];
+  touchActivity();CUR.order[i]=newName;CUR.swapOf=CUR.swapOf||{};CUR.swapOf[newName]=CUR.swapOf[name]||name;delete CUR.ex[name];
   CUR.ex[newName]={sets:Array.from({length:nSets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
   saveCur();renderSession();}
 async function openSwap(i){
@@ -2655,7 +2658,7 @@ async function openSwap(i){
   if(hasLogged){const ok=await showConfirm(`Swap to ${newName}? Sets already logged for ${name} this session will be cleared.`);if(!ok)return;}
   const def=NAME_INDEX[newName];const prev=lastLog(newName);
   const nSets=Math.max(def.sets,0,(oldDef&&oldDef.sets)||0);
-  CUR.order[i]=newName;
+  touchActivity();CUR.order[i]=newName;
   CUR.swapOf=CUR.swapOf||{};CUR.swapOf[newName]=CUR.swapOf[name]||name;
   delete CUR.ex[name];
   CUR.ex[newName]={sets:Array.from({length:nSets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
@@ -2741,7 +2744,7 @@ function addFromLibrary(name){
   const def=NAME_INDEX[name];if(!def)return;
   const have=CUR.order.indexOf(name);
   if(have>=0){closeOverlay();setOpenIdx(have);renderSession();scrollExToTop(have,false);return;} // already in today's list — open it instead of adding a second copy
-  CUR.order.push(name);CUR.added=(CUR.added||[]).concat(name);
+  CUR.order.push(name);CUR.added=(CUR.added||[]).concat(name);touchActivity();
   const prev=lastLog(name);
   CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
   closeOverlay();saveCur();renderSession();
@@ -2829,7 +2832,7 @@ async function finishSession(){
       return;
     }
   }
-  CUR.date=Date.now();const rec={day:CUR.day,date:CUR.date,start:(CUR.start==null?CUR.date:CUR.start),exOrder:CUR.order.slice(),ex:{}};let done=0,total=0,skipped=0;
+  CUR.date=sessionEndAt();disarmIdle();const rec={day:CUR.day,date:CUR.date,start:(CUR.start==null?CUR.date:CUR.start),exOrder:CUR.order.slice(),ex:{}};let done=0,total=0,skipped=0;
   const highlights=[];
   CUR.order.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];const sets=log.sets.map(s=>({weight:s.weight,reps:s.reps}));rec.ex[name]={sets,skipped:!!log.skipped};const d=log.sets.filter(s=>setComplete(ex,s)).length;done+=d;total+=sets.length;if(d===0)skipped++;
     if(log.highlight&&!log.skipped)highlights.push(Object.assign({muscle:ex.m,name},log.highlight));});
@@ -3020,7 +3023,7 @@ async function manualBackup(btn){
   await githubBackup();
   renderHome();
 }
-async function discardSession(){if(!(await showConfirm("Discard this session? Logged sets won't be saved.")))return;removeExToast();CUR=null;sset("current",null);renderHome();}
+async function discardSession(){if(!(await showConfirm("Discard this session? Logged sets won't be saved.")))return;removeExToast();disarmIdle();CUR=null;sset("current",null);renderHome();}
 function saveCur(){sset("current",CUR);}
 
 /* ---------------- backup ---------------- */
@@ -3172,6 +3175,7 @@ function armSwAlert(sec,label){
 // land out of order (a late /cancel would otherwise kill the new schedule).
 let pushSeq=0;
 function scheduleBgAlert(sec,label){
+  swMeta("/__rest",{restAt:Date.now()+sec*1000});
   if(!SETTINGS.pushSub){armSwAlert(sec,label);return;}
   const seq=++pushSeq;
   pushPost("/cancel",{sub:SETTINGS.pushSub})
@@ -3197,6 +3201,7 @@ function scheduleBgAlert(sec,label){
     });
 }
 function cancelBgAlert(){
+  swMeta("/__rest",{restAt:0});
   if(swReady())navigator.serviceWorker.controller.postMessage({type:"cancel-rest-alert"});
   if(SETTINGS.pushSub)pushPost("/cancel",{sub:SETTINGS.pushSub}).catch(()=>{});
 }
@@ -3521,6 +3526,60 @@ function fireAlert(){initAudio();if(SETTINGS.alert!=="visual"){try{navigator.vib
   if(SETTINGS.alert==="sound_vibe"&&!chimePlayed)beep();
   stopKeepAlive();}
 
+/* ---------------- forgotten "Finish" ----------------
+   Every logged set (or skip, swap, added exercise, cardio) stamps
+   CUR.lastAct. A workout ends at that last activity + 5 min, whenever you
+   actually tap Finish — time after that never counts. 30 min after the last
+   activity you get a "still working out?" notification (via the push worker,
+   which keeps it separate from the rest alert), and opening the app after
+   that asks whether to finish. */
+const IDLE_MS=30*60*1000,END_PAD_MS=5*60*1000;
+const hhmm=t=>new Date(t).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+function sessionEndAt(){
+  const now=Date.now();if(!CUR||!CUR.lastAct)return now;
+  if(CARDIO_LIVE&&CARDIO_LIVE.sessionStart!=null&&CARDIO_LIVE.sessionStart===CUR.start)return now;
+  return Math.min(now,Math.max(CUR.lastAct+END_PAD_MS,CUR.start||0));
+}
+function swMeta(key,obj){try{if(!("caches" in window))return;caches.open("gym-buddy-meta").then(c=>c.put(key,new Response(JSON.stringify(obj),{headers:{"Content-Type":"application/json"}}))).catch(()=>{});}catch(e){}}
+let IDLE_BASE=0,PUSH_KINDS=null,idleChain=Promise.resolve();
+async function pushKinds(){
+  if(PUSH_KINDS)return PUSH_KINDS;
+  try{const j=await (await fetch(PUSH_URL+"/",{cache:"no-store"})).json();PUSH_KINDS=Array.isArray(j.kinds)?j.kinds:["rest"];}catch(e){return [];}
+  return PUSH_KINDS;
+}
+function touchActivity(t){
+  if(!CUR)return;const at=t||Date.now();
+  if(!CUR.lastAct||at>CUR.lastAct)CUR.lastAct=at;
+  if(CUR.start!=null&&CUR.lastAct-IDLE_BASE>60000)armIdle();
+}
+function armIdle(){
+  if(!CUR||!CUR.lastAct)return;IDLE_BASE=CUR.lastAct;
+  const at=CUR.lastAct+IDLE_MS;
+  swMeta("/__idle",{idleAt:at,lastLabel:hhmm(CUR.lastAct),endLabel:hhmm(CUR.lastAct+END_PAD_MS)});
+  if(!SETTINGS.pushSub)return;
+  idleChain=idleChain.then(async()=>{const k=await pushKinds();if(!k.includes("idle")||!SETTINGS.pushSub)return;
+    await pushPost("/schedule",{sub:SETTINGS.pushSub,kind:"idle",delayMs:Math.max(1000,at-Date.now())});}).catch(()=>{});
+}
+function disarmIdle(){
+  IDLE_BASE=0;swMeta("/__idle",{idleAt:0});
+  if(!SETTINGS.pushSub)return;
+  idleChain=idleChain.then(async()=>{const k=await pushKinds();if(!k.includes("idle")||!SETTINGS.pushSub)return;
+    await pushPost("/cancel",{sub:SETTINGS.pushSub,kind:"idle"});}).catch(()=>{});
+}
+let idleAsking=false;
+async function checkIdle(){
+  if(!CUR||!CUR.lastAct||idleAsking||CUR.start==null)return;
+  if(Date.now()-CUR.lastAct<IDLE_MS||CUR.idleAsked===CUR.lastAct)return;
+  if(CARDIO_LIVE&&CARDIO_LIVE.sessionStart===CUR.start)return;
+  if(document.getElementById("modalMount").firstElementChild||document.getElementById("overlayMount").firstElementChild)return;
+  idleAsking=true;
+  const ok=await showConfirm(`Nothing logged since ${hhmm(CUR.lastAct)}. Finish the workout? It'll be saved as ending at ${hhmm(sessionEndAt())} — the time after that won't count.`,{okLabel:"Finish workout",cancelLabel:"Keep going"});
+  idleAsking=false;
+  if(!CUR)return;
+  if(ok)finishSession();else{CUR.idleAsked=CUR.lastAct;saveCur();}
+}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")setTimeout(checkIdle,700);});
+
 /* ---------------- wake lock ---------------- */
 let wakeLock=null;
 async function requestWake(){try{if("wakeLock" in navigator)wakeLock=await navigator.wakeLock.request("screen");}catch(e){}}
@@ -3611,7 +3670,7 @@ const verEl=document.getElementById("verBadge");if(verEl)verEl.textContent=APP_V
     else CUR=null;
   }
   if(CUR)tidyCur();
-  if(CUR){openIdx=(CUR.openIdx!=null&&CUR.openIdx>=-1&&CUR.order&&CUR.openIdx<CUR.order.length)?CUR.openIdx:nextOpenIdx();renderSession();requestWake();}else renderHome();
+  if(CUR){openIdx=(CUR.openIdx!=null&&CUR.openIdx>=-1&&CUR.order&&CUR.openIdx<CUR.order.length)?CUR.openIdx:nextOpenIdx();renderSession();requestWake();setTimeout(checkIdle,1200);}else renderHome();
   renderCardioBar();
 })();
 </script>
