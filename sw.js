@@ -1,4 +1,4 @@
-const CACHE = "gym-buddy-v120";
+const CACHE = "gym-buddy-v121";
 const IMG_CACHE = "gym-buddy-exercise-img-v2";
 // Small notes the page leaves for the service worker (when the "still working
 // out?" nudge is due, when the current rest ends). Kept across versions.

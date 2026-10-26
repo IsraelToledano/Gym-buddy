@@ -177,6 +177,8 @@
      row is identifiable while scrolling without opening it or reading the
      banner. Hidden once the exercise is done or skipped. */
   .ex.haspri .rank::after{content:"";position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--red);border:2px solid var(--bg);box-shadow:0 0 0 1px rgba(224,112,62,.5)}
+  .ex.haspri.pri2 .rank::after{width:21px;height:11px;border:none;border-radius:6px;top:-4px;right:-11px;box-shadow:none;
+    background:radial-gradient(circle at 5.5px 5.5px,var(--red) 0 3.8px,transparent 4.3px),radial-gradient(circle at 15.5px 5.5px,var(--red) 0 3.8px,transparent 4.3px),var(--bg)}
   .ex.haspri.done .rank::after,.ex.haspri.uskip .rank::after{display:none}
   /* A finished priority keeps its red dot, now carrying a check. */
   .ex.pridone .rank::after{content:"✓";position:absolute;top:-6px;right:-6px;width:14px;height:14px;border-radius:50%;background:var(--red);color:#fff;border:2px solid var(--bg);font-family:'Manrope',sans-serif;font-size:9px;font-weight:800;line-height:14px;text-align:center;display:block;box-shadow:0 0 0 1px rgba(224,112,62,.5)}
@@ -396,6 +398,16 @@
   .tg.carry{background:rgba(150,130,220,.16);color:var(--violet);border:1px solid rgba(150,130,220,.45)}
   .ex.carryrow .ex-btn{border-style:dashed;border-color:rgba(150,130,220,.6);background:rgba(150,130,220,.10)}
   .ex.prirow .ex-btn{border-style:solid;border-color:var(--red)}
+  .ex.prirow1 .ex-btn{border-style:solid;border-color:rgba(224,112,62,.45)}
+  .tg.pri.lo{background:transparent;border-color:rgba(224,112,62,.35)}
+  .nudge-ic{flex:none}
+  .pdots{display:inline-flex;gap:3px;padding-top:4px}
+  .pdots i{width:8px;height:8px;border-radius:50%;background:var(--red);display:block}
+  .nudge.pri.pri1 .pg-head b{color:var(--ink-dim)}
+  .nudge.pri .pg-line b{color:var(--ink)}
+  .pg-head{margin-bottom:5px}
+  .pg-line{display:flex;gap:8px;align-items:flex-start;margin-top:4px}
+  .pg-line .pdots{min-width:19px;padding-top:6px}
   .tg.pri{background:rgba(224,112,62,.16);color:var(--red);border:1px solid rgba(224,112,62,.45)}
   .nudge.pri{background:var(--card);border-color:var(--line)}
   .nudge.pri b{color:var(--red)}
@@ -927,6 +939,7 @@ function computeAlerts(){
     // volume for the week (made up elsewhere already = no alert).
     const vol=weeklyVolume(),pv=planVolume();
     for(const m in skipped){if(todayMus[m]&&pv[m]&&(vol[m]||0)<pv[m].man)out.priority.push({muscle:m,skipped:skipped[m],today:todayMus[m],v:Math.round(vol[m]||0),man:pv[m].man});}
+    rankPriorities(out.priority);
     // stretch: every optional exercise today whose muscle is still below the plan's
     // full volume (most-behind first) — not just one.
     const stretch=[];
@@ -938,8 +951,53 @@ function computeAlerts(){
   }
   return out;
 }
-function alertHtml(kind,k,text,muscle){const id=kind+k,open=NUDGE_OPEN_SET.has(id);
-  return `<div class="nudge ${kind}" role="button" onclick="toggleAlert('${id}')"><span>${kind==="pri"?"🔴":"✱"}</span><div style="flex:1"><div>${text}</div><div class="nudge-detail" id="al-${id}"${open?"":" hidden"}>${muscleWeekHtml(muscle)}</div></div><span class="nudge-chev" id="alc-${id}">${open?"▴":"▾"}</span></div>`;}
+/* Priority within priority. Every muscle that's behind this week is a
+   priority, but they aren't equal:
+     ●● must today — the next routine in the A1→B1→A2→B2 rotation doesn't
+        train this muscle enough to close the gap, so skipping it again
+        leaves it behind for longer;
+     ●  can wait   — the next routine has enough sets for this muscle to
+        close the gap on its own, so it's OK to skip these again today.
+   Within a ●● muscle only the exercises needed to close the gap get ●●
+   (in list order); any beyond that are ●. */
+const ROT=["A1","B1","A2","B2"];
+function manSetsOn(day,m){const p=PLAN[day];if(!p)return 0;return p.ex.reduce((a,e,k)=>a+(e.m===m&&(k<optFrom(day)||e.main)?e.sets:0),0);}
+function nextTrainedOn(m,from){const i=ROT.indexOf(from);if(i<0)return null;for(let k=1;k<=ROT.length;k++){const d=ROT[(i+k)%ROT.length];const n=manSetsOn(d,m);if(n)return{day:d,k,sets:n};}return null;}
+function rankPriorities(list){
+  const i=ROT.indexOf(CUR.day),nd=i>=0?ROT[(i+1)%ROT.length]:null;
+  list.forEach(p=>{
+    const gap=Math.max(0,p.man-p.v);const ns=nd?manSetsOn(nd,p.muscle):0;
+    Object.assign(p,{gap,nextDay:nd,nextSets:ns,nextOn:nextTrainedOn(p.muscle,CUR.day),level:ns>=gap?1:2,levels:{}});
+    let need=p.level===2?gap:0;
+    p.today.forEach(n=>{const e=NAME_INDEX[n],lg=CUR.ex[n];const left=lg&&!lg.skipped?lg.sets.filter(x=>!setComplete(e,x)).length:0;
+      if(need>0&&left>0){p.levels[n]=2;need-=left;}else p.levels[n]=1;});
+  });
+  list.sort((a,b)=>b.level-a.level||(a.v/a.man)-(b.v/b.man));
+}
+function priInfo(name){if(!CUR)return null;const p=computeAlerts().priority.find(p=>p.today.includes(name));return p?{p,lvl:p.levels[name]||1}:null;}
+const priDots=n=>`<span class="pdots">${'<i></i>'.repeat(n)}</span>`;
+function priLiveNames(p,lvl){const live=p.today.filter(n=>{const lg=CUR.ex[n],e=NAME_INDEX[n];return lg&&!lg.skipped&&lg.sets.some(x=>!setComplete(e,x));});
+  const pick=live.filter(n=>(p.levels[n]||1)===lvl);return pick.length?pick:live;}
+// Two grouped boxes at the top: what must happen today and why, and what can
+// wait and why. One line per muscle.
+function priGroupsHtml(list){
+  let html="";const two=list.filter(p=>p.level===2),one=list.filter(p=>p.level===1);
+  const nd=list.length?list[0].nextDay:null;
+  if(two.length){
+    const lines=two.map(p=>{const m=p.muscle.toLowerCase();
+      const why=p.nextSets?`${p.nextDay} has only ${p.nextSets} of the ${p.gap} sets you're short`:(p.nextOn?`next chance ${p.nextOn.day}, ${p.nextOn.k} workout${p.nextOn.k>1?"s":""} away`:"not in your next routine");
+      return `<div class="pg-line">${priDots(2)}<span><b>${priLiveNames(p,2).map(esc).join(", ")}</b> · ${esc(m)} ${p.v}/${p.man} — ${why}</span></div>`;}).join("");
+    html+=alertHtml("pri pri2",0,`<div class="pg-head"><b>Must today</b> — ${nd?`${nd}, next in your rotation, doesn't make up for these:`:"behind this week, and your next routine doesn't make up for them:"}</div>${lines}`,two.map(p=>p.muscle),"",`<div class="nw-row">${two.map(p=>`${esc(p.muscle)}: skipped ${p.skipped.map(x=>`${esc(x.name)} (${x.day}, ${fmtDate(x.date).replace(/^\w+, /,"")})`).join(", ")}`).join("<br>")}</div>`);
+  }
+  if(one.length){
+    const lines=one.map(p=>{const m=p.muscle.toLowerCase();
+      return `<div class="pg-line">${priDots(1)}<span><b>${priLiveNames(p,1).map(esc).join(", ")}</b> · ${esc(m)} ${p.v}/${p.man} — ${p.nextDay} has ${p.nextSets} ${esc(m)} sets</span></div>`;}).join("");
+    html+=alertHtml("pri pri1",1,`<div class="pg-head"><b>Can wait</b> — ${nd} closes these gaps on its own, so it's OK to skip them again today:</div>${lines}`,one.map(p=>p.muscle),"",`<div class="nw-row">${one.map(p=>`${esc(p.muscle)}: skipped ${p.skipped.map(x=>`${esc(x.name)} (${x.day}, ${fmtDate(x.date).replace(/^\w+, /,"")})`).join(", ")}`).join("<br>")}</div>`);
+  }
+  return html;
+}
+function alertHtml(kind,k,text,muscle,icon,extra){const id=kind.split(" ")[0]+k,open=NUDGE_OPEN_SET.has(id);
+  return `<div class="nudge ${kind}" role="button" onclick="toggleAlert('${id}')">${icon===""?"":`<span class="nudge-ic">${icon||(kind==="pri"?"🔴":"✱")}</span>`}<div style="flex:1"><div>${text}</div><div class="nudge-detail" id="al-${id}"${open?"":" hidden"}>${extra||""}${muscleWeekHtml(muscle)}</div></div><span class="nudge-chev" id="alc-${id}">${open?"▴":"▾"}</span></div>`;}
 const NUDGE_OPEN_SET=new Set();
 function toggleAlert(id){const d=document.getElementById("al-"+id);if(!d)return;const open=d.hidden;d.hidden=!open;if(open)NUDGE_OPEN_SET.add(id);else NUDGE_OPEN_SET.delete(id);const c=document.getElementById("alc-"+id);if(c)c.textContent=open?"▴":"▾";}
 /* Done recently out of schedule: a plan exercise you already did as an extra
@@ -1017,7 +1075,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v120";
+const APP_VERSION="v121";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -1659,8 +1717,8 @@ function renderSession(){
   // you train today was skipped earlier this week; STRETCH = the one optional
   // exercise today that adds the most toward the plan's full volume.
   const AL=computeAlerts();
-  AL.priority.forEach((p,k)=>{html+=alertHtml("pri",k,`<b>Priority · ${esc(p.muscle)} ${p.v}/${p.man}</b> must-have sets this week. Skipped: ${p.skipped.map(x=>`${esc(x.name)} (${x.day}, ${fmtDate(x.date).replace(/^\w+, /,"")})`).join(", ")}.`,p.muscle);});
-  if(AL.stretch.length){const muscles=[...new Set(AL.stretch.map(st=>st.muscle))];html+=alertHtml("str",0,`<b>Stretch goals</b> (optional) — must-haves are covered; do these if you have the energy:${AL.stretch.map(st=>`<br>✱ <b>${esc(st.name)}</b> · ${esc(st.muscle)} ${st.v}/${st.tot} → +${st.add}`).join("")}`,muscles);}
+  html+=priGroupsHtml(AL.priority);
+  if(AL.stretch.length){const muscles=[...new Set(AL.stretch.map(st=>st.muscle))];html+=alertHtml("str",0,`<b>Stretch goals</b> (optional) — ${AL.priority.some(p=>p.level===2)?"after the must-todays, ":""}do these if you have the energy:${AL.stretch.map(st=>`<br>✱ <b>${esc(st.name)}</b> · ${esc(st.muscle)} ${st.v}/${st.tot} → +${st.add}`).join("")}`,muscles);}
   html+=`<div class="list" id="exList">${cardioInlineHtml()}`;
   names.forEach((name,i)=>{
     const ex=NAME_INDEX[name];
@@ -1680,9 +1738,10 @@ function renderSession(){
     // it for the session instead, and show it as a completed priority.
     if(prioRow&&!(CUR.wasPri&&CUR.wasPri[name])){CUR.wasPri=CUR.wasPri||{};CUR.wasPri[name]=1;saveCur();}
     const priDone=!uskip&&dn===total&&total>0&&!!(CUR.wasPri&&CUR.wasPri[name]);
-    if(prioRow)cls.push("haspri");
+    const pin=prioRow?priInfo(name):null;const lvl=pin?pin.lvl:0;
+    if(prioRow)cls.push("haspri");if(lvl===2)cls.push("pri2");
     if(priDone)cls.push("pridone");
-    if(pastCap&&!priDone)cls.push(prioRow?"prirow":(carriedOver(name)?"carryrow":(recentExtra(name)?"doptrow":(isSuggestedEx(name)?"sugg":"skip"))));
+    if(pastCap&&!priDone)cls.push(prioRow?(lvl===2?"prirow":"prirow1"):(carriedOver(name)?"carryrow":(recentExtra(name)?"doptrow":(isSuggestedEx(name)?"sugg":"skip"))));
     if(uskip)cls.push("uskip");else if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
     const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');// Priority is checked BEFORE the carry/recent tags. Those two also mean
 // "you skipped this", so an exercise is routinely both — and when the chain
@@ -1690,7 +1749,9 @@ function renderSession(){
 // "optional". Priority is the stronger claim, so it wins and absorbs the
 // carry/recent context into its label instead of contradicting it.
     const prio=isPriorityEx(name)&&!(dn===total&&total>0);
-    if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(priDone){tags.push('<span class="tg pridone">✓ Priority done</span>');}else if(prio){const c=carriedOver(name)||recentExtra(name);tags.push(`<span class="tg pri">● Priority${c?` · skipped ${esc(c.day)} ${daysAgoTxt(c.date)}`:" · skipped this week"}</span>`);}else if(carriedOver(name)){const c=carriedOver(name);tags.push(`<span class="tg carry">↩ Skipped ${esc(c.day)} ${daysAgoTxt(c.date)} · optional</span>`);}else if(recentExtra(name)){const r=recentExtra(name);tags.push(`<span class="tg dopt">↺ Done ${daysAgoTxt(r.date)} (${r.day}) · optional</span>`);}else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ stretch goal</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
+    if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(priDone){tags.push('<span class="tg pridone">✓ Priority done</span>');}else if(prio){const c=carriedOver(name)||recentExtra(name);
+      if(lvl===2)tags.push(`<span class="tg pri">●● Must today${c?` · skipped ${esc(c.day)} ${daysAgoTxt(c.date)}`:" · skipped this week"}</span>`);
+      else tags.push(`<span class="tg pri lo">● Can wait${pin&&pin.p.level===1&&pin.p.nextDay?` · ${esc(pin.p.nextDay)} covers it`:" · gap covered"}</span>`);}else if(carriedOver(name)){const c=carriedOver(name);tags.push(`<span class="tg carry">↩ Skipped ${esc(c.day)} ${daysAgoTxt(c.date)} · optional</span>`);}else if(recentExtra(name)){const r=recentExtra(name);tags.push(`<span class="tg dopt">↺ Done ${daysAgoTxt(r.date)} (${r.day}) · optional</span>`);}else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ stretch goal</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
@@ -2864,7 +2925,7 @@ function askSnapshot(){
   L.push(`ua: ${navigator.userAgent}`);
   if(CUR){
     const AL=computeAlerts();
-    if(AL.priority.length)L.push(`\nPRIORITY ALERTS: ${AL.priority.map(p=>`${p.muscle} ${p.v}/${p.man} → ${p.today.join(", ")}`).join(" | ")}`);
+    if(AL.priority.length)L.push(`\nPRIORITY ALERTS: ${AL.priority.map(p=>`${p.level===2?"[●● must]":"[● can wait]"} ${p.muscle} ${p.v}/${p.man} (gap ${p.gap}; next ${p.nextDay} has ${p.nextSets}) → ${p.today.map(n=>n+(p.levels[n]===2?" ●●":"")).join(", ")}`).join(" | ")}`);
     if(AL.stretch.length)L.push(`STRETCH: ${AL.stretch.map(s=>`${s.name} (${s.muscle} ${s.v}/${s.tot})`).join(", ")}`);
     L.push(`\nORDER (cut line after ${optFrom(CUR.day)} of this day's plan):`);
     CUR.order.forEach((n,i)=>{
@@ -2875,7 +2936,7 @@ function askSnapshot(){
       if(e.abs)f.push("abs");
       if(lg.skipped)f.push("SKIPPED");
       if(isOptionalEx(CUR.day,n))f.push("optional");
-      if(isPriorityEx(n))f.push("PRIORITY");
+      if(isPriorityEx(n)){const pi=priInfo(n);f.push(pi&&pi.lvl===2?"PRIORITY●●":"PRIORITY●");}
       if(isSuggestedEx(n))f.push("stretch");
       const c=carriedOver(n);if(c)f.push(`carried<${c.day} ${daysAgoTxt(c.date)}>`);
       const r=recentExtra(n);if(r)f.push(`recent<${r.day} ${daysAgoTxt(r.date)}>`);
