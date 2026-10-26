@@ -177,8 +177,9 @@
      row is identifiable while scrolling without opening it or reading the
      banner. Hidden once the exercise is done or skipped. */
   .ex.haspri .rank::after{content:"";position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--red);border:2px solid var(--bg);box-shadow:0 0 0 1px rgba(224,112,62,.5)}
-  .ex.haspri.pri2 .rank::after{width:21px;height:11px;border:none;border-radius:6px;top:-4px;right:-11px;box-shadow:none;
-    background:radial-gradient(circle at 5.5px 5.5px,var(--red) 0 3.8px,transparent 4.3px),radial-gradient(circle at 15.5px 5.5px,var(--red) 0 3.8px,transparent 4.3px),var(--bg)}
+  .ex.haspri.pri2 .rank::after{top:-8px;right:-10px}
+  .ex.haspri.pri2 .rank::before{content:"";position:absolute;top:-8px;right:1px;width:9px;height:9px;border-radius:50%;background:var(--red);border:2px solid var(--bg);box-shadow:0 0 0 1px rgba(224,112,62,.5)}
+  .ex.haspri.pri2.done .rank::before,.ex.haspri.pri2.uskip .rank::before{display:none}
   .ex.haspri.done .rank::after,.ex.haspri.uskip .rank::after{display:none}
   /* A finished priority keeps its red dot, now carrying a check. */
   .ex.pridone .rank::after{content:"✓";position:absolute;top:-6px;right:-6px;width:14px;height:14px;border-radius:50%;background:var(--red);color:#fff;border:2px solid var(--bg);font-family:'Manrope',sans-serif;font-size:9px;font-weight:800;line-height:14px;text-align:center;display:block;box-shadow:0 0 0 1px rgba(224,112,62,.5)}
@@ -1110,7 +1111,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v122";
+const APP_VERSION="v123";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -2226,6 +2227,7 @@ function startSession(day){
   Object.keys(carried).forEach(n=>{if(!order.includes(n))order.push(n);});
   CUR={day,start:null,nudgeDismissed:false,order,defaultOrder:order.slice(),ex:{},recent,carried};
   order.forEach(name=>{const def=NAME_INDEX[name];const prev=lastLog(name);CUR.ex[name]={sets:Array.from({length:def.sets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};});
+  normalizeOrder(); // priority order from the start (plan → ●● → ● → stretch → optional)
   setOpenIdx(0);initAudio();requestWake();renderSession();}
 // Remove duplicate entries and put the list in progress order, keeping the
 // same exercise open. Runs on Resume AND when the app reopens straight into
@@ -2360,7 +2362,24 @@ function commitSet(i,j){
    Re-ordering only ever happens once no field has focus, so it never moves the
    list while you're typing. */
 function exProgressGroup(n){const d=NAME_INDEX[n],lg=CUR.ex[n];if(!lg||!d)return 2;if(lg.skipped)return 0;const dn=lg.sets.filter(x=>setComplete(d,x)).length;return(dn>0&&dn>=lg.sets.length)?0:(dn>0?1:2);}
-function normalizeOrder(){const before=CUR.order.join("|");CUR.order=[0,1,2].flatMap(g=>CUR.order.filter(n=>exProgressGroup(n)===g));return CUR.order.join("|")!==before;}
+/* Not-started exercises follow priority: today's must-haves (in plan order),
+   then ●● must-today extras, then ● can-wait, then stretch goals, then the
+   rest of the optional ones. A list you've reordered by hand keeps your order. */
+function priorityTier(n,AL){
+  if(!isOptionalEx(CUR.day,n))return 0;
+  const p=AL.priority.find(p=>p.today.includes(n));if(p)return (p.levels[n]||1)===2?1:2;
+  if(AL.stretch.some(st=>st.name===n))return 3;
+  return 4;
+}
+function normalizeOrder(){const before=CUR.order.join("|");
+  let todo=CUR.order.filter(n=>exProgressGroup(n)===2);
+  const AL=computeAlerts(),t={};todo.forEach(n=>t[n]=priorityTier(n,AL));
+  const byTier=arr=>arr.map((n,k)=>[n,k]).sort((a,b)=>t[a[0]]-t[b[0]]||a[1]-b[1]).map(x=>x[0]);
+  if(!CUR.userReordered)todo=byTier(todo);
+  else{ // dragged by hand: must-haves stay where you put them; only the optional ones are ranked, in their own slots
+    const slots=[];todo.forEach((n,k)=>{if(t[n]>0)slots.push(k);});const ranked=byTier(slots.map(k=>todo[k]));slots.forEach((k,x)=>todo[k]=ranked[x]);}
+  CUR.order=[...CUR.order.filter(n=>exProgressGroup(n)===0),...CUR.order.filter(n=>exProgressGroup(n)===1),...todo];
+  return CUR.order.join("|")!==before;}
 function settleOrder(name,j){
   const run=()=>{
     if(!CUR)return;
