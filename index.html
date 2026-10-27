@@ -559,6 +559,13 @@
   .rep-tag{font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--amber-bright);background:rgba(242,135,46,.14);border:1px solid rgba(242,135,46,.3);border-radius:5px;padding:1px 6px;margin-left:4px}
 
   html,body{overflow-anchor:none}
+  /* The window itself never scrolls — the page scrolls inside #scroller.
+     iOS 26/27 gets its viewports out of sync when the window is scrolled, and
+     everything pinned to the screen (number pad, rest timer, header) then
+     floats mid-screen or off it. With a window that never moves, "pinned to
+     the bottom" just means bottom:0, always. */
+  html,body{height:100%;overflow:hidden}
+  #scroller{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;overflow-anchor:none}
   /* The dock exists on screen only while a rest runs (display:none otherwise),
      so nothing pinned to the screen is around while you type a set. */
   .timer-dock{pointer-events:none;position:fixed;left:0;right:0;bottom:0;z-index:50;display:none}
@@ -584,8 +591,7 @@
   /* Room to scroll the last rows above the pad yourself — kept for the whole
      session so closing the pad never shortens the page under you. */
   body.in-session .wrap{padding-bottom:400px}
-  .kp,.timer-dock,.ask-fab,.ask-msg,.cardio-bar,.ex-toast,.modal-backdrop{translate:0 var(--vvs,0px)}
-  .shead,.ov-head{top:var(--vvs,0px)}
+
   body.kp-open .timer-dock{bottom:var(--kp-h,0px)}
   body.kp-open .dock-in{padding-bottom:6px}
   body.kp-open .timer .bar,body.kp-open .timer .ctrls{display:none}
@@ -687,6 +693,7 @@
 </style>
 </head>
 <body>
+<div id="scroller">
 <div class="wrap">
   <header class="mast">
     <button class="profile-btn" id="profileBtn" aria-label="Profile">
@@ -700,6 +707,8 @@
   <footer>All weights in kg · saved on this device · back up to a file anytime · rest timer keeps the screen awake during a session, and the end-of-rest chime is queued in advance so it still sounds if you lock the phone.</footer>
 </div>
 
+<div id="overlayMount"></div>
+</div>
 <div id="satProbe" style="position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top);visibility:hidden;pointer-events:none"></div>
 <div class="kp" id="kp" aria-hidden="true"><div class="kp-in">
   <div class="kp-top"><button type="button" class="kp-nav" data-k="prev" aria-label="previous box">‹</button><button type="button" class="kp-nav" data-k="next" aria-label="next box">›</button><div class="kp-lbl" id="kpLbl"></div><button type="button" class="kp-done" data-k="done">Done</button></div>
@@ -716,7 +725,6 @@
   <div class="ctrls"><button id="tMinus">−15s</button><button id="tSkip">Skip</button><button class="done" id="tDone">Done</button></div>
 </div></div></div>
 
-<div id="overlayMount"></div>
 <div id="cardioBarMount"></div>
 <button class="ask-fab" id="askFab" data-report-ui="1" onclick="askTap()" aria-label="Ask Claude" title="Ask Claude — sends a screenshot and your data"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 2.5l1.9 5.6 5.6 1.9-5.6 1.9L10 17.5l-1.9-5.6L2.5 10l5.6-1.9z"/><path d="M18.5 13.5l.95 2.55 2.55.95-2.55.95-.95 2.55-.95-2.55-2.55-.95 2.55-.95z"/></svg></button>
 <div class="ask-msg" id="askMsg" data-report-ui="1"></div>
@@ -724,6 +732,13 @@
 <canvas id="confettiCanvas" aria-hidden="true"></canvas>
 
 <script>
+const SCROLLER=document.getElementById("scroller");
+(function(){const sc=SCROLLER;if(!sc)return;const num=v=>+v||0;
+  window.scrollTo=function(a,b){if(a&&typeof a==="object")sc.scrollTo({top:a.top!=null?num(a.top):sc.scrollTop,left:0,behavior:a.behavior==="smooth"?"smooth":"auto"});else sc.scrollTop=num(b);};
+  window.scrollBy=function(a,b){if(a&&typeof a==="object")sc.scrollBy({top:num(a.top),left:0,behavior:a.behavior==="smooth"?"smooth":"auto"});else sc.scrollTop+=num(b);};
+  try{Object.defineProperty(window,"scrollY",{get:()=>sc.scrollTop,configurable:true});Object.defineProperty(window,"pageYOffset",{get:()=>sc.scrollTop,configurable:true});}catch(e){}
+  sc.addEventListener("scroll",()=>window.dispatchEvent(new Event("scroll")),{passive:true});
+})();
 /* ---------------- data ---------------- */
 const EXIMG_BASE="https://israeltoledano.github.io/Gym-buddy/img/exercises/";
 const EX_IMG={"Standing dumbbell overhead press":["Standing_Dumbbell_Press__0.jpg","Standing_Dumbbell_Press__1.jpg"],"Dumbbell bench press":["Dumbbell_Bench_Press__0.jpg","Dumbbell_Bench_Press__1.jpg"],"Incline dumbbell press":["Incline_Dumbbell_Press__0.jpg","Incline_Dumbbell_Press__1.jpg"],"Seated dumbbell overhead press":["Dumbbell_Shoulder_Press__0.jpg","Dumbbell_Shoulder_Press__1.jpg"],"Lateral raises":["Side_Lateral_Raise__0.jpg","Side_Lateral_Raise__1.jpg"],"Leg extension":["Leg_Extensions__0.jpg","Leg_Extensions__1.jpg"],"Calf raise":["Standing_Calf_Raises__0.jpg","Standing_Calf_Raises__1.jpg"],"Machine crunch":["Ab_Crunch_Machine__0.jpg","Ab_Crunch_Machine__1.jpg"],"Pec deck / butterfly":["Butterfly__0.jpg","Butterfly__1.jpg"],"Triceps rope extension":["Triceps_Pushdown_-_Rope_Attachment__0.jpg","Triceps_Pushdown_-_Rope_Attachment__1.jpg"],"Glute rear kick":["Glute_Kickback__0.jpg","Glute_Kickback__1.jpg"],"Machine bench press":["Machine_Bench_Press__0.jpg","Machine_Bench_Press__1.jpg"],"Incline barbell press":["Barbell_Incline_Bench_Press_-_Medium_Grip__0.jpg","Barbell_Incline_Bench_Press_-_Medium_Grip__1.jpg"],"Machine shoulder press":["Leverage_Shoulder_Press__0.jpg","Leverage_Shoulder_Press__1.jpg"],"Leg press":["Leg_Press__0.jpg","Leg_Press__1.jpg"],"Calf press":["Calf_Press_On_The_Leg_Press_Machine__0.jpg","Calf_Press_On_The_Leg_Press_Machine__1.jpg"],"Knee raise (parallel bars)":["Knee_Hip_Raise_On_Parallel_Bars__0.jpg","Knee_Hip_Raise_On_Parallel_Bars__1.jpg"],"Triceps V-cable pushdown":["Triceps_Pushdown_-_V-Bar_Attachment__0.jpg","Triceps_Pushdown_-_V-Bar_Attachment__1.jpg"],"Machine triceps extension":["Machine_Triceps_Extension__0.jpg","Machine_Triceps_Extension__1.jpg"],"Lat pulldown (machine)":["Lat_Pulldown_Gym__0.jpg","Lat_Pulldown_Gym__0.jpg"],"Seated cable row (machine)":["Leverage_Iso_Row__0.jpg","Leverage_Iso_Row__1.jpg"],"Rear delt reverse fly":["Reverse_Machine_Flyes__0.jpg","Reverse_Machine_Flyes__1.jpg"],"Concentration curl":["Concentration_Curls__0.jpg","Concentration_Curls__1.jpg"],"Incline dumbbell curl":["Incline_Dumbbell_Curl__0.jpg","Incline_Dumbbell_Curl__1.jpg"],"Leg curl":["Seated_Leg_Curl__0.jpg","Seated_Leg_Curl__1.jpg"],"Captain knee raise":["Knee_Hip_Raise_On_Parallel_Bars__0.jpg","Knee_Hip_Raise_On_Parallel_Bars__1.jpg"],"Back extension":["Hyperextensions_Back_Extensions__0.jpg","Hyperextensions_Back_Extensions__1.jpg"],"Lat pulldown":["Wide-Grip_Lat_Pulldown__0.jpg","Wide-Grip_Lat_Pulldown__1.jpg"],"Seated cable row (V-grip)":["Seated_Cable_Rows__0.jpg","Seated_Cable_Rows__1.jpg"],"Hammer curl":["Hammer_Curls__0.jpg","Hammer_Curls__1.jpg"],"Cable rope hammer curl":["Cable_Hammer_Curls_-_Rope_Attachment__0.jpg","Cable_Hammer_Curls_-_Rope_Attachment__1.jpg"],"Seated incline curl":["Incline_Dumbbell_Curl__0.jpg","Incline_Dumbbell_Curl__1.jpg"],"Decline crunch (weighted)":["Decline_Crunch__0.jpg","Decline_Crunch__1.jpg"],"Goblet squat":["Goblet_Squat__0.jpg", "Goblet_Squat__1.jpg"],"Standing DB calf raise":["Standing_Dumbbell_Calf_Raise__0.jpg", "Standing_Dumbbell_Calf_Raise__1.jpg"],"Dumbbell Romanian deadlift":["Stiff-Legged_Dumbbell_Deadlift__0.jpg", "Stiff-Legged_Dumbbell_Deadlift__1.jpg"],"Machine bicep curl":["Machine_Bicep_Curl__0.jpg", "Machine_Bicep_Curl__1.jpg"],"Machine lateral raise":["Cable_Seated_Lateral_Raise__0.jpg", "Cable_Seated_Lateral_Raise__1.jpg"],"Bulgarian split squat":["Suspended_Split_Squat__0.jpg", "Suspended_Split_Squat__1.jpg"],"Walking lunges":["Dumbbell_Lunges__0.jpg", "Dumbbell_Lunges__1.jpg"],"Dumbbell side bend":["Dumbbell_Side_Bend__0.jpg", "Dumbbell_Side_Bend__1.jpg"],"Cable woodchop":["Standing_Cable_Wood_Chop__0.jpg", "Standing_Cable_Wood_Chop__1.jpg"],"Pallof press":["Pallof_Press__0.jpg", "Pallof_Press__1.jpg"],"Romanian deadlift":["Romanian_Deadlift__0.jpg", "Romanian_Deadlift__1.jpg"],"Seated leg curl":["Seated_Leg_Curl__0.jpg", "Seated_Leg_Curl__1.jpg"],"Overhead cable tricep extension":["Cable_Rope_Overhead_Triceps_Extension__0.jpg", "Cable_Rope_Overhead_Triceps_Extension__1.jpg"],"Chest-supported row":["Leverage_Iso_Row__0.jpg", "Leverage_Iso_Row__1.jpg"],"Straight-arm pulldown":["Straight-Arm_Pulldown__0.jpg", "Straight-Arm_Pulldown__1.jpg"],"Single-arm lat pulldown":["One_Arm_Lat_Pulldown__0.jpg", "One_Arm_Lat_Pulldown__1.jpg"],"Cable fly (high to low)":["Flat_Bench_Cable_Flyes__0.jpg", "Flat_Bench_Cable_Flyes__1.jpg"],"Cable lateral raise":["Cable_Seated_Lateral_Raise__0.jpg", "Cable_Seated_Lateral_Raise__1.jpg"],"Face pull":["Face_Pull__0.jpg", "Face_Pull__1.jpg"],"Hack squat":["Hack_Squat__0.jpg", "Hack_Squat__1.jpg"],"Hip thrust":["Barbell_Hip_Thrust__0.jpg", "Barbell_Hip_Thrust__1.jpg"],"Seated calf raise":["Seated_Calf_Raise__0.jpg", "Seated_Calf_Raise__1.jpg"],"Preacher curl":["Machine_Preacher_Curls__0.jpg", "Machine_Preacher_Curls__1.jpg"],"Cable curl":["Standing_Biceps_Cable_Curl__0.jpg", "Standing_Biceps_Cable_Curl__1.jpg"]};
@@ -1121,7 +1136,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v125";
+const APP_VERSION="v126";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -1146,7 +1161,7 @@ function startFocusTrace(el,ms){
     cols:"ms,scrollY,vvTop,vvH,innerH,clientH,docH,fieldTop,focused,dockTop,dockTy,padTop",samples:[],calls:[],scrolls:[]};
   let lastY=scrollY;
   const snap=()=>{const r=el.getBoundingClientRect();const di=document.querySelector("#dock .dock-in");const dr=di?di.getBoundingClientRect():null;
-    ft.samples.push([Math.round(performance.now()-t0),Math.round(scrollY),vv?Math.round(vv.offsetTop):null,vv?Math.round(vv.height):null,window.innerHeight,document.documentElement.clientHeight,document.documentElement.scrollHeight,Math.round(r.top),document.activeElement===el?1:0,dr&&dr.height?Math.round(dr.top):null,di?(di.dataset.ty||"0"):null,(()=>{const k=document.getElementById("kp");const kr=k&&KP.open?k.getBoundingClientRect():null;return kr&&kr.height?Math.round(kr.top):null;})()]);
+    ft.samples.push([Math.round(performance.now()-t0),Math.round(scrollY),vv?Math.round(vv.offsetTop):null,vv?Math.round(vv.height):null,window.innerHeight,document.documentElement.clientHeight,(SCROLLER||document.documentElement).scrollHeight,Math.round(r.top),document.activeElement===el?1:0,dr&&dr.height?Math.round(dr.top):null,di?(di.dataset.ty||"0"):null,(()=>{const k=document.getElementById("kp");const kr=k&&KP.open?k.getBoundingClientRect():null;return kr&&kr.height?Math.round(kr.top):null;})()]);
     const own=performance.now()-OWN_SCROLL_AT<400;
     if(Math.abs(scrollY-lastY)>250&&!own&&!(FG&&FG.user)&&!(kpm&&KPG&&KPG.user))ft.jump=true;lastY=scrollY;};
   const onS=e=>{if(ft.scrolls.length<220)ft.scrolls.push([Math.round(performance.now()-t0),!e||e.target===window||e.target===document?"w":"vv:"+e.type,Math.round(scrollY),vv?Math.round(vv.offsetTop):null,vv?Math.round(vv.height):null]);};
@@ -3060,7 +3075,7 @@ function askStamp(d=new Date()){const z=n=>String(n).padStart(2,"0");return `${d
 async function askCapture(){
   const h2c=await askLoadLib();
   const bg=getComputedStyle(document.body).backgroundColor||getComputedStyle(document.documentElement).getPropertyValue("--bg");
-  const canvas=await h2c(document.body,{x:window.scrollX,y:window.scrollY,width:window.innerWidth,height:window.innerHeight,
+  const canvas=await h2c(document.body,{x:0,y:SCROLLER?0:window.scrollY,width:window.innerWidth,height:window.innerHeight,
     windowWidth:document.documentElement.clientWidth,scale:Math.min(2,window.devicePixelRatio||1),backgroundColor:bg,logging:false,useCORS:true,
     ignoreElements:el=>!!(el&&el.getAttribute&&el.getAttribute("data-report-ui")==="1")});
   return new Promise((res,rej)=>canvas.toBlob(b=>b?res(b):rej(new Error("empty capture")),"image/png"));
