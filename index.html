@@ -581,7 +581,11 @@
   .kp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
   .kp-grid button.off{opacity:.3}
   .kp-grid .kp-del{font-size:20px;color:var(--ink-dim)}
-  body.kp-open .wrap{padding-bottom:calc(var(--kp-h,0px) + 150px)}
+  /* Room to scroll the last rows above the pad yourself — kept for the whole
+     session so closing the pad never shortens the page under you. */
+  body.in-session .wrap{padding-bottom:400px}
+  .kp,.timer-dock,.ask-fab,.ask-msg,.cardio-bar,.ex-toast,.modal-backdrop{translate:0 var(--vvs,0px)}
+  .shead,.ov-head{top:var(--vvs,0px)}
   body.kp-open .timer-dock{bottom:var(--kp-h,0px)}
   body.kp-open .dock-in{padding-bottom:6px}
   body.kp-open .timer .bar,body.kp-open .timer .ctrls{display:none}
@@ -1111,7 +1115,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v123";
+const APP_VERSION="v124";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -2395,6 +2399,7 @@ function settleOrder(name,j){
 // dock instead. Once the dock is up, nudge the page so the next unfilled row
 // sits clear above it.
 function revealNextSet(i,j){
+  return; // v124: the timer never moves the page
   setTimeout(()=>{
     if(!CUR)return;const name=CUR.order[i];if(!name)return;const ex=NAME_INDEX[name];
     const sets=CUR.ex[name].sets;let k=j+1;while(k<sets.length&&setComplete(ex,sets[k]))k++;
@@ -3426,6 +3431,23 @@ document.addEventListener("focusin",()=>{setTimeout(scheduleDockFix,0);});
    tick re-checks it 4x a second as a backstop. */
 function satTop(){const p=document.getElementById("satProbe");return p?p.offsetHeight:0;}
 let lastTypingEnd=0;
+/* Pin to the bottom of the screen. On iOS 26/27 the visual viewport can get
+   stuck offset from the layout viewport (seen in your traces: visualViewport
+   height reported as -50 and offsetTop 313 after a scroll), and everything
+   position:fixed then floats up by that offset — the pad and timer in the
+   middle of the screen, the sticky header off the top. When no keyboard is up,
+   that offset is exactly how far they've drifted, so slide them back by it.
+   The page itself is never scrolled. */
+let VVS=0;
+function pinBars(){
+  const vv=window.visualViewport;let s=0;
+  if(vv&&!isField(document.activeElement))s=Math.max(0,Math.round(vv.offsetTop));
+  if(s!==VVS){VVS=s;document.documentElement.style.setProperty("--vvs",s+"px");traceNote("pin",s);}
+}
+if(window.visualViewport){visualViewport.addEventListener("scroll",pinBars);visualViewport.addEventListener("resize",pinBars);}
+window.addEventListener("scroll",pinBars,{passive:true});
+document.addEventListener("focusout",()=>setTimeout(pinBars,50));
+setInterval(pinBars,300);
 function placeDock(){
   const d=document.getElementById("dock");if(!d)return;const di=d.firstElementChild;if(!di)return;
   const clear=()=>{if(di.dataset.ty&&di.dataset.ty!=="0"){di.style.transform="";di.dataset.ty="0";}document.body.classList.remove("dock-covers");};
@@ -3546,32 +3568,12 @@ function kpClearArea(){
   const dk=document.getElementById("dock");if(dk&&dk.classList.contains("up")){const t=dk.firstElementChild.getBoundingClientRect().top;if(t>T+60)B=Math.min(B,t);}
   return {T,B:B-10};
 }
-// One instant scroll, only if the box is hidden or low, to put it near the top of the clear area.
-function kpReveal(){
-  requestAnimationFrame(()=>{
-    const el=kpInput();if(!el)return;const r=el.getBoundingClientRect();const {T,B}=kpClearArea();
-    if(r.top>=T&&r.bottom<=B&&r.top<=T+(B-T)*0.7)return;
-    window.scrollBy(0,Math.round(r.top-(T+(B-T)*0.18)));
-  });
-}
-/* Keep the box in sight while the pad is open. If anything moves the page
-   (iOS, a late re-layout) and you're not touching it yourself, put the box
-   straight back. Each correction is recorded in the trace. */
+// The pad never moves the page (v124): it sits at the bottom and you scroll
+// yourself if a box is behind it. Programmatic scrolls were also what tipped
+// iOS into floating the pad and timer mid-screen.
+function kpReveal(){}
 let KPG=null;
-document.addEventListener("touchmove",e=>{if(KP.open&&KPG&&!(e.target.closest&&e.target.closest(".kp")))KPG.user=true;},{passive:true,capture:true});
-function kpGuard(){
-  if(!KP.open||!KPG||KPG.user||KPG.fixes>=8)return;
-  const el=kpInput();if(!el)return;const r=el.getBoundingClientRect();if(!r.height)return;
-  const {T,B}=kpClearArea();if(B-T<r.height+20)return;
-  if(r.top>=T-4&&r.bottom<=B+4)return;
-  KPG.fixes++;const want=T+(B-T)*0.18;
-  traceNote("guard","kp",Math.round(r.top),Math.round(T),Math.round(B),Math.round(scrollY),window.innerHeight);
-  window.scrollBy(0,Math.round(r.top-want));
-}
-window.addEventListener("scroll",()=>{if(KP.open)requestAnimationFrame(kpGuard);},{passive:true});
-window.addEventListener("resize",()=>{if(KP.open){kpSetVar();requestAnimationFrame(kpGuard);}});
-if(window.visualViewport)visualViewport.addEventListener("resize",()=>{if(KP.open)requestAnimationFrame(kpGuard);});
-setInterval(()=>{if(KP.open)kpGuard();},250);
+window.addEventListener("resize",()=>{if(KP.open)kpSetVar();});
 function kpAfterRender(){
   if(!KP.open)return;
   if(!kpInput()){kpClose();return;}
