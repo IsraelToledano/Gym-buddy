@@ -274,6 +274,13 @@
   .btnrow .formtog,.btnrow .trendbtn{margin-top:0;padding:6px 9px;font-size:11px;flex:none;white-space:nowrap}
   .lasttime .ago{color:var(--ink-faint);white-space:nowrap}
   .targetrow{margin-bottom:8px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+  .prog-hint{display:flex;flex-direction:column;gap:4px;margin:-2px 0 10px;padding:8px 10px;border-radius:10px;border:1px solid rgba(111,191,115,.4);background:rgba(111,191,115,.10)}
+  .prog-hint .ph-chip{font-weight:800;font-size:13px;color:var(--green)}
+  .prog-hint .ph-why{font-size:12px;line-height:1.4;color:var(--ink-dim)}
+  .prog-hint.down{border-color:rgba(242,135,46,.45);background:rgba(242,135,46,.10)}
+  .prog-hint.down .ph-chip{color:var(--amber)}
+  .prog-hint.harder{border-color:rgba(150,130,220,.45);background:rgba(150,130,220,.10)}
+  .prog-hint.harder .ph-chip{color:var(--violet)}
   .target-badge{display:inline-block;font-size:10.5px;font-weight:600;color:var(--teal);background:rgba(84,185,168,.12);border:1px solid rgba(84,185,168,.3);border-radius:20px;padding:3px 9px;flex:none;white-space:nowrap}
   .lasttime{font-size:11px;color:var(--ink-faint);line-height:1.4;min-width:0}
   .lasttime b{color:var(--ink-dim);font-weight:600}
@@ -819,7 +826,7 @@ const PLAN={
     {n:"Dumbbell Romanian deadlift",m:"Hamstrings",equip:"dumbbell",leg:1,sets:3,reps:"10–12",rest:"90s",cues:{do:["Hold a dumbbell in each hand in front of the thighs, soft knees.","Push the hips back until you feel a strong hamstring stretch.","Keep the dumbbells close to the legs and drive the hips forward to stand."],dont:["Don't round the lower back to reach lower.","Don't turn it into a squat — the knees stay mostly fixed."]}},
     {n:"Dumbbell side bend",m:"Obliques",equip:"dumbbell",sets:3,reps:"12–15 per side",rest:"45–60s",cues:{do:["Hold one dumbbell at your side, other hand on your hip or behind your head.","Bend straight sideways at the waist, moving only in the side-to-side plane.","Return upright by contracting the side opposite the weight.","Use a moderate weight — this is not a heavy lift."],dont:["Don't lean forward or backward; that turns it into a twist.","Don't let the hips shift side to side — move at the waist only.","Don't go heavy: loading this hard sharply increases spinal disc compression."]}},
     {n:"Concentration curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60s",cues:{do:["Brace the elbow on the inner thigh.","Curl with the bicep and turn the pinky up at the top.","Squeeze hard and get a full stretch each rep."],dont:["Don't let the elbow drift off the thigh mid-rep.","Don't swing the torso to help the weight up."]}},
-    {n:"Captain knee raise",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:{do:["Keep the back flat, no swinging.","Curl the pelvis up, not just the legs.","Squeeze hard at the top of the raise."],dont:["Don't use momentum to swing into the next rep.","Don't let the lower back arch away from the pads."]}},
+    {n:"Captain knee raise",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"12–20",rest:"60s",cues:{do:["Keep the back flat, no swinging.","Curl the pelvis up, not just the legs.","Squeeze hard at the top of the raise."],dont:["Don't use momentum to swing into the next rep.","Don't let the lower back arch away from the pads."]}},
   ]},
   B2:{name:"Pull",ex:[
     {n:"Lat pulldown",m:"Back",equip:"machine",main:1,sets:4,reps:"8–12",rest:"90–120s",cues:{do:["Grip a bit wider than shoulder width.","Drive the elbows down and back to the upper chest.","Get a full, controlled stretch at the top."],dont:["Don't lean back excessively to muscle the bar down.","Don't let the shoulders shrug toward the ears."]}},
@@ -827,7 +834,7 @@ const PLAN={
     {n:"Dumbbell Romanian deadlift",m:"Hamstrings",equip:"dumbbell",leg:1,sets:3,reps:"10–12",rest:"90s",cues:{do:["Hold a dumbbell in each hand in front of the thighs, soft knees.","Push the hips back until you feel a strong hamstring stretch.","Keep the dumbbells close to the legs and drive the hips forward to stand."],dont:["Don't round the lower back to reach lower.","Don't turn it into a squat — the knees stay mostly fixed."]}},
     {n:"Rear delt reverse fly",m:"Rear delts",equip:"machine",sets:3,reps:"12–15",rest:"60s",cues:{do:["Keep a fixed, slight bend in the elbows.","Open to shoulder height, leading with the elbows.","Target the rear delts — keep the traps down."],dont:["Don't shrug the traps to finish the movement.","Don't use momentum to swing the weight open."]}},
     {n:"Machine bicep curl",m:"Biceps",equip:"machine",sets:4,reps:"12–15",rest:"60s",cues:{do:["Pin the elbows against the pad.","Curl through the full range without swinging.","Squeeze hard at the top of every rep."],dont:["Don't let the elbows lift off the pad.","Don't rush the negative back to the stretch."]}},
-    {n:"Captain knee raise",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"to failure",rest:"60s",cues:{do:["Keep the back flat, no swinging.","Curl the pelvis up, not just the legs.","Squeeze hard at the top of the raise."],dont:["Don't use momentum to swing into the next rep.","Don't let the lower back arch away from the pads."]}},
+    {n:"Captain knee raise",m:"Abs",equip:"bodyweight",abs:1,sets:3,reps:"12–20",rest:"60s",cues:{do:["Keep the back flat, no swinging.","Curl the pelvis up, not just the legs.","Squeeze hard at the top of the raise."],dont:["Don't use momentum to swing into the next rep.","Don't let the lower back arch away from the pads."]}},
     {n:"Seated incline curl",m:"Biceps",equip:"dumbbell",sets:3,reps:"10–12",rest:"60–75s",cues:{do:["Let the arms hang for a full stretch at the bottom.","Squeeze hard at the top of each rep.","Control the descent all the way down."],dont:["Don't let the elbows travel forward as you curl.","Don't rush through the stretch at the bottom."]}}
   ]}
 };
@@ -2010,7 +2017,7 @@ function renderSession(){
       // it right at the top of the expanded card instead of making the person scroll
       // past sets and cues to find it. The editor down in noteBlock is untouched.
       const pinnedNoteHtml=`<div id="pn-${i}">${nVal.trim()?pinnedNoteView(i,nVal):""}</div>`;
-      const metaRow=(targetBadge||lastTimeHtml)?`<div class="targetrow">${targetBadge}${lastTimeHtml}</div>`:"";
+      const metaRow=((targetBadge||lastTimeHtml)?`<div class="targetrow">${targetBadge}${lastTimeHtml}</div>`:"")+progHintHtml(name);
       topHtml=`${pinnedNoteHtml}${metaRow}`;
       if(!prs.hasData){statsHtml=`<div class="nohist" style="margin-bottom:0;padding-bottom:0;border-bottom:none">No history yet — your first logged session sets the baseline.</div>`;}
       else{
@@ -2499,6 +2506,50 @@ async function confirmSwitchSession(day){
 }
 function lastLog(name){const r=lastLogInfo(name);return r?r.sets:null;}
 function daysAgoTxt(ts){const d=Math.floor((new Date().setHours(0,0,0,0)-new Date(ts).setHours(0,0,0,0))/86400000);return d<=0?"today":d===1?"yesterday":`${d} days ago`;}
+/* ---------------- progression nudge ----------------
+   Weight up / down, based on the last two sessions of the exercise at the
+   weight you're on now — never on a single day (one off-day is noise).
+     ↑ up:   the first set reaches the top of the rep range and every other set
+             is within one rep of it, two sessions running.
+     ↓ down: most sets fall below the bottom of the range, two sessions running.
+   Otherwise nothing is shown. The step is the next real increment for the
+   equipment; a big relative jump (light dumbbells) gets a heads-up, and a
+   previous jump that failed nearby is pointed out. Bodyweight exercises get
+   "make it harder" instead of a weight. */
+const PROG_STEP={machine:2.5,cable:2.5,barbell:2.5,dumbbell:2};
+const HARDER={"Captain knee raise":"straighten the legs, or hold a light dumbbell between the feet",
+  "Decline crunch (weighted)":"hug a plate to your chest","Back extension":"hug a plate to your chest"};
+function repRange(ex){const m=String(ex.reps||"").match(/(\d+)\s*[–-]\s*(\d+)/);return m?[+m[1],+m[2]]:null;}
+function modeWeight(st){const c={};st.forEach(x=>c[x.w]=(c[x.w]||0)+1);let b=null;for(const w in c)if(b==null||c[w]>c[b]||(c[w]===c[b]&&+w>+b))b=w;return +b;}
+function fmtKg(w){return String(round1(w));}
+function progressionHint(name){
+  const ex=NAME_INDEX[name];if(!ex)return null;const rg=repRange(ex);if(!rg)return null;const lo=rg[0],hi=rg[1];
+  const sess=[];
+  for(let k=HISTORY.length-1;k>=0&&sess.length<10;k--){const lg=sessionLog(HISTORY[k],name);if(!lg||lg.skipped)continue;
+    const st=lg.sets.filter(x=>x.reps!==""&&x.reps!=null).map(x=>({w:parseFloat(x.weight)||0,r:parseInt(x.reps)||0}));if(st.length)sess.push(st);}
+  if(sess.length<2)return null;
+  const W=modeWeight(sess[0]);const at=st=>st.filter(x=>x.w===W).map(x=>x.r);
+  const a=at(sess[0]),b=at(sess[1]);if(!a.length||!b.length)return null; // needs two sessions at this weight
+  const isUp=r=>r[0]>=hi&&r.every(x=>x>=hi-1);
+  const isDown=r=>r.filter(x=>x<lo).length*2>r.length;
+  const rr=r=>Math.min(...r)===Math.max(...r)?String(r[0]):`${Math.min(...r)}–${Math.max(...r)}`;
+  if(isUp(a)&&isUp(b)){
+    if(W===0)return{kind:"harder",text:"Make it harder",why:`Top of the ${lo}–${hi} range on every set, two sessions running — ${HARDER[name]||"use a harder variation"}.`};
+    const step=PROG_STEP[ex.equip]||2.5,next=W+step,pct=Math.round(step/W*100);
+    let why=`Top of the ${lo}–${hi} range on every set at ${fmtKg(W)} kg, two sessions running.`;
+    // an earlier attempt just above that didn't hold the range
+    for(let k=2;k<sess.length;k++){const hv=sess[k].filter(x=>x.w>W&&x.w<=W+step*1.6);if(hv.length&&hv.filter(x=>x.r<lo).length*2>=hv.length){why+=` Last time at ${fmtKg(hv[0].w)} kg you got ${rr(hv.map(x=>x.r))} — ${fmtKg(next)} is the smaller step.`;break;}}
+    if(pct>=12)why+=` Big jump (+${pct}%) — expect fewer reps; ${lo}+ is fine, under that go back and add reps first.`;
+    return{kind:"up",text:`Try ${fmtKg(next)} kg`,why};
+  }
+  if(W>0&&isDown(a)&&isDown(b)){
+    const step=PROG_STEP[ex.equip]||2.5,next=Math.max(0,W-step);
+    return{kind:"down",text:`Try ${fmtKg(next)} kg`,why:`Most sets under ${lo} reps at ${fmtKg(W)} kg, two sessions running (${rr(b)}, then ${rr(a)}).`};
+  }
+  return null;
+}
+function progHintHtml(name){const h=progressionHint(name);if(!h)return"";
+  return `<div class="prog-hint ${h.kind}"><span class="ph-chip">${h.kind==="down"?"↓":"↑"} ${esc(h.text)}</span><span class="ph-why">${esc(h.why)}</span></div>`;}
 function lastLogInfo(name){
   const def=NAME_INDEX[name];const bwEx=def&&(def.abs||def.reps==="to failure");
   for(let i=HISTORY.length-1;i>=0;i--){
