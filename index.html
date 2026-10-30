@@ -646,6 +646,50 @@
   .hidden{display:none!important}
 
   /* theme toggle */
+  /* onboarding + routine editor */
+  .ob .ob-p{color:var(--ink-dim);font-size:14px;line-height:1.45;margin:0 0 14px}
+  .ob-cta{display:block;width:100%;background:var(--amber);color:#1a120a;border:none;border-radius:14px;text-align:center;padding:14px;font-weight:800;font-size:15px;margin-top:8px;font-family:inherit}
+  .ob-ghost{display:block;width:100%;background:none;border:1px solid var(--line);border-radius:14px;text-align:center;padding:12px;font-weight:700;font-size:14px;color:var(--ink-dim);margin-top:10px;font-family:inherit}
+  .ob-note{font-size:11.5px;color:var(--ink-faint);line-height:1.4;margin-top:8px}
+  .tpl{display:block;width:100%;text-align:left;border:1.5px solid var(--line);background:var(--card);border-radius:16px;padding:12px 14px;margin-bottom:10px;font-family:inherit;color:var(--ink)}
+  .tpl.sel{border-color:var(--amber);box-shadow:0 0 0 3px rgba(242,135,46,.18)}
+  .tpl.blank{border-style:dashed}
+  .tpl .t{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .tpl .t span{font-family:'Manrope',system-ui,sans-serif;font-size:11px;font-weight:700;color:var(--teal);background:rgba(84,185,168,.12);border:1px solid rgba(84,185,168,.3);border-radius:20px;padding:2px 8px;white-space:nowrap}
+  .tpl .d{font-size:12.5px;color:var(--ink-dim);margin-top:3px;line-height:1.4}
+  .ob .tabs{display:flex;gap:6px;margin:0 0 12px;flex-wrap:wrap}
+  .ob .tab{border:1px solid var(--line);border-radius:20px;padding:6px 12px;font-weight:700;font-size:13px;color:var(--ink-dim);background:var(--card);font-family:inherit}
+  .ob .tab.on{background:var(--amber);border-color:var(--amber);color:#1a120a}
+  .ob .tab.add{border-style:dashed}
+  .re-day{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .re-name{flex:1;min-width:0;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;text-transform:uppercase;color:var(--ink);background:none;border:none;border-bottom:1px dashed var(--line);padding:2px 0}
+  .re-name:focus{outline:none;border-bottom-color:var(--amber)}
+  .re-code{font-size:11px;font-weight:700;color:var(--ink-faint);border:1px solid var(--line);border-radius:8px;padding:2px 6px}
+  .re-del{background:none;border:none;color:var(--red);font-size:12px;font-weight:700;font-family:inherit}
+  .ob .stat{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.ob .stat span{font-size:11px;font-weight:700;color:var(--ink-dim);border:1px solid var(--line);border-radius:20px;padding:2px 8px}
+  .re-row{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--card);border-radius:13px;padding:10px 11px;margin-bottom:7px;cursor:pointer}
+  .re-row .n,.re-top .n{flex:1;font-weight:700;font-size:14px;color:var(--ink);line-height:1.2}
+  .re-row .n small,.re-top .n small{display:block;font-weight:500;font-size:11.5px;color:var(--ink-dim);margin-top:2px}
+  .re-row .sr{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:4px 7px;background:var(--bg);white-space:nowrap}
+  .re-row .x{background:none;border:none;color:var(--ink-faint);font-size:15px;padding:4px}
+  .re-row.edit{display:block;border-color:var(--amber);cursor:default}
+  .re-top{display:flex;align-items:center;gap:10px;cursor:pointer}
+  .re-ed{display:flex;gap:8px;margin-top:10px}
+  .re-ed>div{flex:1;border:1px solid var(--line);border-radius:10px;padding:6px 6px;background:var(--bg);text-align:center}
+  .re-ed i{display:block;font-style:normal;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--ink-faint);text-transform:uppercase;margin-bottom:3px}
+  .stp{display:flex;align-items:center;justify-content:space-between;gap:4px}
+  .stp b{font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--ink)}
+  .stp button{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:16px;font-weight:700;line-height:1}
+  .re-lab{font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--ink-faint);text-transform:uppercase;margin:10px 0 5px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:5px 10px;font-size:12.5px;font-weight:700;color:var(--ink-dim);font-family:inherit}
+  .chip.on{background:rgba(242,135,46,.15);border-color:var(--amber);color:var(--amber)}
+  .re-cut{display:flex;align-items:center;gap:8px;margin:4px 0 9px}.re-cut i{flex:1;border-top:2px dashed rgba(242,135,46,.5)}.re-cut span{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:11px;letter-spacing:.14em;color:var(--amber);text-transform:uppercase}
+  .re-add{display:block;width:100%;background:none;border:1.5px dashed var(--line);border-radius:13px;text-align:center;padding:11px;font-weight:700;font-size:13.5px;color:var(--ink-dim);margin:4px 0 12px;font-family:inherit}
+  .re-mh{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:12px 0 6px}
+  .prow{display:flex;width:100%;text-align:left;justify-content:space-between;align-items:center;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13.5px;color:var(--ink);font-weight:600;font-family:inherit}
+  .prow small{display:block;font-weight:500;color:var(--ink-faint);font-size:11.5px;margin-top:2px}
+  .prow .chev{color:var(--ink-faint);font-size:18px}
   .theme-row{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:14px}
   .theme-row .tl{font-size:13.5px;font-weight:600}
   .theme-row .td{font-size:11.5px;color:var(--ink-faint);margin-top:2px}
@@ -1082,6 +1126,54 @@ const CUES_V2={
 // settings) plus refined do/don't, for every exercise in the routine.
 for(const k in PLAN)PLAN[k].ex.forEach(e=>{if(CUES_V2[e.n])e.cues=CUES_V2[e.n];});
 EXTRA_EX.forEach(e=>{if(CUES_V2[e.n])e.cues=CUES_V2[e.n];});
+/* ---------------- routines (one per person, per phone) ----------------
+   The built-in PLAN above is Israel's routine and stays the default. Anyone
+   who builds their own (onboarding on a new phone, or Profile → My routine)
+   gets it stored as data under "routine"; applyRoutine() then rewrites PLAN
+   and NAME_INDEX in place so everything else — rotation, cut line, carry-
+   overs, priorities, history — works on that person's days unchanged. */
+const BUILTIN_PLAN={};for(const k in PLAN)BUILTIN_PLAN[k]=PLAN[k];
+const DEFAULT_ROT=["A1","B1","A2","B2"],DEFAULT_DAYS=["A1","A2","B1","B2"];
+let ROT=DEFAULT_ROT.slice(),DAY_LIST=DEFAULT_DAYS.slice(),ROUTINE=null;
+const LIB={};for(const n in NAME_INDEX)LIB[n]=NAME_INDEX[n];   // every known exercise definition
+const dayName=d=>PLAN[d]?PLAN[d].name:(d||"");
+function applyRoutine(R){
+  ROUTINE=R&&R.order&&R.days?R:null;
+  for(const k in PLAN)delete PLAN[k];
+  if(!ROUTINE){for(const k in BUILTIN_PLAN)PLAN[k]=BUILTIN_PLAN[k];ROT=DEFAULT_ROT.slice();DAY_LIST=DEFAULT_DAYS.slice();}
+  else{
+    ROUTINE.order.forEach(k=>{const d=ROUTINE.days[k];if(!d)return;
+      const ex=d.ex.filter(x=>LIB[x.n]).map(x=>Object.assign({},LIB[x.n],{sets:x.sets,reps:x.reps,rest:x.rest,main:x.main?1:0}));
+      PLAN[k]={name:d.name||k,optFrom:Math.min(d.optFrom==null?ex.length:d.optFrom,ex.length),ex};});
+    ROT=ROUTINE.order.filter(k=>PLAN[k]);DAY_LIST=ROT.slice();
+  }
+  for(const n in NAME_INDEX)delete NAME_INDEX[n];
+  for(const k in PLAN)PLAN[k].ex.forEach(e=>{if(!(e.n in NAME_INDEX))NAME_INDEX[e.n]=e;});
+  for(const n in LIB)if(!(n in NAME_INDEX))NAME_INDEX[n]=LIB[n];
+}
+// A routine object from day lists: [key, name, [exercise names], optional count]
+const rx=n=>{const d=LIB[n];return d?{n,sets:d.sets,reps:d.reps,rest:d.rest,main:d.main?1:0}:null;};
+function mkRoutine(name,days){const R={name,order:[],days:{}};
+  days.forEach(([k,nm,list,opt])=>{const ex=list.map(rx).filter(Boolean);R.order.push(k);R.days[k]={name:nm,ex,optFrom:Math.max(0,ex.length-(opt||0))};});return R;}
+function builtinRoutine(){const R={name:"Push / Pull",order:DEFAULT_ROT.slice(),days:{}};
+  DEFAULT_ROT.forEach(k=>{const p=BUILTIN_PLAN[k];R.days[k]={name:p.name,optFrom:Math.min(p.optFrom||OPTIONAL_FROM,p.ex.length),ex:p.ex.map(e=>({n:e.n,sets:e.sets,reps:e.reps,rest:e.rest,main:e.main?1:0}))};});return R;}
+const TEMPLATES=[
+  {id:"pp4",name:"Push / Pull · 4 days",tag:"Israel's routine",desc:"A1 · B1 · A2 · B2 — chest/shoulders/triceps and back/biceps days, legs and core spread across them.",make:builtinRoutine},
+  {id:"fb3",name:"Full body · 3 days",desc:"A · B · C — every muscle three times a week, 6 exercises a day. Good for beginners.",
+   make:()=>mkRoutine("Full body",[
+    ["A","Full body A",["Goblet squat","Machine bench press","Lat pulldown (machine)","Seated dumbbell overhead press","Dumbbell Romanian deadlift","Machine crunch","Lateral raises"],1],
+    ["B","Full body B",["Leg press","Incline dumbbell press","Seated cable row (V-grip)","Lateral raises","Machine bicep curl","Triceps V-cable pushdown","Calf raise"],1],
+    ["C","Full body C",["Hack squat","Dumbbell bench press","Chest-supported row","Rear delt reverse fly","Leg curl","Captain knee raise","Cable curl"],1]])},
+  {id:"ul4",name:"Upper / Lower · 4 days",desc:"Upper 1 · Lower 1 · Upper 2 · Lower 2.",
+   make:()=>mkRoutine("Upper / Lower",[
+    ["U1","Upper 1",["Machine bench press","Lat pulldown (machine)","Seated dumbbell overhead press","Seated cable row (V-grip)","Lateral raises","Triceps V-cable pushdown","Machine bicep curl"],1],
+    ["L1","Lower 1",["Goblet squat","Dumbbell Romanian deadlift","Leg extension","Standing DB calf raise","Machine crunch"],0],
+    ["U2","Upper 2",["Incline dumbbell press","Chest-supported row","Machine shoulder press","Rear delt reverse fly","Overhead cable tricep extension","Machine bicep curl","Cable lateral raise"],1],
+    ["L2","Lower 2",["Hack squat","Romanian deadlift","Bulgarian split squat","Seated leg curl","Seated calf raise","Captain knee raise"],0]])},
+  {id:"blank",name:"Start from scratch",desc:"Name your days and add exercises from the library.",
+   make:()=>({name:"My routine",order:["D1"],days:{D1:{name:"Day 1",optFrom:0,ex:[]}}})}
+];
+
 // Manually curated swap pairs — shown first when present. These exist for
 // pairs where the "obvious" alternative isn't simply "same muscle" (e.g. an
 // incline press variant should map to the other incline variant, not a flat
@@ -1207,7 +1299,6 @@ function computeAlerts(){
         close the gap on its own, so it's OK to skip these again today.
    Within a ●● muscle only the exercises needed to close the gap get ●●
    (in list order); any beyond that are ●. */
-const ROT=["A1","B1","A2","B2"];
 function manSetsOn(day,m){const p=PLAN[day];if(!p)return 0;return p.ex.reduce((a,e,k)=>a+(e.m===m&&(k<optFrom(day)||e.main)?e.sets:0),0);}
 function nextTrainedOn(m,from){const i=ROT.indexOf(from);if(i<0)return null;for(let k=1;k<=ROT.length;k++){const d=ROT[(i+k)%ROT.length];const n=manSetsOn(d,m);if(n)return{day:d,k,sets:n};}return null;}
 function rankPriorities(list){
@@ -1328,7 +1419,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v128";
+const APP_VERSION="v129";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -1414,7 +1505,7 @@ let HISTORY=[],SETTINGS={alert:"sound_vibe",logReps:true,theme:"dark",dayOrder:{
 let TENNIS=[];
 let CARDIO=[];
 let CUSTOM_EX=[];
-let PROFILE={heightCm:"",weightKg:"",age:"",goal:""};
+let PROFILE={name:"",heightCm:"",weightKg:"",age:"",goal:""};
 
 /* ---------------- helpers ---------------- */
 function weekStart(d){const x=new Date(d);const day=(x.getDay()+6)%7;x.setHours(0,0,0,0);x.setDate(x.getDate()-day);return x.getTime();}
@@ -1442,7 +1533,7 @@ function sessionLog(s,name){
 // Sets recently added to the plan. Row gets a one-time "new set" tag (and no ✕)
 // until that set has been logged once in a finished session.
 const NEW_SETS={"Triceps V-cable pushdown":{set:4,since:"2026-10-03",label:"Oct 3"},"Machine triceps extension":{set:4,since:"2026-10-03",label:"Oct 3"},"Standing DB calf raise":{set:4,since:"2026-10-03",label:"Oct 3"},"Machine bicep curl":{set:4,since:"2026-10-10",label:"Oct 10"}};
-function newSetPending(name){const ns=NEW_SETS[name];if(!ns)return 0;const t=new Date(ns.since+"T00:00:00").getTime();const ex=NAME_INDEX[name];
+function newSetPending(name){if(ROUTINE)return 0;const ns=NEW_SETS[name];if(!ns)return 0;const t=new Date(ns.since+"T00:00:00").getTime();const ex=NAME_INDEX[name];
   const did=HISTORY.some(s=>s.date>=t&&(()=>{const l=sessionLog(s,name);return l&&!l.skipped&&l.sets.filter(x=>setComplete(ex,x)).length>=ns.set;})());return did?0:ns.set;}
 function isBodyweight(name,hist){const pe=getPlanEx(name);const flag=pe&&(pe.abs||pe.reps==="to failure");if(hist&&hist.length)return hist.every(h=>!h.anyW);return!!flag;}
 function setComplete(ex,s){const wOk=s.weight!==""&&s.weight!=null;const rOk=s.reps!==""&&s.reps!=null;return SETTINGS.logReps?rOk:wOk;}
@@ -1498,7 +1589,7 @@ function dayKeyOf(ts){const d=new Date(ts);return d.getFullYear()+"-"+d.getMonth
 function lastDoneOf(day){for(let i=HISTORY.length-1;i>=0;i--)if(HISTORY[i].day===day)return HISTORY[i].date;return null;}
 function daysSinceTs(ts){return Math.floor((Date.now()-ts)/86400000);}
 function suggestDay(){
-  const DAYS=["A1","A2","B1","B2"];
+  const DAYS=DAY_LIST.filter(d=>PLAN[d]&&PLAN[d].ex.length);
   const vol=weeklyVolume();
   const deficit={};
   for(const m in MUSCLES){const meta=MUSCLES[m];if(!meta.nudge){deficit[m]=0;continue;}deficit[m]=Math.max(0,(meta.t||0)-(vol[m]||0));}
@@ -1510,9 +1601,9 @@ function suggestDay(){
     const ld=lastDoneOf(d);
     const stale=(ld===null)?14:Math.min(daysSinceTs(ld),14);
     score+=stale*2;
-    if(last&&PLAN[last.day].name===p.name)score-=18;     // alternation is near-hard: no push after push
+    if(last&&dayName(last.day)===p.name)score-=18;     // alternation is near-hard: no push after push
     if(last&&last.day===d)score-=10;                      // and definitely not the identical day
-    if(d===rot)score+=14;                                 // strong pull toward the A1→B1→A2→B2 rotation
+    if(d===rot)score+=14;                                 // strong pull toward the rotation (A1→B1→A2→B2 for the built-in routine)
     const seen=new Set();let cover=0;
     p.ex.forEach(e=>{if(seen.has(e.m))return;seen.add(e.m);cover+=deficit[e.m]||0;});
     score+=cover*1.5;
@@ -1526,15 +1617,15 @@ function suggestDay(){
     const bits=[];
     if(pick.ld===null)bits.push("you haven't run this one yet");
     else bits.push(pick.stale>=14?"not trained in 2+ weeks":pick.stale===0?"already trained today":pick.stale===1?"last done yesterday":`last done ${pick.stale} days ago`);
-    if(last&&PLAN[last.day].name!==pick.name)bits.push(`follows ${PLAN[last.day].name.toLowerCase()} with ${pick.name.toLowerCase()}`);
-    if(pick.d===rot)bits.push("next in your A1→B1→A2→B2 rotation");
+    if(last&&PLAN[last.day]&&dayName(last.day)!==pick.name)bits.push(`follows ${dayName(last.day).toLowerCase()} with ${pick.name.toLowerCase()}`);
+    if(pick.d===rot)bits.push(`next in your ${ROT.join("→")} rotation`);
     else if(pick.cover>=4)bits.push("covers the muscles furthest behind this week");
     reason=bits.join(" · ");
     reason=reason.charAt(0).toUpperCase()+reason.slice(1)+".";
   }
   return{pick,all:scored,trainedToday,reason,runnerUp:scored[1]};
 }
-function nextSuggestedDay(){const ROT=["A1","B1","A2","B2"];if(!HISTORY.length)return ROT[0];const last=HISTORY[HISTORY.length-1].day;const idx=ROT.indexOf(last);if(idx<0)return ROT[0];return ROT[(idx+1)%ROT.length];}
+function nextSuggestedDay(){if(!HISTORY.length)return ROT[0];const last=HISTORY[HISTORY.length-1].day;const idx=ROT.indexOf(last);if(idx<0)return ROT[0];return ROT[(idx+1)%ROT.length];}
 
 // per-session stats for one exercise
 const MAX_SANE_REPS=50;
@@ -1781,7 +1872,7 @@ function exCardHtml(rec,name){
 }
 function historySorted(){return HISTORY.map((rec,idx)=>({rec,idx})).sort((a,b)=>b.rec.date-a.rec.date);}
 function historyRowHtml(rec,idx){
-  const p=PLAN[rec.day];const st=sessionOverallStats(rec);
+  const p=PLAN[rec.day]||{name:rec.day,ex:[]};const st=sessionOverallStats(rec);
   let deltaHtml="";
   if(idx>0){
     const prevSt=sessionOverallStats(HISTORY[idx-1]);
@@ -1814,7 +1905,7 @@ function openHistoryFull(){
 }
 function openHistorySession(idx){
   const rec=HISTORY[idx];if(!rec)return;
-  const p=PLAN[rec.day];
+  const p=PLAN[rec.day]||{name:rec.day,ex:[]};
   const st=sessionOverallStats(rec);
   let deltaRow="";const noteBits=[];
   if(idx>0){
@@ -1897,7 +1988,7 @@ function renderHome(summary){
       });
     }
   }
-  if(CUR){const p=PLAN[CUR.day];const names=CUR.order||p.ex.map(e=>e.n);let tot=0,done=0;names.forEach(n=>{const ex=NAME_INDEX[n];const log=CUR.ex[n];if(!log)return;tot+=log.sets.length;done+=log.sets.filter(s=>setComplete(ex,s)).length;});
+  if(CUR){const p=PLAN[CUR.day]||{name:CUR.day,ex:[]};const names=CUR.order||p.ex.map(e=>e.n);let tot=0,done=0;names.forEach(n=>{const ex=NAME_INDEX[n];const log=CUR.ex[n];if(!log)return;tot+=log.sets.length;done+=log.sets.filter(s=>setComplete(ex,s)).length;});
     html+=`<div class="resume"><div class="l"><div class="t">Resume ${CUR.day} · ${p.name}</div><div class="d">${done}/${tot} sets · ${CUR.start==null?"not started yet":"started "+fmtDate(CUR.start)}</div></div><button onclick="openSession()">Resume</button></div>`;}
   const sg=suggestDay();
   const nextDay=sg.pick.d;
@@ -1909,11 +2000,11 @@ function renderHome(summary){
       <div class="sg-day"><b>${nextDay}</b> · ${sp.name}</div>
       <div class="sg-why">${sg.reason}</div>
       <button class="sg-go" onclick="startSession('${nextDay}')">Start ${nextDay} · ${sp.name}</button>
-      <div class="sg-alt">Or run <b>${sg.runnerUp.d} · ${sg.runnerUp.name}</b> instead — pick any day below.</div>
+      ${sg.runnerUp?`<div class="sg-alt">Or run <b>${sg.runnerUp.d} · ${sg.runnerUp.name}</b> instead — pick any day below.</div>`:""}
     </div>`;
   }
   html+=`<div class="days">`;
-  for(const k of ["A1","A2","B1","B2"]){const p=PLAN[k];html+=`<button class="day-btn${(!CUR&&k===nextDay)?" upnext-day":""}" onclick="previewDay('${k}')"><div class="code"><b>${k}</b></div><div class="nm">${p.name}</div><div class="ct">${p.ex.length} exercises</div></button>`;}
+  for(const k of DAY_LIST){const p=PLAN[k];if(!p)continue;html+=`<button class="day-btn${(!CUR&&k===nextDay)?" upnext-day":""}" onclick="previewDay('${k}')"><div class="code"><b>${k}</b></div><div class="nm">${p.name}</div><div class="ct">${p.ex.length} exercises</div></button>`;}
   html+=`</div>`;
   html+=`<button class="day-btn cardio-tile" style="width:100%;margin-top:10px;display:flex;align-items:center;gap:14px;text-align:left" onclick="startCardioLog(null)">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 8 4-16 2 8h6"/></svg>
@@ -1963,7 +2054,7 @@ function renderSession(){
   // wherever the abs exercise happens to sit.
 
   names.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];if(log.skipped)return;const sets=log.sets;totSets+=sets.length;doneSets+=sets.filter(s=>setComplete(ex,s)).length;});
-  const p=PLAN[CUR.day];
+  const p=PLAN[CUR.day]||{name:CUR.day,ex:[]};
   const pct=totSets?Math.round(doneSets/totSets*100):0;
   let html=`<div class="shead"><div class="row1"><h2><b>${CUR.day}</b> · ${p.name}</h2><div style="display:flex;align-items:center"><span class="rest-mini" id="restMini"></span><div class="clock" id="clock">0:00</div></div></div><div class="row2"><div class="prog" id="prog">${doneSets}/${totSets} sets · ${pct}%</div><button class="linkbtn" onclick="renderHome()">Back</button></div><div class="pbar"><div class="pbar-fill" id="progFill" style="width:${pct}%"></div></div></div>`;
   // Two kinds of alert at the top: PRIORITY = a must-have exercise for a muscle
@@ -2063,12 +2154,139 @@ new MutationObserver(()=>{
   else if(!open&&was){document.body.classList.remove("ov-open");window.scrollTo(0,ovSavedY);}
 }).observe(document.getElementById("overlayMount"),{childList:true});
 
+/* ---------------- onboarding + routine editor ---------------- */
+// Re-render inside the open page instead of replacing it, so the slide-in
+// animation doesn't replay (and flicker) on every tap.
+function obMount(html){const m=document.getElementById("overlayMount");const cur=m.firstElementChild;
+  if(cur&&cur.classList.contains("ob"))cur.innerHTML=html;else m.innerHTML=`<div class="overlay ob">${html}</div>`;}
+const ovBack=(fn,sub,title)=>`<div class="ov-head"><button class="bk" onclick="${fn}" aria-label="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><div class="ti"><span>${sub}</span>${title}</div></div>`;
+function needsOnboarding(){return !ROUTINE&&!HISTORY.length&&!CUR&&!PROFILE.name&&!SETTINGS.onboarded;}
+function openOnboarding(){
+  closeOverlay();const p=PROFILE;
+  document.getElementById("overlayMount").innerHTML=`<div class="overlay ob">${ovBack("obSkip()","Gym Buddy","Welcome")}<div class="ov-body">
+    <p class="ob-p">Set up your profile. Everything you log stays on this phone, separate from anyone else's.</p>
+    <div class="field"><label>Name</label><input id="obName" type="text" autocomplete="given-name" placeholder="Your name" value="${esc(p.name||"")}"></div>
+    <div class="field-row"><div class="field"><label>Height</label><input id="obH" type="number" inputmode="decimal" placeholder="cm" value="${esc(p.heightCm)}"></div>
+      <div class="field"><label>Weight</label><input id="obW" type="number" inputmode="decimal" placeholder="kg" value="${esc(p.weightKg)}"></div></div>
+    <div class="field"><label>Age</label><input id="obA" type="number" inputmode="numeric" placeholder="years" value="${esc(p.age)}"></div>
+    <div class="field"><label>Goal</label><textarea id="obG" placeholder="e.g. build muscle, get stronger…">${esc(p.goal)}</textarea></div>
+    <button class="ob-cta" onclick="obNext()">Next: build my routine →</button>
+    <div class="ob-note">Height, weight and age are optional — they're only used for calorie estimates.</div>
+  </div></div>`;
+}
+async function obNext(){
+  const v=id=>(document.getElementById(id)||{}).value||"";
+  const name=v("obName").trim();if(!name){await showAlert("Add your name to continue.");return;}
+  Object.assign(PROFILE,{name,heightCm:v("obH"),weightKg:v("obW"),age:v("obA"),goal:v("obG")});await sset("profile",PROFILE);
+  openTemplatePicker("onboard");
+}
+async function obSkip(){if(await showConfirm("Skip setup? You'll start with the built-in Push / Pull routine, and can change it any time in Profile → My routine.",{okLabel:"Skip",cancelLabel:"Back"})){SETTINGS.onboarded=1;await sset("settings",SETTINGS);closeOverlay();renderHome();}}
+let TPL_PICK="pp4";
+function openTemplatePicker(mode){closeOverlay();renderTemplatePicker(mode);}
+function renderTemplatePicker(mode){
+  const cards=TEMPLATES.map(t=>`<button class="tpl${t.id===TPL_PICK?" sel":""}${t.id==="blank"?" blank":""}" onclick="TPL_PICK='${t.id}';renderTemplatePicker('${mode}')"><div class="t">${esc(t.name)}${t.tag?`<span>${esc(t.tag)}</span>`:""}</div><div class="d">${esc(t.desc)}</div></button>`).join("");
+  obMount(`${ovBack(mode==="onboard"?"openOnboarding()":"openRoutineEditor('profile')",mode==="onboard"?"Step 2 of 3":"My routine","Your routine")}<div class="ov-body">
+    <p class="ob-p">${mode==="onboard"?"Start from a template and change anything, or build it yourself.":"Replace your routine with a template — your history stays."}</p>
+    ${cards}<button class="ob-cta" onclick="pickTemplate('${mode}')">Next: edit the days →</button></div>`);
+}
+function pickTemplate(mode){const t=TEMPLATES.find(x=>x.id===TPL_PICK)||TEMPLATES[0];RE=null;openRoutineEditor(mode,t.make());}
+
+// Editor state
+let RE=null;
+const REST_OPTS=["45s","60s","75s","90s","120s"];
+function restSec(r){const m=String(r||"").match(/(\d+)(?:\s*[–-]\s*(\d+))?/);return m?(m[2]?(+m[1]+ +m[2])/2:+m[1]):75;}
+function repParts(r){const m=String(r||"").match(/^(\d+)\s*[–-]\s*(\d+)(.*)$/);return m?{lo:+m[1],hi:+m[2],suf:m[3]||""}:{lo:8,hi:12,suf:""};}
+function openRoutineEditor(mode,R){
+  closeOverlay();
+  if(!RE||R){const src=R||(ROUTINE?ROUTINE:builtinRoutine());RE={mode,R:JSON.parse(JSON.stringify(src)),day:null,open:-1,pick:false,q:""};RE.day=RE.R.order[0];}
+  RE.mode=mode;renderRoutineEditor();
+}
+function reDay(){return RE.R.days[RE.day];}
+function renderRoutineEditor(){
+  const R=RE.R,d=reDay();
+  const tabs=R.order.map(k=>`<button class="tab${k===RE.day?" on":""}" onclick="reTab('${k}')">${esc(k)}</button>`).join("")+`<button class="tab add" onclick="reAddDay()">+ Day</button>`;
+  let body="";
+  if(RE.pick){
+    const q=RE.q.trim().toLowerCase();const have=new Set(d.ex.map(x=>x.n));
+    const list=Object.values(LIB).filter(e=>!have.has(e.n)&&(!q||[e.n,e.m,...(MUSCLE_WORDS[e.m]||[])].join("|").toLowerCase().includes(q)));
+    const byM={};list.forEach(e=>{(byM[e.m]=byM[e.m]||[]).push(e);});
+    const groups=Object.keys(MUSCLES).filter(m=>byM[m]).map(m=>`<div class="re-mh">${esc(m)}</div>`+byM[m].sort((a,b)=>(EQUIP_RANK[a.equip]??9)-(EQUIP_RANK[b.equip]??9)||a.n.localeCompare(b.n)).map(e=>`<button class="lib-item" onclick="reAddEx('${escLibName(e.n)}')"><span>${esc(e.n)}</span><span class="equip-tag">${e.equip}</span></button>`).join("")).join("");
+    body=`<div class="field"><input id="reQ" type="search" placeholder="Search by name or muscle (e.g. biceps)" value="${esc(RE.q)}" oninput="RE.q=this.value;reRefreshPick()"></div><div id="rePick">${groups||`<div class="no-results">No match.</div>`}</div>
+      <button class="ob-ghost" onclick="RE.pick=false;RE.q='';renderRoutineEditor()">Done adding</button>`;
+  }else{
+    const sets=d.ex.reduce((a,x)=>a+x.sets,0),mins=Math.round(d.ex.reduce((a,x)=>a+x.sets*(40+restSec(x.rest)),0)/60);
+    const rows=d.ex.map((x,i)=>{const L=LIB[x.n]||{m:""};const opt=i>=d.optFrom;
+      const cut=(i===d.optFrom&&i>0)?`<div class="re-cut"><i></i><span>Optional below</span><i></i></div>`:"";
+      const sub=[L.m,x.main?"heavy top set":"",opt?"optional":""].filter(Boolean).join(" · ");
+      if(RE.open!==i)return cut+`<div class="re-row" onclick="reOpen(${i})"><div class="n">${esc(x.n)}<small>${esc(sub)}</small></div><span class="sr">${x.sets}×${esc(x.reps)}</span><button class="x" onclick="event.stopPropagation();reRemove(${i})" aria-label="remove">✕</button></div>`;
+      const rp=repParts(x.reps);
+      const restBtns=REST_OPTS.map(r=>`<button class="chip${x.rest===r?" on":""}" onclick="reSet(${i},'rest','${r}')">${r}</button>`).join("")+(REST_OPTS.includes(x.rest)?"":`<button class="chip on">${esc(x.rest)}</button>`);
+      return cut+`<div class="re-row edit"><div class="re-top" onclick="reOpen(-1)"><div class="n">${esc(x.n)}<small>${esc(sub)}</small></div><button class="x" onclick="event.stopPropagation();reRemove(${i})" aria-label="remove">✕</button></div>
+        <div class="re-ed"><div><i>Sets</i><span class="stp"><button onclick="reStep(${i},'sets',-1)">−</button><b>${x.sets}</b><button onclick="reStep(${i},'sets',1)">+</button></span></div>
+          <div><i>Reps from</i><span class="stp"><button onclick="reStep(${i},'lo',-1)">−</button><b>${rp.lo}</b><button onclick="reStep(${i},'lo',1)">+</button></span></div>
+          <div><i>to</i><span class="stp"><button onclick="reStep(${i},'hi',-1)">−</button><b>${rp.hi}</b><button onclick="reStep(${i},'hi',1)">+</button></span></div></div>
+        <div class="re-lab">Rest</div><div class="chips">${restBtns}</div>
+        <div class="chips" style="margin-top:8px"><button class="chip${opt?" on":""}" onclick="reOpt(${i})">Optional</button><button class="chip${x.main?" on":""}" onclick="reSet(${i},'main',${x.main?0:1})">Heavy top set</button>
+          <button class="chip" onclick="reMove(${i},-1)">↑ Up</button><button class="chip" onclick="reMove(${i},1)">↓ Down</button></div></div>`;}).join("");
+    body=`<div class="re-day"><input class="re-name" value="${esc(d.name)}" onchange="reDay().name=this.value.trim()||RE.day" aria-label="day name"><span class="re-code">${esc(RE.day)}</span>${R.order.length>1&&!(CUR&&CUR.day===RE.day)?`<button class="re-del" onclick="reDelDay()">Delete day</button>`:""}</div>
+      <div class="stat"><span>${d.ex.length} exercises</span><span>${sets} sets</span><span>~${mins} min</span></div>
+      ${rows||`<div class="ob-note" style="margin:6px 0 12px">No exercises yet.</div>`}
+      <button class="re-add" onclick="RE.pick=true;RE.open=-1;renderRoutineEditor()">+ Add exercise (search by name or muscle)</button>
+      <button class="ob-cta" onclick="reSave()">Save routine</button>
+      ${RE.mode==="profile"?`<button class="ob-ghost" onclick="RE=null;openTemplatePicker('profile')">Start over from a template</button>`:""}`;
+  }
+  const sub=RE.mode==="onboard"?"Step 3 of 3 · "+esc(RE.R.name):"My routine · "+esc(RE.R.name);
+  obMount(`${ovBack(RE.mode==="onboard"?"openTemplatePicker('onboard')":"reCancel()",sub,"Edit days")}<div class="ov-body"><div class="tabs">${tabs}</div>${body}</div>`);
+  if(RE.pick){const q=document.getElementById("reQ");if(q&&RE.q)q.focus();}
+}
+function reRefreshPick(){const keep=RE.q;renderRoutineEditor();const q=document.getElementById("reQ");if(q){q.focus();try{q.setSelectionRange(keep.length,keep.length);}catch(e){}}}
+function reTab(k){RE.day=k;RE.open=-1;RE.pick=false;renderRoutineEditor();}
+function reOpen(i){RE.open=i;renderRoutineEditor();}
+function reAddDay(){const R=RE.R;let n=R.order.length+1;while(R.days["D"+n])n++;const k="D"+n;R.order.push(k);R.days[k]={name:"Day "+n,optFrom:0,ex:[]};reTab(k);}
+async function reDelDay(){if(!(await showConfirm(`Delete ${RE.day} · ${reDay().name}? Past workouts on it stay in your history.`,{okLabel:"Delete",cancelLabel:"Keep"})))return;
+  const R=RE.R;delete R.days[RE.day];R.order=R.order.filter(k=>k!==RE.day);reTab(R.order[0]);}
+function reAddEx(n){const d=reDay(),x=rx(n);if(!x)return;d.ex.splice(d.optFrom,0,x);d.optFrom++;RE.open=d.optFrom-1;RE.pick=false;RE.q="";renderRoutineEditor();}
+function reRemove(i){const d=reDay();d.ex.splice(i,1);if(i<d.optFrom)d.optFrom--;RE.open=-1;renderRoutineEditor();}
+function reSet(i,f,v){const d=reDay();d.ex[i][f]=v;
+  if(f==="main"&&v&&i>=d.optFrom){reOpt(i);d.ex[d.optFrom-1].main=1;return;} // heavy top sets are always required
+  renderRoutineEditor();}
+function reStep(i,f,dlt){const x=reDay().ex[i];
+  if(f==="sets"){x.sets=Math.max(1,Math.min(10,x.sets+dlt));}
+  else{const p=repParts(x.reps);if(f==="lo")p.lo=Math.max(1,Math.min(p.hi,p.lo+dlt));else p.hi=Math.max(p.lo,Math.min(50,p.hi+dlt));x.reps=`${p.lo}–${p.hi}${p.suf}`;}
+  renderRoutineEditor();}
+function reOpt(i){const d=reDay();const x=d.ex.splice(i,1)[0];
+  if(i<d.optFrom){d.optFrom--;d.ex.push(x);x.main=0;RE.open=d.ex.length-1;}  // make optional → to the end (a heavy top set is never optional)
+  else{d.ex.splice(d.optFrom,0,x);RE.open=d.optFrom;d.optFrom++;}   // make required → end of the required block
+  renderRoutineEditor();}
+function reMove(i,dir){const d=reDay();const j=i+dir;if(j<0||j>=d.ex.length)return;
+  if((i<d.optFrom)!==(j<d.optFrom))return; // stays on its side of the cut line (use Optional to cross it)
+  const t=d.ex[i];d.ex[i]=d.ex[j];d.ex[j]=t;RE.open=j;renderRoutineEditor();}
+async function reCancel(){RE=null;closeOverlay();openProfile();}
+async function reSave(){
+  const R=RE.R;const nm=document.querySelector(".re-name");if(nm&&!RE.pick)reDay().name=nm.value.trim()||RE.day;
+  if(!R.order.length||R.order.every(k=>!R.days[k].ex.length)){await showAlert("Add at least one exercise to a day first.");return;}
+  const empty=R.order.filter(k=>!R.days[k].ex.length);
+  if(empty.length&&!(await showConfirm(`${empty.join(", ")} ${empty.length>1?"have":"has"} no exercises and will be left out.`,{okLabel:"Save anyway",cancelLabel:"Back"})))return;
+  empty.forEach(k=>{delete R.days[k];});R.order=R.order.filter(k=>R.days[k]);
+  // The built-in routine saved unchanged stays built-in (so later updates to it still reach you).
+  if(!ROUTINE&&JSON.stringify(R)===JSON.stringify(builtinRoutine())){RE=null;SETTINGS.onboarded=SETTINGS.onboarded||(HISTORY.length?0:1);await sset("settings",SETTINGS);closeOverlay();if(CUR&&PLAN[CUR.day])renderSession();else renderHome();return;}
+  R.savedAt=Date.now();
+  await sset("routine",R);applyRoutine(R);
+  SETTINGS.dayOrder=SETTINGS.dayOrder||{};R.order.forEach(k=>{delete SETTINGS.dayOrder[k];});
+  const was=RE.mode;RE=null;SETTINGS.onboarded=1;await sset("settings",SETTINGS);
+  closeOverlay();
+  if(CUR&&PLAN[CUR.day])renderSession();else renderHome();
+  if(was==="profile")showExToast&&showExToast({icon:"✓",text:"Routine saved"});
+}
+
 /* ---------------- profile ---------------- */
 let profSaveT=null;
 function openProfile(){
   closeOverlay();
   const p=PROFILE;
   const html=`<div class="overlay"><div class="ov-head"><button class="bk" onclick="closeOverlay()" aria-label="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button><div class="ti"><span>Stored on this device</span>Profile</div></div><div class="ov-body">
+    <div class="field"><label>Name</label><input id="pName" type="text" placeholder="Your name" value="${esc(p.name||"")}" oninput="setProfileField('name',this.value)"></div>
+    <button class="prow" onclick="openRoutineEditor('profile')"><div>My routine<small>${esc(ROUTINE?ROUTINE.name:"Push / Pull (built-in)")} · ${ROT.length} days</small></div><span class="chev">›</span></button>
     <div class="field-row">
       <div class="field"><label>Height</label><input id="pHeight" type="number" inputmode="decimal" placeholder="e.g. 178" value="${esc(p.heightCm)}" oninput="setProfileField('heightCm',this.value)"><div class="unit">cm</div></div>
       <div class="field"><label>Weight</label><input id="pWeight" type="number" inputmode="decimal" placeholder="e.g. 76" value="${esc(p.weightKg)}" oninput="setProfileField('weightKg',this.value)"><div class="unit">kg</div></div>
@@ -2077,8 +2295,8 @@ function openProfile(){
     <div class="field"><label>Goal</label><textarea id="pGoal" placeholder="e.g. Lean bulk, prioritize chest and shoulder width while keeping strength progressing on the big lifts." oninput="setProfileField('goal',this.value)">${esc(p.goal)}</textarea></div>
     <div class="prof-saved hidden" id="profSaved">✓ Saved</div>
     <div class="theme-row"><div><div class="tl">Appearance</div><div class="td">${SETTINGS.theme==="light"?"Light":"Dark"} mode</div></div><button class="theme-switch" onclick="toggleTheme()" aria-label="toggle theme"><div class="knob"></div></button></div>
-    <div class="field" style="margin-top:14px"><label>GitHub backup token</label><div class="tokwrap"><input id="pGhToken" type="password" autocomplete="off" placeholder="Fine-grained PAT, Contents read/write" value="${esc(SETTINGS.ghToken||"")}" oninput="setGhToken(this.value)"><textarea id="pGhTokenTa" class="tok-ta" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off" style="display:none" oninput="setGhToken(this.value)">${esc(SETTINGS.ghToken||"")}</textarea><button type="button" class="eyebtn" id="ghTokenEye" aria-label="show token" onclick="toggleGhTokenVis()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div><div class="tokhint" id="ghTokenHint" style="display:none">Full token shown above — check carefully for missing/extra characters, especially at the start and end.</div></div>
-    <div class="prof-saved hidden" id="ghTokenSaved">✓ Saved — will auto-backup at end of each session</div>
+${SETTINGS.onboarded&&!SETTINGS.ghToken?"":`    <div class="field" style="margin-top:14px"><label>GitHub backup token</label><div class="tokwrap"><input id="pGhToken" type="password" autocomplete="off" placeholder="Fine-grained PAT, Contents read/write" value="${esc(SETTINGS.ghToken||"")}" oninput="setGhToken(this.value)"><textarea id="pGhTokenTa" class="tok-ta" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off" style="display:none" oninput="setGhToken(this.value)">${esc(SETTINGS.ghToken||"")}</textarea><button type="button" class="eyebtn" id="ghTokenEye" aria-label="show token" onclick="toggleGhTokenVis()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div><div class="tokhint" id="ghTokenHint" style="display:none">Full token shown above — check carefully for missing/extra characters, especially at the start and end.</div></div>
+    <div class="prof-saved hidden" id="ghTokenSaved">✓ Saved — will auto-backup at end of each session</div>`}
     <div class="theme-row" style="margin-top:14px"><div><div class="tl">Number pad</div><div class="td">${SETTINGS.sysKeyboard?"System keyboard":"Built-in pad (no page jumps)"}</div></div><button class="sw2${SETTINGS.sysKeyboard?"":" on"}" onclick="toggleKeypad()" aria-label="toggle number pad"><div class="knob"></div></button></div>
     <div class="theme-row" style="margin-top:14px"><div><div class="tl">Rest alerts on lock screen</div><div class="td" id="pushState">${SETTINGS.pushSub?"On — a notification when rest is up":"Off"}</div></div><button class="tool-btn" style="flex:none;padding:8px 12px" onclick="${SETTINGS.pushSub?"testPush()":"enablePush()"}">${SETTINGS.pushSub?"Send test":"Turn on"}</button></div>
   </div></div>`;
@@ -3150,7 +3368,7 @@ async function saveCustomExercise(){
   const reps=(document.getElementById("ceReps").value||"8–12").trim();
   const rest=(document.getElementById("ceRest").value||"60–90s").trim();
   const def={n:name,m:muscle,equip,sets,reps,rest,cues:{do:[],dont:[]},custom:1};
-  CUSTOM_EX.push(def);NAME_INDEX[name]=def;
+  CUSTOM_EX.push(def);NAME_INDEX[name]=def;LIB[name]=def;
   await sset("customEx",CUSTOM_EX);
   addFromLibrary(name);
 }
@@ -4026,7 +4244,7 @@ const verEl=document.getElementById("verBadge");if(verEl)verEl.textContent=APP_V
   // v53 routine revision: clear the old per-day order overrides once so the new default routine (PLAN) applies.
   if((SETTINGS.routineRev||0)<53){["A1","A2","B1","B2"].forEach(d=>{delete SETTINGS.dayOrder[d];});SETTINGS.routineRev=53;await sset("settings",SETTINGS);}
   applyTheme();
-  HISTORY=await sget("history",[]);NOTES=await sget("notes",{});BACKMETA=await sget("backupMeta",{at:0,count:0,lastError:null,lastAttempt:0});PROFILE=await sget("profile",PROFILE);TENNIS=await sget("tennis",[]);CARDIO=await sget("cardio",[]);CARDIO_LIVE=await sget("cardioLive",null);CUSTOM_EX=await sget("customEx",[]);CUSTOM_EX.forEach(e=>{NAME_INDEX[e.n]=e;});updateProfileBtnState();
+  HISTORY=await sget("history",[]);NOTES=await sget("notes",{});BACKMETA=await sget("backupMeta",{at:0,count:0,lastError:null,lastAttempt:0});PROFILE=await sget("profile",PROFILE);TENNIS=await sget("tennis",[]);CARDIO=await sget("cardio",[]);CARDIO_LIVE=await sget("cardioLive",null);CUSTOM_EX=await sget("customEx",[]);CUSTOM_EX.forEach(e=>{NAME_INDEX[e.n]=e;LIB[e.n]=e;});applyRoutine(await sget("routine",null));updateProfileBtnState();
   if(!SETTINGS.fixJul5Reps){
     let fixed=false;
     HISTORY.forEach(h=>{const d=new Date(h.date);if(h.day!=="B1"||d.getFullYear()!==2026||d.getMonth()!==6||d.getDate()!==5)return;
@@ -4061,7 +4279,7 @@ const verEl=document.getElementById("verBadge");if(verEl)verEl.textContent=APP_V
     else CUR=null;
   }
   if(CUR)tidyCur();
-  if(CUR){openIdx=(CUR.openIdx!=null&&CUR.openIdx>=-1&&CUR.order&&CUR.openIdx<CUR.order.length)?CUR.openIdx:nextOpenIdx();renderSession();requestWake();setTimeout(checkIdle,1200);}else renderHome();
+  if(CUR){openIdx=(CUR.openIdx!=null&&CUR.openIdx>=-1&&CUR.order&&CUR.openIdx<CUR.order.length)?CUR.openIdx:nextOpenIdx();renderSession();requestWake();setTimeout(checkIdle,1200);}else{renderHome();if(needsOnboarding())openOnboarding();}
   renderCardioBar();
 })();
 </script>
