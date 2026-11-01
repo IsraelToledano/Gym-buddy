@@ -408,7 +408,8 @@
   .tg.carry{background:rgba(150,130,220,.16);color:var(--violet);border:1px solid rgba(150,130,220,.45)}
   .ex.carryrow .ex-btn{border-style:dashed;border-color:rgba(150,130,220,.6);background:rgba(150,130,220,.10)}
   .ex.prirow .ex-btn{border-style:solid;border-color:var(--red)}
-  .ex.prirow1 .ex-btn{border-style:solid;border-color:rgba(224,112,62,.45)}
+  .ex.optrow .ex-btn{border-style:dashed;border-color:rgba(242,135,46,.6);background:rgba(242,135,46,.10)}
+  .tg.optr{background:rgba(242,135,46,.14);color:var(--amber-bright);border:1px solid rgba(242,135,46,.35)}
   .tg.pri.lo{background:transparent;border-color:rgba(224,112,62,.35)}
   .nudge-ic{flex:none}
   .pdots{display:inline-flex;gap:3px;padding-top:4px}
@@ -1314,6 +1315,14 @@ function rankPriorities(list){
 }
 function priInfo(name){if(!CUR)return null;const p=computeAlerts().priority.find(p=>p.today.includes(name));return p?{p,lvl:p.levels[name]||1}:null;}
 const priDots=n=>`<span class="pdots">${'<i></i>'.repeat(n)}</span>`;
+// Why an exercise is optional today, in a few words.
+function optReason(name,pin){
+  const c=carriedOver(name);
+  if(c)return `skipped in ${c.day}`+(pin&&pin.p.level===1&&pin.p.nextDay?` · ${pin.p.nextDay} covers it`:"");
+  const r=recentExtra(name);if(r)return `done ${daysAgoTxt(r.date)} in ${r.day}`;
+  const st=CUR?computeAlerts().stretch.find(x=>x.name===name):null;if(st)return `stretch goal · ${st.muscle.toLowerCase()} ${st.v}/${st.tot}`;
+  return "extra, if you have time";
+}
 function priLiveNames(p,lvl){const live=p.today.filter(n=>{const lg=CUR.ex[n],e=NAME_INDEX[n];return lg&&!lg.skipped&&lg.sets.some(x=>!setComplete(e,x));});
   const pick=live.filter(n=>(p.levels[n]||1)===lvl);return pick.length?pick:live;}
 // Two grouped boxes at the top: what must happen today and why, and what can
@@ -1329,8 +1338,8 @@ function priGroupsHtml(list){
   }
   if(one.length){
     const lines=one.map(p=>{const m=p.muscle.toLowerCase();
-      return `<div class="pg-line">${priDots(1)}<span><b>${priLiveNames(p,1).map(esc).join(", ")}</b> · ${esc(m)} ${p.v}/${p.man} — ${p.nextDay} has ${p.nextSets} ${esc(m)} sets</span></div>`;}).join("");
-    html+=alertHtml("pri pri1",1,`<div class="pg-head"><b>Can wait</b> — ${nd} closes these gaps on its own, so it's OK to skip them again today:</div>${lines}`,one.map(p=>p.muscle),"",`<div class="nw-row">${one.map(p=>`${esc(p.muscle)}: skipped ${p.skipped.map(x=>`${esc(x.name)} (${x.day}, ${fmtDate(x.date).replace(/^\w+, /,"")})`).join(", ")}`).join("<br>")}</div>`);
+      return `<div class="pg-line"><span><b>${priLiveNames(p,1).map(esc).join(", ")}</b> · ${esc(m)} ${p.v}/${p.man} — ${p.nextDay} has ${p.nextSets} ${esc(m)} sets</span></div>`;}).join("");
+    html+=alertHtml("pri pri1",1,`<div class="pg-head"><b>Optional today</b> — skipped earlier, but ${nd} closes these gaps on its own:</div>${lines}`,one.map(p=>p.muscle),"",`<div class="nw-row">${one.map(p=>`${esc(p.muscle)}: skipped ${p.skipped.map(x=>`${esc(x.name)} (${x.day}, ${fmtDate(x.date).replace(/^\w+, /,"")})`).join(", ")}`).join("<br>")}</div>`);
   }
   return html;
 }
@@ -1419,7 +1428,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v129";
+const APP_VERSION="v130";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -2075,27 +2084,24 @@ function renderSession(){
     // Same precedence as the tag chain below, or the row border would argue
     // with its own tag. The red dot is independent of the cut line: a
     // priority exercise above the line gets marked too.
-    const prioRow=isPriorityEx(name)&&!uskip&&!(dn===total&&total>0);
-    // Once a priority is done the weekly alert clears (the muscle has hit its
-    // must-have), so isPriorityEx goes false and the row used to fall back to
-    // the purple carry tag — hiding that the priority work was done. Remember
-    // it for the session instead, and show it as a completed priority.
-    if(prioRow&&!(CUR.wasPri&&CUR.wasPri[name])){CUR.wasPri=CUR.wasPri||{};CUR.wasPri[name]=1;saveCur();}
+    // One look for everything optional (v130): orange row + "Optional · <why>".
+    // Only ●● must-today stands apart (red). A ● can-wait priority is just an
+    // optional extra with its reason; on a must-have plan row it adds nothing.
+    const prio=isPriorityEx(name)&&!uskip&&!(dn===total&&total>0);
+    const pin=prio?priInfo(name):null;const must2=!!(pin&&pin.lvl===2);
+    // Once a ●● priority is done the weekly alert clears, so remember it for the session.
+    if(must2&&!(CUR.wasPri&&CUR.wasPri[name])){CUR.wasPri=CUR.wasPri||{};CUR.wasPri[name]=1;saveCur();}
     const priDone=!uskip&&dn===total&&total>0&&!!(CUR.wasPri&&CUR.wasPri[name]);
-    const pin=prioRow?priInfo(name):null;const lvl=pin?pin.lvl:0;
-    if(prioRow)cls.push("haspri");if(lvl===2)cls.push("pri2");
+    if(must2)cls.push("haspri","pri2");
     if(priDone)cls.push("pridone");
-    if(pastCap&&!priDone)cls.push(prioRow?(lvl===2?"prirow":"prirow1"):(carriedOver(name)?"carryrow":(recentExtra(name)?"doptrow":(isSuggestedEx(name)?"sugg":"skip"))));
+    if(pastCap&&!priDone)cls.push(must2?"prirow":"optrow");
     if(uskip)cls.push("uskip");else if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
-    const tags=[];if(ex.main)tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');// Priority is checked BEFORE the carry/recent tags. Those two also mean
-// "you skipped this", so an exercise is routinely both — and when the chain
-// let them win, the banner called it a priority while its own row said
-// "optional". Priority is the stronger claim, so it wins and absorbs the
-// carry/recent context into its label instead of contradicting it.
-    const prio=isPriorityEx(name)&&!(dn===total&&total>0);
-    if(uskip)tags.push('<span class="tg sk">Skipped</span>');else if(priDone){tags.push('<span class="tg pridone">✓ Priority done</span>');}else if(prio){const c=carriedOver(name)||recentExtra(name);
-      if(lvl===2)tags.push(`<span class="tg pri">●● Must today${c?` · skipped ${esc(c.day)} ${daysAgoTxt(c.date)}`:" · skipped this week"}</span>`);
-      else tags.push(`<span class="tg pri lo">● Can wait${pin&&pin.p.level===1&&pin.p.nextDay?` · ${esc(pin.p.nextDay)} covers it`:" · gap covered"}</span>`);}else if(carriedOver(name)){const c=carriedOver(name);tags.push(`<span class="tg carry">↩ Skipped ${esc(c.day)} ${daysAgoTxt(c.date)} · optional</span>`);}else if(recentExtra(name)){const r=recentExtra(name);tags.push(`<span class="tg dopt">↺ Done ${daysAgoTxt(r.date)} (${r.day}) · optional</span>`);}else if(pastCap&&isSuggestedEx(name)){tags.push('<span class="tg sugg">Optional ✱ stretch goal</span>');}else if(pastCap){tags.push('<span class="tg opt">Optional</span>');}if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
+    const tags=[];if(ex.main&&!(pastCap&&!must2))tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');
+    if(uskip)tags.push('<span class="tg sk">Skipped</span>');
+    else if(priDone)tags.push('<span class="tg pridone">✓ Priority done</span>');
+    else if(must2){const c=carriedOver(name)||recentExtra(name);tags.push(`<span class="tg pri">●● Must today${c?` · skipped in ${esc(c.day)}`:" · skipped this week"}</span>`);}
+    else if(pastCap)tags.push(`<span class="tg optr">Optional · ${esc(optReason(name,pin))}</span>`);
+    if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
