@@ -1428,7 +1428,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v130";
+const APP_VERSION="v131";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -2078,7 +2078,7 @@ function renderSession(){
     const log=CUR.ex[name];const total=log.sets.length;const dn=log.sets.filter(s=>setComplete(ex,s)).length;
     const uskip=!!log.skipped;
     const pastCap=isOptionalEx(CUR.day,name);
-    const cls=["ex"];if(ex.main)cls.push("main");if(ex.abs)cls.push("abs");
+    const cls=["ex"];if(ex.main)cls.push("main");if(ex.abs&&!isOptionalEx(CUR.day,name))cls.push("abs");
     // Row border must agree with the tag chosen below — a red "Priority" tag
     // inside a teal "optional" row reads as a contradiction.
     // Same precedence as the tag chain below, or the row border would argue
@@ -2102,7 +2102,7 @@ function renderSession(){
     else if(must2){const c=carriedOver(name)||recentExtra(name);tags.push(`<span class="tg pri">●● Must today${c?` · skipped in ${esc(c.day)}`:" · skipped this week"}</span>`);}
     else if(pastCap)tags.push(`<span class="tg optr">Optional · ${esc(optReason(name,pin))}</span>`);
     if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
-    const rankInner=uskip?"–":(ex.abs?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
+    const rankInner=uskip?"–":((ex.abs&&!pastCap)?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
     const targetBadge=(ex.reps&&ex.reps!=="to failure")?`<span class="target-badge">Target ${ex.reps} reps</span>`:"";
     const nVal=(NOTES[name]||"");
@@ -2855,13 +2855,24 @@ function commitSet(i,j){
    list while you're typing. */
 function exProgressGroup(n){const d=NAME_INDEX[n],lg=CUR.ex[n];if(!lg||!d)return 2;if(lg.skipped)return 0;const dn=lg.sets.filter(x=>setComplete(d,x)).length;return(dn>0&&dn>=lg.sets.length)?0:(dn>0?1:2);}
 /* Not-started exercises follow priority: today's must-haves (in plan order),
-   then ●● must-today extras, then ● can-wait, then stretch goals, then the
-   rest of the optional ones. A list you've reordered by hand keeps your order. */
+   then ●● must-today extras, then the optional ones from most to least useful
+   — so the top optional one is where to start:
+     how far behind its muscle is this week (vs the plan's full volume),
+     halved when the next routine in the rotation trains that muscle anyway;
+     something you already did as an extra in the last few days goes last.
+   A list you've reordered by hand keeps your order for the must-haves. */
+function optScore(n){
+  const e=NAME_INDEX[n];if(!e)return 0;if(recentExtra(n))return -1;
+  const pv=planVolume()[e.m],v=weeklyVolume()[e.m]||0;if(!pv||!pv.tot)return 0;
+  let s=Math.max(0,(pv.tot-v)/pv.tot);
+  const i=ROT.indexOf(CUR.day),nd=i>=0?ROT[(i+1)%ROT.length]:null;
+  if(nd&&manSetsOn(nd,e.m)>0)s/=2;
+  return s;
+}
 function priorityTier(n,AL){
   if(!isOptionalEx(CUR.day,n))return 0;
-  const p=AL.priority.find(p=>p.today.includes(n));if(p)return (p.levels[n]||1)===2?1:2;
-  if(AL.stretch.some(st=>st.name===n))return 3;
-  return 4;
+  const p=AL.priority.find(p=>p.today.includes(n));if(p&&(p.levels[n]||1)===2)return 1;
+  return 3-optScore(n); // 2..4, higher score first
 }
 function normalizeOrder(){const before=CUR.order.join("|");
   let todo=CUR.order.filter(n=>exProgressGroup(n)===2);
