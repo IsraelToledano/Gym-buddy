@@ -1307,9 +1307,12 @@ function rankPriorities(list){
   list.forEach(p=>{
     const gap=Math.max(0,p.man-p.v);const ns=nd?manSetsOn(nd,p.muscle):0;
     Object.assign(p,{gap,nextDay:nd,nextSets:ns,nextOn:nextTrainedOn(p.muscle,CUR.day),level:ns>=gap?1:2,levels:{}});
-    let need=p.level===2?gap:0;
+    // An exercise you already did as an extra in the last few days is never
+    // "must today" — it stays optional, and the gap falls to the next one.
+    let need=p.level===2?gap:0,heldByRecent=false;
     p.today.forEach(n=>{const e=NAME_INDEX[n],lg=CUR.ex[n];const left=lg&&!lg.skipped?lg.sets.filter(x=>!setComplete(e,x)).length:0;
-      if(need>0&&left>0){p.levels[n]=2;need-=left;}else p.levels[n]=1;});
+      if(need>0&&left>0){if(recentExtra(n)){p.levels[n]=1;heldByRecent=true;}else{p.levels[n]=2;need-=left;}}else p.levels[n]=1;});
+    if(p.level===2&&!Object.values(p.levels).includes(2)){p.level=1;p.recentOnly=heldByRecent;}
   });
   list.sort((a,b)=>b.level-a.level||(a.v/a.man)-(b.v/b.man));
 }
@@ -1319,7 +1322,7 @@ const priDots=n=>`<span class="pdots">${'<i></i>'.repeat(n)}</span>`;
 function optReason(name,pin){
   const c=carriedOver(name);
   if(c)return `skipped in ${c.day}`+(pin&&pin.p.level===1&&pin.p.nextDay?` · ${pin.p.nextDay} covers it`:"");
-  const r=recentExtra(name);if(r)return `done ${daysAgoTxt(r.date)} in ${r.day}`;
+  const r=recentExtra(name);if(r)return `done ${daysAgoTxt(r.date)} in ${r.day}`+(pin?` · ${pin.p.muscle.toLowerCase()} ${pin.p.v}/${pin.p.man}`:"");
   const st=CUR?computeAlerts().stretch.find(x=>x.name===name):null;if(st)return `stretch goal · ${st.muscle.toLowerCase()} ${st.v}/${st.tot}`;
   return "extra, if you have time";
 }
@@ -1338,8 +1341,10 @@ function priGroupsHtml(list){
   }
   if(one.length){
     const lines=one.map(p=>{const m=p.muscle.toLowerCase();
-      return `<div class="pg-line"><span><b>${priLiveNames(p,1).map(esc).join(", ")}</b> · ${esc(m)} ${p.v}/${p.man} — ${p.nextDay} has ${p.nextSets} ${esc(m)} sets</span></div>`;}).join("");
-    html+=alertHtml("pri pri1",1,`<div class="pg-head"><b>Optional today</b> — skipped earlier, but ${nd} closes these gaps on its own:</div>${lines}`,one.map(p=>p.muscle),"",`<div class="nw-row">${one.map(p=>`${esc(p.muscle)}: skipped ${p.skipped.map(x=>`${esc(x.name)} (${x.day}, ${fmtDate(x.date).replace(/^\w+, /,"")})`).join(", ")}`).join("<br>")}</div>`);
+      const names=priLiveNames(p,1);const r=p.recentOnly?names.map(recentExtra).find(Boolean):null;
+      const why=r?`you did it ${daysAgoTxt(r.date)} in ${r.day}`:`${p.nextDay} has ${p.nextSets} ${esc(m)} sets`;
+      return `<div class="pg-line"><span><b>${names.map(esc).join(", ")}</b> · ${esc(m)} ${p.v}/${p.man} — ${why}</span></div>`;}).join("");
+    html+=alertHtml("pri pri1",1,`<div class="pg-head"><b>Optional today</b> — a bit behind this week, but no need to push them today:</div>${lines}`,one.map(p=>p.muscle),"",`<div class="nw-row">${one.map(p=>`${esc(p.muscle)}: skipped ${p.skipped.map(x=>`${esc(x.name)} (${x.day}, ${fmtDate(x.date).replace(/^\w+, /,"")})`).join(", ")}`).join("<br>")}</div>`);
   }
   return html;
 }
@@ -1428,7 +1433,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v131";
+const APP_VERSION="v132";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -2099,7 +2104,7 @@ function renderSession(){
     const tags=[];if(ex.main&&!(pastCap&&!must2))tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');
     if(uskip)tags.push('<span class="tg sk">Skipped</span>');
     else if(priDone)tags.push('<span class="tg pridone">✓ Priority done</span>');
-    else if(must2){const c=carriedOver(name)||recentExtra(name);tags.push(`<span class="tg pri">●● Must today${c?` · skipped in ${esc(c.day)}`:" · skipped this week"}</span>`);}
+    else if(must2){const c=carriedOver(name);tags.push(`<span class="tg pri">●● Must today${c?` · skipped in ${esc(c.day)}`:" · skipped this week"}</span>`);}
     else if(pastCap)tags.push(`<span class="tg optr">Optional · ${esc(optReason(name,pin))}</span>`);
     if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":((ex.abs&&!pastCap)?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
@@ -2858,15 +2863,16 @@ function exProgressGroup(n){const d=NAME_INDEX[n],lg=CUR.ex[n];if(!lg||!d)return
    then ●● must-today extras, then the optional ones from most to least useful
    — so the top optional one is where to start:
      how far behind its muscle is this week (vs the plan's full volume),
-     halved when the next routine in the rotation trains that muscle anyway;
-     something you already did as an extra in the last few days goes last.
+     halved when the next routine in the rotation trains that muscle anyway,
+     and halved again if you already did it as an extra in the last few days.
    A list you've reordered by hand keeps your order for the must-haves. */
 function optScore(n){
-  const e=NAME_INDEX[n];if(!e)return 0;if(recentExtra(n))return -1;
+  const e=NAME_INDEX[n];if(!e)return 0;
   const pv=planVolume()[e.m],v=weeklyVolume()[e.m]||0;if(!pv||!pv.tot)return 0;
   let s=Math.max(0,(pv.tot-v)/pv.tot);
   const i=ROT.indexOf(CUR.day),nd=i>=0?ROT[(i+1)%ROT.length]:null;
   if(nd&&manSetsOn(nd,e.m)>0)s/=2;
+  if(recentExtra(n))s/=2;   // you trained it in the last few days
   return s;
 }
 function priorityTier(n,AL){
