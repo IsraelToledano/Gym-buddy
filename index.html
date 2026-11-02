@@ -409,6 +409,11 @@
   .ex.carryrow .ex-btn{border-style:dashed;border-color:rgba(150,130,220,.6);background:rgba(150,130,220,.10)}
   .ex.prirow .ex-btn{border-style:solid;border-color:var(--red)}
   .ex.optrow .ex-btn{border-style:dashed;border-color:rgba(242,135,46,.6);background:rgba(242,135,46,.10)}
+  .why{margin:-2px 0 10px;padding:9px 11px;border-radius:10px;border:1px solid rgba(242,135,46,.35);background:rgba(242,135,46,.07);font-size:12.5px;line-height:1.45;color:var(--ink-dim);display:grid;gap:4px}
+  .why b{color:var(--ink)}
+  .why .why-t{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber)}
+  .why.must{border-color:rgba(224,112,62,.45);background:rgba(224,112,62,.07)}.why.must .why-t{color:var(--red)}
+  .why .why-note{color:var(--ink-faint);font-size:11.5px}
   .tg.optr{background:rgba(242,135,46,.14);color:var(--amber-bright);border:1px solid rgba(242,135,46,.35)}
   .tg.pri.lo{background:transparent;border-color:rgba(224,112,62,.35)}
   .nudge-ic{flex:none}
@@ -426,6 +431,7 @@
   .tg.sugg{background:rgba(242,135,46,.14);color:var(--amber-bright);border:1px solid rgba(242,135,46,.35)}
   .recent-box{font-size:13px;color:var(--teal);background:rgba(84,185,168,.08);border:1px solid rgba(84,185,168,.3);border-radius:10px;padding:8px 10px;margin:6px 0 10px;line-height:1.35}
   .recent-box .rb-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+  .recent-box.rb-only{background:none;border:none;padding:0;margin:-4px 0 10px}.recent-box.rb-only .rb-btns{margin-top:0}
   /* Four distinct priority levels — these must stay visually separable at a
      glance, since they're the whole point of the cut-line zone:
        pri  (red)    must do, skipped this week
@@ -1318,13 +1324,45 @@ function rankPriorities(list){
 }
 function priInfo(name){if(!CUR)return null;const p=computeAlerts().priority.find(p=>p.today.includes(name));return p?{p,lvl:p.levels[name]||1}:null;}
 const priDots=n=>`<span class="pdots">${'<i></i>'.repeat(n)}</span>`;
-// Why an exercise is optional today, in a few words.
-function optReason(name,pin){
-  const c=carriedOver(name);
-  if(c)return `skipped in ${c.day}`+(pin&&pin.p.level===1&&pin.p.nextDay?` · ${pin.p.nextDay} covers it`:"");
-  const r=recentExtra(name);if(r)return `done ${daysAgoTxt(r.date)} in ${r.day}`+(pin?` · ${pin.p.muscle.toLowerCase()} ${pin.p.v}/${pin.p.man}`:"");
-  const st=CUR?computeAlerts().stretch.find(x=>x.name===name):null;if(st)return `stretch goal · ${st.muscle.toLowerCase()} ${st.v}/${st.tot}`;
-  return "extra, if you have time";
+// Short reason on the collapsed card; the full why is in the open card (whyHtml).
+function optReason(name){
+  const c=carriedOver(name);if(c)return `skipped in ${c.day}`;
+  const r=recentExtra(name);if(r)return `done ${daysAgoTxt(r.date)}`;
+  const o=CUR?optNeed(name):null;if(o&&o.tier>=1&&o.tier<=3&&o.tier!==0)return o.tier===1?"stretch goal":"behind this week";
+  return "extra";
+}
+const capF=x=>x.charAt(0).toUpperCase()+x.slice(1);
+// Where this week's sets for a muscle came from: "3 in B2 Tue, 2 in A2 yesterday".
+function muscleSources(m){const from=weekStartTs(),out=[];let dropping=0;const tomorrowFrom=from+864e5;
+  HISTORY.filter(h=>h.date>=from).forEach(h=>{let n=0;sessionExNames(h).forEach(x=>{const d=NAME_INDEX[x];if(!d||d.m!==m)return;const l=sessionLog(h,x);if(l&&!l.skipped)n+=l.sets.filter(st=>setComplete(d,st)).length;});
+    if(n){out.push(`${n} in ${h.day} ${daysAgoTxt(h.date)}`);if(h.date<tomorrowFrom)dropping+=n;}});
+  if(CUR){let n=0;CUR.order.forEach(x=>{const d=NAME_INDEX[x];if(!d||d.m!==m)return;const l=CUR.ex[x];if(l)n+=l.sets.filter(st=>setComplete(d,st)).length;});if(n)out.push(`${n} today`);}
+  return{txt:out.join(", "),dropping};}
+function whyHtml(name){
+  if(!CUR)return"";const ex=NAME_INDEX[name],lg=CUR.ex[name];if(!ex||!lg||lg.skipped||lg.sets.every(x=>setComplete(ex,x)))return"";
+  const pin=priInfo(name),must2=!!(pin&&pin.lvl===2),opt=isOptionalEx(CUR.day,name);if(!opt&&!must2)return"";
+  const o=optNeed(name);if(!o)return"";const c=carriedOver(name),r=recentExtra(name),m=o.m.toLowerCase();
+  const src=muscleSources(o.m);
+  const nums=o.v<o.man?`<b>${o.v} of ${o.man}</b> must-have sets this week`:(o.v<o.tot?`<b>${o.v}</b> sets this week — must-haves (${o.man}) done, the full plan is ${o.tot}`:`<b>${o.v}</b> sets this week — the plan's ${o.tot} already covered`);
+  const stand=`${capF(m)}: ${nums}${src.txt?` (${src.txt})`:""}.${src.dropping?` ${src.dropping} of them drop out of the 7-day count tomorrow.`:""}`;
+  const lines=[];let title;
+  if(c)lines.push(`You skipped it in ${c.day} ${daysAgoTxt(c.date)}, so it was carried over to today.`);
+  else if(r){const h=HISTORY.find(x=>x.date===r.date),l=h&&sessionLog(h,name),k=l?l.sets.filter(x=>setComplete(ex,x)).length:0;
+    lines.push(`It's in ${CUR.day}'s plan, but you already did ${k?k+" set"+(k>1?"s":"")+" of it":"it"} ${daysAgoTxt(r.date)} in ${r.day} as an extra — so today it's optional.`);}
+  else if(opt)lines.push(`It's in ${CUR.day}'s plan, below the must-haves.`);
+  lines.push(stand);
+  if(must2){title="Why it's a must today";
+    lines.push(`${o.nd?`${o.nd}, your next routine, ${o.ns?`only has ${o.ns}`:"has none"}`:"Your next routine doesn't cover it"} — skip it again and ${m} stay${m.endsWith("s")?"":"s"} behind.`);}
+  else{
+    const optl=CUR.order.filter(n=>exProgressGroup(n)===2&&isOptionalEx(CUR.day,n)&&!((priInfo(n)||{}).lvl===2));const k=optl.indexOf(name)+1;
+    title=k?`Why it's here · #${k} of ${optl.length} optional`:"Why it's here";
+    if(o.tier===3)lines.push(`${o.gap} more set${o.gap>1?"s":""} hit${o.gap>1?"":"s"} the target, and ${o.nd||"your next routine"}${o.ns?` only has ${o.ns}`:" has none"} — the most useful optional kind today.`);
+    else if(o.tier===2)lines.push(`${o.nd}, your next routine, has ${o.ns} ${m} sets and closes the gap anyway — so it can wait.`);
+    else if(o.tier===1)lines.push(`Must-haves are covered; this only adds toward the full ${o.tot}.`);
+    else lines.push(`Already fully covered this week — only if you have time${c?". That's why it sits below the ones whose muscles still need work, even though you skipped it":""}.`);
+    if(optl.length>1)lines.push(`<span class="why-note">Optional ones are ordered by how much each muscle still needs this week.</span>`);
+  }
+  return `<div class="why${must2?" must":""}"><div class="why-t">${title}</div>${lines.map(x=>`<div>${x}</div>`).join("")}</div>`;
 }
 function priLiveNames(p,lvl){const live=p.today.filter(n=>{const lg=CUR.ex[n],e=NAME_INDEX[n];return lg&&!lg.skipped&&lg.sets.some(x=>!setComplete(e,x));});
   const pick=live.filter(n=>(p.levels[n]||1)===lvl);return pick.length?pick:live;}
@@ -1433,7 +1471,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v132";
+const APP_VERSION="v133";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -2105,7 +2143,7 @@ function renderSession(){
     if(uskip)tags.push('<span class="tg sk">Skipped</span>');
     else if(priDone)tags.push('<span class="tg pridone">✓ Priority done</span>');
     else if(must2){const c=carriedOver(name);tags.push(`<span class="tg pri">●● Must today${c?` · skipped in ${esc(c.day)}`:" · skipped this week"}</span>`);}
-    else if(pastCap)tags.push(`<span class="tg optr">Optional · ${esc(optReason(name,pin))}</span>`);
+    else if(pastCap)tags.push(`<span class="tg optr">Optional · ${esc(optReason(name))}</span>`);
     if((NOTES[ex.n]||"").trim())tags.push('<span class="tg note">📝 note</span>');
     const rankInner=uskip?"–":((ex.abs&&!pastCap)?"★":((dn===total&&total>0)?"✓":(i+1)));const exp=(openIdx===i);
     const prs=exPRs(name);let topHtml="",statsHtml="",trendBtnHtml="";
@@ -2119,7 +2157,7 @@ function renderSession(){
       // it right at the top of the expanded card instead of making the person scroll
       // past sets and cues to find it. The editor down in noteBlock is untouched.
       const pinnedNoteHtml=`<div id="pn-${i}">${nVal.trim()?pinnedNoteView(i,nVal):""}</div>`;
-      const metaRow=((targetBadge||lastTimeHtml)?`<div class="targetrow">${targetBadge}${lastTimeHtml}</div>`:"")+progHintHtml(name);
+      const metaRow=((targetBadge||lastTimeHtml)?`<div class="targetrow">${targetBadge}${lastTimeHtml}</div>`:"")+whyHtml(name)+((recentExtra(name)&&!uskip&&dn===0)?recentBoxHtml(i,name):"")+progHintHtml(name);
       topHtml=`${pinnedNoteHtml}${metaRow}`;
       if(!prs.hasData){statsHtml=`<div class="nohist" style="margin-bottom:0;padding-bottom:0;border-bottom:none">No history yet — your first logged session sets the baseline.</div>`;}
       else{
@@ -2139,7 +2177,7 @@ function renderSession(){
     const swapOpts=getSwapOptions(name);
     const liveVB=uskip?null:computeExVolumeInsight(name);
     const hlHtml=`<div id="hl-${i}">${liveVB?renderHighlightBadge(liveVB):""}</div>`;
-    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${(exp&&recentExtra(name)&&!uskip&&dn===0)?recentBoxHtml(i,name):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}<div id="ef-${i}">${effortHtml(i)}</div><button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="btnrow"><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo":"⤼ Skip"}</button><button class="formtog" onclick="toggleCues(this)">Cues ▾</button>${trendBtnHtml}${noteBtnHtml}</div><div class="cues">${cues}</div>${noteBlock}</div></div></div></div>`;
+    html+=`<div class="${cls.join(" ")}" id="ex-${i}" data-name="${name}"><div class="ex-btn" role="button" tabindex="0" aria-expanded="${exp}" onclick="toggleEx(${i})" onkeydown="if(event.key==='Enter')toggleEx(${i})"><span class="drag-handle" data-idx="${i}" aria-label="drag to reorder" onclick="event.stopPropagation()">${DRAG_SVG}</span><span class="rank">${rankInner}</span><span><span class="ex-name">${ex.n}</span>${tags.length?`<span class="tags">${tags.join("")}</span>`:""}</span><span class="ex-right">${swapOpts.length?`<button class="swap-btn" onclick="event.stopPropagation();openSwap(${i})" aria-label="swap exercise">${SWAP_SVG}</button>`:""}<span class="setcount">${uskip?"Skipped":`<b>${dn}</b>/${total}`}</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></span></div><div class="ex-body"><div class="inner"><div class="panel">${exp?animHtml(ex.n):""}${topHtml}<div class="setgrid">${rows}</div>${hlHtml}<div id="ef-${i}">${effortHtml(i)}</div><button class="addset" onclick="addSet(${i})">+ Add set</button><div style="margin-top:14px">${statsHtml}</div><div class="btnrow"><button class="formtog skiptog${uskip?" active":""}" onclick="event.stopPropagation();toggleSkipEx(${i})">${uskip?"↺ Undo":"⤼ Skip"}</button><button class="formtog" onclick="toggleCues(this)">Cues ▾</button>${trendBtnHtml}${noteBtnHtml}</div><div class="cues">${cues}</div>${noteBlock}</div></div></div></div>`;
   });
   html+=`</div><button class="tool-btn" style="width:100%;margin-top:10px" onclick="openAddExercise()">+ Add exercise</button>${cardioFinisherHtml()}<div class="finishbar"><button class="btn ghost" onclick="discardSession()">Discard</button><button class="btn primary" onclick="finishSession()">Finish &amp; save</button></div>`;
   document.body.classList.add("in-session");
@@ -2866,19 +2904,24 @@ function exProgressGroup(n){const d=NAME_INDEX[n],lg=CUR.ex[n];if(!lg||!d)return
      halved when the next routine in the rotation trains that muscle anyway,
      and halved again if you already did it as an extra in the last few days.
    A list you've reordered by hand keeps your order for the must-haves. */
-function optScore(n){
-  const e=NAME_INDEX[n];if(!e)return 0;
-  const pv=planVolume()[e.m],v=weeklyVolume()[e.m]||0;if(!pv||!pv.tot)return 0;
-  let s=Math.max(0,(pv.tot-v)/pv.tot);
-  const i=ROT.indexOf(CUR.day),nd=i>=0?ROT[(i+1)%ROT.length]:null;
-  if(nd&&manSetsOn(nd,e.m)>0)s/=2;
-  if(recentExtra(n))s/=2;   // you trained it in the last few days
-  return s;
+// Where an optional exercise's muscle stands this week, and how much it still
+// needs. tier 3 = below its must-have sets and the next routine won't close
+// the gap · 2 = below, but the next routine closes it · 1 = must-haves met,
+// still under the plan's full volume · 0 = already fully covered.
+function optNeed(n){
+  const e=NAME_INDEX[n];if(!e)return null;const pv=planVolume()[e.m]||{man:0,tot:0};const v=Math.round(weeklyVolume()[e.m]||0);
+  const i=ROT.indexOf(CUR.day),nd=i>=0?ROT[(i+1)%ROT.length]:null;const ns=nd?manSetsOn(nd,e.m):0;
+  const gap=Math.max(0,pv.man-v);
+  return{m:e.m,v,man:pv.man,tot:pv.tot,gap,nd,ns,tier:gap>0?(ns>=gap?2:3):(v<pv.tot?1:0),need:pv.tot?Math.max(0,(pv.tot-v)/pv.tot):0};
 }
+// Higher = more useful. Within "already covered", a skipped carry-over comes
+// before something you did recently, which comes before a plain extra.
+function optScore(n){const o=optNeed(n);if(!o)return 0;let s=o.tier*10+o.need*5;
+  if(o.tier===0)s+=carriedOver(n)?0.3:(recentExtra(n)?0.2:0);return s;}
 function priorityTier(n,AL){
   if(!isOptionalEx(CUR.day,n))return 0;
   const p=AL.priority.find(p=>p.today.includes(n));if(p&&(p.levels[n]||1)===2)return 1;
-  return 3-optScore(n); // 2..4, higher score first
+  return 2+(40-optScore(n))/40; // 2..3, higher score first
 }
 function normalizeOrder(){const before=CUR.order.join("|");
   let todo=CUR.order.filter(n=>exProgressGroup(n)===2);
@@ -3264,7 +3307,8 @@ function finishDrag(){
 }
 
 function recentBoxHtml(i,name){const r=recentExtra(name);const alts=freshSwaps(name);
-  return `<div class="recent-box">↺ You did this ${daysAgoTxt(r.date)} on ${r.day} — optional today.<div class="rb-btns">${alts.map(n=>`<button class="formtog" onclick="event.stopPropagation();swapTo(${i},'${escLibName(n)}')">Swap → ${esc(n)}</button>`).join("")}<button class="formtog" onclick="event.stopPropagation();toggleSkipEx(${i})">⤼ Skip</button></div></div>`;}
+  // The why (done recently → optional) is explained in the "Why it's here" box above; only the actions stay.
+  return `<div class="recent-box rb-only"><div class="rb-btns">${alts.map(n=>`<button class="formtog" onclick="event.stopPropagation();swapTo(${i},'${escLibName(n)}')">Swap → ${esc(n)}</button>`).join("")}<button class="formtog" onclick="event.stopPropagation();toggleSkipEx(${i})">⤼ Skip</button></div></div>`;}
 /* ---------------- exercise swap ---------------- */
 async function swapTo(i,newName){const name=CUR.order[i];const oldDef=NAME_INDEX[name];
   if(CUR.ex[name].sets.some(s=>setComplete(oldDef,s))){const ok=await showConfirm(`Swap to ${newName}? Sets already logged for ${name} this session will be cleared.`);if(!ok)return;}
