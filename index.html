@@ -198,6 +198,18 @@
 
   .day-btn.cardio-tile{border-color:var(--teal)}
   .day-btn.cardio-tile .code{color:var(--teal)}
+.day-btn.oneoff-tile{width:100%;margin-top:10px;display:flex;align-items:center;gap:14px;text-align:left;border-style:dashed;border-color:var(--ink-faint)}
+.day-btn.oneoff-tile .oo-ic{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;color:var(--ink);width:26px;text-align:center;flex:none}
+.day-btn.oneoff-tile .code b{color:var(--ink)}
+.day-btn.oneoff-tile .oo-nm{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:18px;color:var(--ink-dim);text-transform:uppercase}
+.day-btn.oneoff-tile.live{border-color:var(--amber);border-style:solid}
+.oo-info{background:var(--card-hi);border:1px dashed var(--ink-faint);border-radius:var(--r);padding:12px 14px;font-size:13px;line-height:1.45;color:var(--ink-dim);margin-bottom:12px}
+.oo-info b{color:var(--ink)}
+.oo-sub{font-size:12px;color:var(--ink-faint);text-align:center;margin:6px 0 0}
+.oo-ease{color:var(--green);font-weight:600}
+.oo-chip{display:inline-block;font-family:'Manrope',sans-serif;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);border:1px dashed var(--ink-faint);border-radius:20px;padding:1px 7px;margin-left:6px;vertical-align:3px}
+.oo-hist{margin-top:18px}
+.oo-hist .tool-btn{width:100%}
   .cd-type-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:6px}
   .cd-type-btn{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 4px;text-align:center;font-size:12px;font-weight:600;color:var(--ink-dim)}
   .cd-type-btn .ic{font-size:20px;display:block;margin-bottom:4px}
@@ -787,6 +799,8 @@
   .cal-d.two .c{font-size:11.5px}
   .cal-d.push{background:rgba(242,135,46,.16);border-color:rgba(242,135,46,.45)}.cal-d.push .c{color:var(--amber-bright)}
   .cal-d.pull{background:rgba(84,185,168,.14);border-color:rgba(84,185,168,.45)}.cal-d.pull .c{color:var(--teal)}
+.cal-d.full{background:var(--card-hi);border:1px dashed var(--ink-faint)}.cal-d.full .c{color:var(--ink)}
+.cal-leg i.lf{border:1px dashed var(--ink-dim)}
   .cal-d .dots{position:absolute;bottom:3px;display:flex;gap:3px}
   .cal-d .dots i{width:5px;height:5px;border-radius:50%;background:var(--violet)}
   .cal-d .dots i.t{background:var(--green)}
@@ -1242,7 +1256,104 @@ const BUILTIN_PLAN={};for(const k in PLAN)BUILTIN_PLAN[k]=PLAN[k];
 const DEFAULT_ROT=["A1","B1","A2","B2"],DEFAULT_DAYS=["A1","A2","B1","B2"];
 let ROT=DEFAULT_ROT.slice(),DAY_LIST=DEFAULT_DAYS.slice(),ROUTINE=null;
 const LIB={};for(const n in NAME_INDEX)LIB[n]=NAME_INDEX[n];   // every known exercise definition
-const dayName=d=>PLAN[d]?PLAN[d].name:(d||"");
+/* ---- One-off sessions (v136) ----
+   A workout outside the A1→B1→A2→B2 rotation — e.g. a full-body refresh after
+   time off. It's saved in history under day "FB", which is deliberately NOT a
+   PLAN key, so:
+   • everything keyed by exercise name sees it — "Last:" weights, PRs, trends,
+     progression nudges, weekly volume, the Coach's lift trends, recent extras;
+   • everything keyed by the routine ignores it — the rotation / suggested day,
+     carry-over of skipped must-haves, "skipped this week" priorities, the cut
+     line, per-day completion in the Coach.
+   Work done in a one-off still clears a carry-over for that exercise. */
+const ONEOFF_KEY="FB";
+const ONEOFF={name:"Full body",ex:[
+  ["Lat pulldown",3],["Goblet squat",3],["Incline barbell press",3],["Seated cable row (machine)",3],
+  ["Dumbbell Romanian deadlift",2],["Lateral raises",2],["Triceps V-cable pushdown",2],["Concentration curl",2],["Captain knee raise",2]]};
+const isOneOff=d=>d===ONEOFF_KEY;
+const dayName=d=>PLAN[d]?PLAN[d].name:isOneOff(d)?ONEOFF.name:(d||"");
+const dayStub=d=>PLAN[d]||{name:dayName(d),ex:[]};
+function oneOffList(){return ONEOFF.ex.filter(([n])=>NAME_INDEX[n]);}
+// Last session that belongs to the rotation (one-offs are skipped over).
+function lastRegular(){for(let i=HISTORY.length-1;i>=0;i--)if(!isOneOff(HISTORY[i].day))return HISTORY[i];return null;}
+/* Ease-back target for a lift you haven't done in EASE_GAP_DAYS+ days: last
+   time's reps at ~90% of last time's weight (rounded down to a real increment),
+   which leaves roughly 2–3 reps in the tank. After a break strength is mostly
+   still there; what bites is the soreness from going all-out on day one.
+   null = done recently, the normal goals apply. */
+const EASE_GAP_DAYS=10;
+function easeIn(name){
+  const def=NAME_INDEX[name];const info=lastLogInfo(name);if(!def||!info)return null;
+  const days=Math.round((new Date().setHours(0,0,0,0)-new Date(info.date).setHours(0,0,0,0))/864e5);if(days<EASE_GAP_DAYS)return null;
+  const rg=repRange(def);
+  const st=info.sets.filter(s=>s.reps!==""&&s.reps!=null).map(s=>({w:parseFloat(s.weight)||0,r:parseInt(s.reps)||0})).filter(s=>s.r>0&&s.r<=MAX_SANE_REPS);
+  if(!st.length)return null;
+  const W=modeWeight(st);
+  const atW=st.filter(s=>s.w===W).map(s=>s.r).sort((a,b)=>a-b),med=atW[Math.floor((atW.length-1)/2)];
+  const clamp=r=>rg?Math.min(rg[1],Math.max(rg[0],r)):r;
+  if(!W)return{days,w:0,r:clamp(Math.round(med*0.8)),bw:true}; // bodyweight: ~80% of last time's reps
+  const step=PROG_STEP[def.equip]||2.5;
+  return{days,w:round1(Math.max(step,Math.floor(W*0.9/step)*step)),r:clamp(med),from:W};
+}
+const easeTxt=ez=>ez.bw?`${ez.r} reps`:`${fmtKg(ez.w)} × ${ez.r}`;
+// Set rows for a one-off exercise: grey hints = the ease-in target when it
+// applies (a blank weight then logs that), otherwise last time's numbers.
+function oneOffSets(name,n){const prev=lastLog(name),ez=easeIn(name);
+  return Array.from({length:n},(_,j)=>{const p=prev&&prev[j]!=null?prev[j]:(prev&&prev.length?prev[prev.length-1]:null);
+    return{weight:"",reps:"",
+      ph:ez&&!ez.bw?String(ez.w):(p?String(p.weight??"–")||"–":"–"),
+      phReps:ez?String(ez.r):(p&&p.reps!=null&&p.reps!==""?String(p.reps):"")};});}
+function startOneOff(){
+  const list=oneOffList();
+  CUR={day:ONEOFF_KEY,start:null,nudgeDismissed:false,order:list.map(x=>x[0]),ex:{},recent:{},carried:{},extra:{},extrasV:1};
+  CUR.defaultOrder=CUR.order.slice();
+  list.forEach(([n,k])=>{CUR.ex[n]={sets:oneOffSets(n,k)};});
+  setOpenIdx(0);initAudio();requestWake();renderSession();}
+// Turn the in-progress rotation session into a one-off: whatever you've
+// logged stays (trailing empty sets trimmed to the one-off count), untouched
+// exercises go, and the rest of the full-body list is added.
+function convertToOneOff(){
+  if(!CUR||isOneOff(CUR.day))return;
+  const want=Object.fromEntries(oneOffList());const order=[],ex={};
+  CUR.order.forEach(n=>{const d=NAME_INDEX[n],lg=CUR.ex[n];if(!d||!lg)return;
+    const dn=lg.sets.filter(x=>setComplete(d,x)).length;if(!dn)return;
+    const k=want[n]||(oneOffList().find(([m])=>sameMoveIn(n,[m]))||[])[1]; // same movement under another name (Lat pulldown (machine))
+    if(k){const keep=Math.max(dn,k);while(lg.sets.length>keep&&!setComplete(d,lg.sets[lg.sets.length-1]))lg.sets.pop();}
+    lg.skipped=false;order.push(n);ex[n]=lg;});
+  oneOffList().forEach(([n,k])=>{if(order.includes(n)||sameMoveIn(n,order))return;order.push(n);ex[n]={sets:oneOffSets(n,k)};});
+  Object.assign(CUR,{day:ONEOFF_KEY,wasDay:CUR.day,order,defaultOrder:order.slice(),ex,recent:{},carried:{},extra:{},extrasV:1,userReordered:false,wasPri:{}});
+  normalizeOrder();openIdx=nextOpenIdx();CUR.openIdx=openIdx;saveCur();closeOverlay();renderSession();requestWake();}
+async function confirmSwitchOneOff(){
+  const ok=await showConfirm(`Discard your in-progress ${CUR.day} session and start a fresh one-off? Anything logged so far in ${CUR.day} will be lost.`,{okLabel:"Discard & start one-off",cancelLabel:"Keep current session"});
+  if(!ok)return;closeOverlay();startOneOff();}
+// A finished session in history can be moved off (or back onto) the rotation.
+async function setHistoryOneOff(idx,on){const rec=HISTORY[idx];if(!rec)return;
+  if(on){if(isOneOff(rec.day)||!PLAN[rec.day])return;rec.wasDay=rec.day;rec.day=ONEOFF_KEY;}
+  else{if(!isOneOff(rec.day)||!rec.wasDay)return;rec.day=rec.wasDay;delete rec.wasDay;}
+  await sset("history",HISTORY);renderHome();openHistorySession(idx);}
+function previewOneOff(){
+  closeOverlay();
+  const list=oneOffList();const ld=lastDoneOf(ONEOFF_KEY);
+  let eased=0;
+  const rows=list.map(([n,k])=>{const e=NAME_INDEX[n];const ez=easeIn(n);if(ez)eased++;
+    const prev=lastLogInfo(n);const lastTxt=prev?prev.sets.filter(s=>s.reps!==""&&s.reps!=null).slice(0,1).map(s=>parseFloat(s.weight)?`${s.weight} × ${s.reps}`:`${s.reps} reps`)[0]:"";
+    const sub=ez?`${esc(e.m)} · <span class="oo-ease">ease in ${esc(easeTxt(ez))}</span>`:`${esc(e.m)}${lastTxt?` · last ${esc(lastTxt)}`:` · ${esc(e.equip)}`}`;
+    return `<div class="prev-item"><div><div class="pi-name">${esc(n)}</div><div class="pi-sub">${sub}</div></div><div class="pi-r">${k}×${esc(e.reps)}<div class="pi-rest">${esc(e.rest)} rest</div></div></div>`;}).join("");
+  const nx=nextSuggestedDay();
+  const info=`<div class="oo-info">Off the books — your rotation stays on <b>${esc(nx)} · ${esc(dayName(nx))}</b>. Every set still counts: weekly volume, “Last:” weights, PRs and the Coach all see it. Skips here don't carry over.${eased?` Lifts you haven't done in ${EASE_GAP_DAYS}+ days: last time's reps, ~10% lighter — about 2–3 reps in the tank.`:""}</div>`;
+  let cta;
+  if(CUR&&isOneOff(CUR.day))cta=`<button class="btn primary" style="width:100%" onclick="closeOverlay();openSession()">Resume one-off</button>`;
+  else if(CUR){let dn=0;CUR.order.forEach(n=>{const d=NAME_INDEX[n],lg=CUR.ex[n];if(d&&lg)dn+=lg.sets.filter(x=>setComplete(d,x)).length;});
+    cta=`<button class="btn primary" style="width:100%" onclick="convertToOneOff()">Turn ${esc(CUR.day)} into this one-off</button><div class="oo-sub">${dn?`Keeps the ${dn} set${dn===1?"":"s"} you've logged and adds the rest of the list.`:`Nothing logged in ${esc(CUR.day)} yet — it's swapped for this list.`}</div><button class="btn ghost" style="width:100%;margin-top:10px" onclick="confirmSwitchOneOff()">Discard ${esc(CUR.day)} &amp; start fresh</button>`;}
+  else cta=`<button class="btn primary" style="width:100%" onclick="closeOverlay();startOneOff()">Start one-off · ${esc(ONEOFF.name)}</button>`;
+  const html=`<div class="overlay"><div class="ov-head">${BACK_BTN}<div class="ti"><span>${ld?`Last one-off ${fmtDate(ld)}`:"Off the rotation"}</span>One-off · ${esc(ONEOFF.name)}</div></div><div class="ov-body">
+    ${info}
+    <div class="section-h" style="margin-top:0">${list.length} exercises · ${list.reduce((a,x)=>a+x[1],0)} sets</div>
+    <div class="prev-list">${rows}</div>
+    ${cta}
+  </div></div>`;
+  document.getElementById("overlayMount").innerHTML=html;
+}
 function applyRoutine(R){
   ROUTINE=R&&R.order&&R.days?R:null;
   for(const k in PLAN)delete PLAN[k];
@@ -1483,14 +1594,20 @@ const sameMoveIn=(name,list)=>{const mv=MOVES[name];return !!mv&&list.some(n=>n!
 function carryOk(name,srcDay,today){return wasMandatoryOn(srcDay,name)&&!sameMoveIn(name,today);}
 function computeCarryOver(day,order){
   const out={};
-  const last=HISTORY[HISTORY.length-1];
+  // From the last rotation session — one-offs aren't a source of carry-overs,
+  // but work done in one since then does count as made up.
+  let li=HISTORY.length-1;while(li>=0&&isOneOff(HISTORY[li].day))li--;
+  const last=HISTORY[li];
   if(!last)return out;
+  const since=HISTORY.slice(li+1);
+  const madeUp=n=>since.some(h=>sessionExNames(h).some(x=>{const d=NAME_INDEX[x];if(!d||!(x===n||sameMoveIn(n,[x])))return false;const l=sessionLog(h,x);return l&&!l.skipped&&l.sets.some(s=>setComplete(d,s));}));
   sessionExNames(last).forEach(n=>{
     const e=NAME_INDEX[n];if(!e)return;
     if(order.includes(n))return;                    // already on today's list
     if(!carryOk(n,last.day,order))return;           // optional skips, re-carries and same-movement duplicates don't carry
     const lg=sessionLog(last,n);
     if(lg&&!lg.skipped&&lg.sets.some(x=>setComplete(e,x)))return; // it did get done
+    if(madeUp(n))return;                            // or got done in a one-off since
     out[n]={day:last.day,date:last.date};
   });
   return out;
@@ -1510,6 +1627,7 @@ function isOptionalEx(day,name){
   return idx>=optFrom(day);
 }
 function getDayOrderNames(day){
+  if(!PLAN[day])return isOneOff(day)?oneOffList().map(x=>x[0]):[];
   const planNames=PLAN[day].ex.map(e=>e.n);
   // A saved order only re-orders the day's own plan exercises. Names from old
   // routines or past swaps that got saved into it (Calf raise / Captain knee
@@ -1531,7 +1649,7 @@ const mem={};
 const LS_PREFIX="gymbuddy:";
 async function sget(k,def){if(!HAS_STORE)return(k in mem)?mem[k]:def;try{const raw=window.localStorage.getItem(LS_PREFIX+k);return raw!=null?JSON.parse(raw):def;}catch(e){return def;}}
 async function sset(k,v){mem[k]=v;if(!HAS_STORE)return;try{window.localStorage.setItem(LS_PREFIX+k,JSON.stringify(v));}catch(e){}}
-const APP_VERSION="v135";
+const APP_VERSION="v136";
 function backupSettings(){const s=Object.assign({},SETTINGS);delete s.ghToken;delete s.pushSub;return s;}
 function backupBlob(){return JSON.stringify({v:2,exportedAt:Date.now(),settings:backupSettings(),notes:NOTES,history:HISTORY,profile:PROFILE,tennis:TENNIS,cardio:CARDIO,customEx:CUSTOM_EX,focusTrace:focusTraces()});}
 /* Diagnostics for the "page jumps when I tap a reps box" report: for 2.5s after
@@ -1705,8 +1823,9 @@ function suggestDay(){
   const vol=weeklyVolume();
   const deficit={};
   for(const m in MUSCLES){const meta=MUSCLES[m];if(!meta.nudge){deficit[m]=0;continue;}deficit[m]=Math.max(0,(meta.t||0)-(vol[m]||0));}
-  const last=HISTORY.length?HISTORY[HISTORY.length-1]:null;
-  const trainedToday=!!(last&&dayKeyOf(last.date)===dayKeyOf(Date.now()));
+  // a one-off counts as training today, but the rotation / alternation reads past it
+  const lastAny=HISTORY.length?HISTORY[HISTORY.length-1]:null,last=lastRegular();
+  const trainedToday=!!(lastAny&&dayKeyOf(lastAny.date)===dayKeyOf(Date.now()));
   const rot=nextSuggestedDay();
   const scored=DAYS.map(d=>{
     const p=PLAN[d];let score=0;
@@ -1730,14 +1849,14 @@ function suggestDay(){
     if(pick.ld===null)bits.push("you haven't run this one yet");
     else bits.push(pick.stale>=14?"not trained in 2+ weeks":pick.stale===0?"already trained today":pick.stale===1?"last done yesterday":`last done ${pick.stale} days ago`);
     if(last&&PLAN[last.day]&&dayName(last.day)!==pick.name)bits.push(`follows ${dayName(last.day).toLowerCase()} with ${pick.name.toLowerCase()}`);
-    if(pick.d===rot)bits.push(`next in your ${ROT.join("→")} rotation`);
+    if(pick.d===rot)bits.push(`next in your ${ROT.join("→")} rotation${lastAny&&isOneOff(lastAny.day)?" (one-offs don't move it)":""}`);
     else if(pick.cover>=4)bits.push("covers the muscles furthest behind this week");
     reason=bits.join(" · ");
     reason=reason.charAt(0).toUpperCase()+reason.slice(1)+".";
   }
   return{pick,all:scored,trainedToday,reason,runnerUp:scored[1]};
 }
-function nextSuggestedDay(){if(!HISTORY.length)return ROT[0];const last=HISTORY[HISTORY.length-1].day;const idx=ROT.indexOf(last);if(idx<0)return ROT[0];return ROT[(idx+1)%ROT.length];}
+function nextSuggestedDay(){const lr=lastRegular();if(!lr)return ROT[0];const last=lr.day;const idx=ROT.indexOf(last);if(idx<0)return ROT[0];return ROT[(idx+1)%ROT.length];}
 
 // per-session stats for one exercise
 const MAX_SANE_REPS=50;
@@ -1984,7 +2103,7 @@ function exCardHtml(rec,name){
 }
 function historySorted(){return HISTORY.map((rec,idx)=>({rec,idx})).sort((a,b)=>b.rec.date-a.rec.date);}
 function historyRowHtml(rec,idx){
-  const p=PLAN[rec.day]||{name:rec.day,ex:[]};const st=sessionOverallStats(rec);
+  const p=dayStub(rec.day);const st=sessionOverallStats(rec);
   let deltaHtml="";
   if(idx>0){
     const prevSt=sessionOverallStats(HISTORY[idx-1]);
@@ -1995,7 +2114,7 @@ function historyRowHtml(rec,idx){
       deltaHtml=`<div class="hist-delta ${dir}">${arrow} ${pct>=0?"+":""}${pct}%</div>`;
     }
   }
-  return`<button class="hist-item" onclick="openHistorySession(${idx})"><div class="hist-day">${rec.day}</div><div class="hist-mid"><div class="nm">${p?esc(p.name):esc(rec.day)}</div><div class="dt">${fmtDate(rec.date)}</div></div><div class="hist-right"><div class="hist-comp">${st.done}/${st.total} sets</div>${deltaHtml}</div></button>`;
+  return`<button class="hist-item" onclick="openHistorySession(${idx})"><div class="hist-day">${rec.day}</div><div class="hist-mid"><div class="nm">${p?esc(p.name):esc(rec.day)}${isOneOff(rec.day)?" · one-off":""}</div><div class="dt">${fmtDate(rec.date)}</div></div><div class="hist-right"><div class="hist-comp">${st.done}/${st.total} sets</div>${deltaHtml}</div></button>`;
 }
 function renderHistorySection(){
   if(!HISTORY.length)return"";
@@ -2017,7 +2136,7 @@ function openHistoryFull(){
 }
 function openHistorySession(idx){
   const rec=HISTORY[idx];if(!rec)return;
-  const p=PLAN[rec.day]||{name:rec.day,ex:[]};
+  const p=dayStub(rec.day);
   const st=sessionOverallStats(rec);
   let deltaRow="";const noteBits=[];
   if(idx>0){
@@ -2046,7 +2165,7 @@ function openHistorySession(idx){
   });
   if(prCount)noteBits.unshift(`${prCount} new PR${prCount>1?"s":""} this session`);
   const note=noteBits.length?`<div class="overall-note">${esc(noteBits.join(" · "))}.</div>`:"";
-  const html=`<div class="overlay"><div class="ov-head">${BACK_BTN}<div class="ti"><span>${fmtDate(rec.date)}</span>${rec.day} · ${p?esc(p.name):""}</div></div><div class="ov-body">
+  const html=`<div class="overlay"><div class="ov-head">${BACK_BTN}<div class="ti"><span>${fmtDate(rec.date)}${isOneOff(rec.day)?" · one-off":""}</span>${rec.day} · ${p?esc(p.name):""}</div></div><div class="ov-body">
     <div class="overall-card"><div class="oh">Session overview</div>
     <div class="overall-row"><span>Sets completed</span><b>${st.done} / ${st.total}</b></div>
     <div class="overall-row"><span>Total volume</span><b>${st.vol}kg</b></div>
@@ -2054,6 +2173,7 @@ function openHistorySession(idx){
     ${deltaRow}${note}</div>
     <div class="section-h">Exercises</div>
     ${exCards.join("")}
+    ${isOneOff(rec.day)?(rec.wasDay&&PLAN[rec.wasDay]?`<div class="oo-hist"><button class="tool-btn" onclick="setHistoryOneOff(${idx},false)">Count as ${esc(rec.wasDay)} again</button><div class="oo-sub">Puts it back in the rotation.</div></div>`:""):(PLAN[rec.day]?`<div class="oo-hist"><button class="tool-btn" onclick="setHistoryOneOff(${idx},true)">Count as a one-off</button><div class="oo-sub">Takes it off the rotation. Sets still count toward volume, PRs and the Coach.</div></div>`:"")}
   </div></div>`;
   document.getElementById("overlayMount").innerHTML=html;
 }
@@ -2075,7 +2195,7 @@ let showExport=false,showImport=false;
 
 function renderHome(summary){
   document.body.classList.remove("in-session");kpClose();
-  if(window.__swPendingReload&&!summary){window.__swPendingReload=false;location.reload();return;}
+  if(window.__swPendingReload&&!summary){window.__swPendingReload=false;if(saveT){clearTimeout(saveT);saveT=null;}if(CUR)saveCur();location.reload();return;}
   stopTimer(true);releaseWake();closeOverlay();
   kickEl.textContent="Push / Pull · Tracker";
   if(summary)TAB="train";
@@ -2090,7 +2210,7 @@ function renderTrain(summary){
   let html="";
   html+=statRowHtml();
   if(summary&&summary.milestone){html+=`<div class="milestone-banner"><div class="ic">🎉</div><div><div class="tt">${summary.milestone} workouts logged</div><div class="dd">Since you started tracking — nice consistency.</div></div></div>`;}
-  if(summary){html+=`<div class="nudge" style="border-color:rgba(111,191,115,.4);background:rgba(111,191,115,.1)"><span>✓</span><div><b style="color:var(--green)">${summary.day} logged.</b> ${summary.done}/${summary.total} sets done${summary.skipped?` · ${summary.skipped} exercise${summary.skipped>1?"s":""} skipped`:""}.${kcalLineHtml(summary.kcal)}</div></div>`;
+  if(summary){html+=`<div class="nudge" style="border-color:rgba(111,191,115,.4);background:rgba(111,191,115,.1)"><span>✓</span><div><b style="color:var(--green)">${isOneOff(summary.day)?"One-off logged.":summary.day+" logged."}</b>${isOneOff(summary.day)?` Rotation stays on <b>${nextSuggestedDay()}</b>.`:""} ${summary.done}/${summary.total} sets done${summary.skipped?` · ${summary.skipped} exercise${summary.skipped>1?"s":""} skipped`:""}.${kcalLineHtml(summary.kcal)}</div></div>`;
     if(summary.highlights&&summary.highlights.length){
       const groups=buildMuscleSummary(summary.highlights);
       html+=`<div class="section-h">Highlights by muscle group</div>`;
@@ -2108,8 +2228,8 @@ function renderTrain(summary){
       });
     }
   }
-  if(CUR){const p=PLAN[CUR.day]||{name:CUR.day,ex:[]};const names=CUR.order||p.ex.map(e=>e.n);let tot=0,done=0;names.forEach(n=>{const ex=NAME_INDEX[n];const log=CUR.ex[n];if(!log)return;tot+=log.sets.length;done+=log.sets.filter(s=>setComplete(ex,s)).length;});
-    html+=`<div class="resume"><div class="l"><div class="t">Resume ${CUR.day} · ${p.name}</div><div class="d">${done}/${tot} sets · ${CUR.start==null?"not started yet":"started "+fmtDate(CUR.start)}</div></div><button onclick="openSession()">Resume</button></div>`;}
+  if(CUR){const p=dayStub(CUR.day);const names=CUR.order||p.ex.map(e=>e.n);let tot=0,done=0;names.forEach(n=>{const ex=NAME_INDEX[n];const log=CUR.ex[n];if(!log)return;tot+=log.sets.length;done+=log.sets.filter(s=>setComplete(ex,s)).length;});
+    html+=`<div class="resume"><div class="l"><div class="t">Resume ${isOneOff(CUR.day)?"one-off":CUR.day} · ${p.name}</div><div class="d">${done}/${tot} sets · ${CUR.start==null?"not started yet":"started "+fmtDate(CUR.start)}</div></div><button onclick="openSession()">Resume</button></div>`;}
   const sg=suggestDay();
   const nextDay=sg.pick.d;
   html+=`<div class="section-h">Start a session</div>`;
@@ -2127,6 +2247,8 @@ function renderTrain(summary){
   html+=`<div class="days">`;
   for(const k of DAY_LIST){const p=PLAN[k];if(!p)continue;html+=`<button class="day-btn${(!CUR&&k===nextDay)?" upnext-day":""}" onclick="previewDay('${k}')"><div class="code"><b>${k}</b></div><div class="nm">${p.name}</div><div class="ct">${p.ex.length} exercises</div></button>`;}
   html+=`</div>`;
+  { const live=!!(CUR&&isOneOff(CUR.day));const nEx=oneOffList().length;
+    html+=`<button class="day-btn oneoff-tile${live?" live":""}" onclick="previewOneOff()"><div class="oo-ic">1×</div><div><div class="code"><b>ONE-OFF</b> <span class="oo-nm">· ${esc(ONEOFF.name)}</span></div><div class="ct" style="margin-top:2px">${live?"In progress — tap to resume":`Off the rotation · ${nEx} exercises, lighter sets`}</div></div></button>`; }
   html+=`<button class="day-btn cardio-tile" style="width:100%;margin-top:10px;display:flex;align-items:center;gap:14px;text-align:left" onclick="startCardioLog(null)">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 8 4-16 2 8h6"/></svg>
     <div><div class="code"><b>CARDIO</b></div><div class="ct" style="margin-top:2px">${CARDIO_LIVE?"Cardio in progress — tap to view":"Log a standalone cardio session"}</div></div>
@@ -2216,6 +2338,7 @@ function trainGoalsHtml(day){
   return`<div class="plan"><div class="ph">Today's goals</div>${rows}</div>`;
 }
 function goalBadgeHtml(name,day,nSets){
+  if(isOneOff(day)){const ez=easeIn(name);if(ez)return`<span class="goal-badge">🎯 Ease in ${esc(easeTxt(ez))} <em>${ez.days} days off · 2–3 in the tank</em></span>`;}
   const g=exGoal(name,day,nSets);if(!g||g.kind==="up"||g.kind==="down"||g.kind==="harder")return""; // the progression nudge says it
   return`<span class="goal-badge">🎯 Goal ${esc(g.txt)} <em>${g.kind==="hold"?"hold — all at the top":"+"+g.add+" rep"+(g.add>1?"s":"")}</em></span>`;
 }
@@ -2233,7 +2356,7 @@ async function calDay(y,m,d){
   const list=HISTORY.map((s,idx)=>({s,idx})).filter(({s})=>{const x=new Date(s.date);return x.getFullYear()===y&&x.getMonth()===m&&x.getDate()===d;});
   if(!list.length)return;
   if(list.length===1){openHistorySession(list[0].idx);return;}
-  const k=await showChoice(new Date(y,m,d).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}),"",list.map(({s})=>`${s.day} · ${(PLAN[s.day]||{name:""}).name}`));
+  const k=await showChoice(new Date(y,m,d).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}),"",list.map(({s})=>`${s.day} · ${dayName(s.day)}`));
   if(k!=null&&k>=0&&list[k])openHistorySession(list[k].idx);
 }
 function renderProgress(){
@@ -2252,7 +2375,7 @@ function renderProgress(){
   let g=["M","T","W","T","F","S","S"].map(x=>`<div class="wd">${x}</div>`).join("");
   for(let i=0;i<lead;i++)g+=`<div class="cal-d out"></div>`;
   for(let d=1;d<=days;d++){const ds=byDate[d]||[];const isT=today.getFullYear()===y&&today.getMonth()===m&&today.getDate()===d;
-    const kind=ds.length?(/^B/.test(ds[0])?"pull":"push"):"";
+    const kind=ds.length?(isOneOff(ds[0])?"full":/^B/.test(ds[0])?"pull":"push"):"";
     const dots=(cdx[d]?"<i></i>":"")+(tnx[d]?'<i class="t"></i>':"");
     g+=`<${ds.length?`button onclick="calDay(${y},${m},${d})"`:"div"} class="cal-d ${kind}${ds.length>1?" two":""}${isT?" today":""}"><span class="n">${d}</span>${ds.length?`<span class="c">${ds.map(esc).join("+")}</span>`:""}${dots?`<span class="dots">${dots}</span>`:""}</${ds.length?"button":"div"}>`;}
   const goal=Math.round(days/7*CADENCE_TARGET);
@@ -2261,7 +2384,7 @@ function renderProgress(){
   let html=`<div class="section-h">Calendar</div><div class="cal"><div class="cal-top"><div class="mn">${first.toLocaleDateString(undefined,{month:"long",year:"numeric"})}</div><div class="nav"><button ${canPrev?"":"disabled"} onclick="calNav(-1)" aria-label="previous month">‹</button><button ${canNext?"":"disabled"} onclick="calNav(1)" aria-label="next month">›</button></div></div>
    <div class="cal-sum"><span class="big">${cnt}</span><span class="lbl">workout${cnt===1?"":"s"} · goal ~${goal}</span>${prevCnt||cnt?`<span class="dl ${diff>0?"up":diff<0?"dn":""}">${diff>0?"▲ "+diff:diff<0?"▼ "+(-diff):"="} vs ${esc(pmName)}${isCur?` 1–${today.getDate()}`:""}</span>`:""}</div>
    <div class="cal-grid">${g}</div>
-   <div class="cal-leg"><span><i class="lp"></i>Push</span><span><i class="ll"></i>Pull</span><span><i class="lc"></i>Cardio</span><span><i class="lt"></i>Tennis</span></div></div>`;
+   <div class="cal-leg"><span><i class="lp"></i>Push</span><span><i class="ll"></i>Pull</span><span><i class="lf"></i>One-off</span><span><i class="lc"></i>Cardio</span><span><i class="lt"></i>Tennis</span></div></div>`;
   // month by month — last 6 months, tap to jump
   const ms=[];for(let k=5;k>=0;k--){const dd=new Date(b.max[0],b.max[1]-k,1);ms.push({y:dd.getFullYear(),m:dd.getMonth(),l:dd.toLocaleDateString(undefined,{month:"short"}),c:sessionsInMonth(dd.getFullYear(),dd.getMonth()).length});}
   const mx=Math.max(...ms.map(x=>x.c),goal);
@@ -2435,9 +2558,9 @@ function renderSession(){
   // wherever the abs exercise happens to sit.
 
   names.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];if(log.skipped)return;const sets=log.sets;totSets+=sets.length;doneSets+=sets.filter(s=>setComplete(ex,s)).length;});
-  const p=PLAN[CUR.day]||{name:CUR.day,ex:[]};
+  const p=dayStub(CUR.day);
   const pct=totSets?Math.round(doneSets/totSets*100):0;
-  let html=`<div class="shead"><div class="row1"><h2><b>${CUR.day}</b> · ${p.name}</h2><div style="display:flex;align-items:center"><span class="rest-mini" id="restMini"></span><div class="clock" id="clock">0:00</div></div></div><div class="row2"><div class="prog" id="prog">${doneSets}/${totSets} sets · ${pct}%</div><button class="linkbtn" onclick="renderHome()">Back</button></div><div class="pbar"><div class="pbar-fill" id="progFill" style="width:${pct}%"></div></div></div>`;
+  let html=`<div class="shead"><div class="row1"><h2><b>${CUR.day}</b> · ${p.name}${isOneOff(CUR.day)?'<span class="oo-chip">one-off</span>':""}</h2><div style="display:flex;align-items:center"><span class="rest-mini" id="restMini"></span><div class="clock" id="clock">0:00</div></div></div><div class="row2"><div class="prog" id="prog">${doneSets}/${totSets} sets · ${pct}%</div><button class="linkbtn" onclick="renderHome()">Back</button></div><div class="pbar"><div class="pbar-fill" id="progFill" style="width:${pct}%"></div></div></div>`;
   // Two kinds of alert at the top: PRIORITY = a must-have exercise for a muscle
   // you train today was skipped earlier this week; STRETCH = the one optional
   // exercise today that adds the most toward the plan's full volume.
@@ -2469,7 +2592,7 @@ function renderSession(){
     if(pastCap&&!priDone)cls.push(must2?"prirow":"optrow");
     if(pastCap&&!priDone&&!must2&&!uskip&&!(dn===total&&total>0)&&(optInfo(name)||{}).kind==="none")cls.push("faded");
     if(uskip)cls.push("uskip");else if(dn===total&&total>0)cls.push("done");else if(dn>0)cls.push("partial");
-    const tags=[];if(ex.main&&!(pastCap&&!must2))tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');
+    const tags=[];if(ex.main&&!isOneOff(CUR.day)&&!(pastCap&&!must2))tags.push('<span class="tg str">Heavy top set</span>');if(ex.abs&&!pastCap)tags.push('<span class="tg dont">~40–45 min · don\'t skip</span>');
     if(uskip)tags.push('<span class="tg sk">Skipped</span>');
     else if(priDone)tags.push('<span class="tg pridone">✓ Priority done</span>');
     else if(must2){const c=carriedOver(name);tags.push(`<span class="tg pri">●● Must today${c?` · skipped in ${esc(c.day)}`:" · skipped this week"}</span>`);}
@@ -2488,7 +2611,7 @@ function renderSession(){
       // past sets and cues to find it. The editor down in noteBlock is untouched.
       const pinnedNoteHtml=`<div id="pn-${i}">${nVal.trim()?pinnedNoteView(i,nVal):""}</div>`;
       const goalBadge=uskip?"":goalBadgeHtml(name,CUR.day,total);
-      const metaRow=((goalBadge||targetBadge||lastTimeHtml)?`<div class="targetrow">${goalBadge}${targetBadge}${lastTimeHtml}</div>`:"")+whyHtml(name)+((recentExtra(name)&&!uskip&&dn===0)?recentBoxHtml(i,name):"")+progHintHtml(name);
+      const metaRow=((goalBadge||targetBadge||lastTimeHtml)?`<div class="targetrow">${goalBadge}${targetBadge}${lastTimeHtml}</div>`:"")+whyHtml(name)+((recentExtra(name)&&!uskip&&dn===0)?recentBoxHtml(i,name):"")+(isOneOff(CUR.day)&&easeIn(name)?"":progHintHtml(name));
       topHtml=`${pinnedNoteHtml}${metaRow}`;
       if(!prs.hasData){statsHtml=`<div class="nohist" style="margin-bottom:0;padding-bottom:0;border-bottom:none">No history yet — your first logged session sets the baseline.</div>`;}
       else{
@@ -3568,6 +3691,7 @@ function propWeight(i,j){const name=CUR.order[i];const ex=NAME_INDEX[name];const
    the stored plan. */
 function effortCheck(i){
   const name=CUR.order[i], ex=NAME_INDEX[name];
+  if(isOneOff(CUR.day))return null;                    // lighter on purpose — no "add a set" nudge
   if(CUR.effortOff&&CUR.effortOff[name])return null;   // dismissed this session
   const sets=CUR.ex[name].sets;
   if(sets.length>ex.sets)return null;                   // already carrying an extra set
@@ -3734,11 +3858,11 @@ async function openSwap(i){
   const hasLogged=CUR.ex[name].sets.some(s=>setComplete(oldDef,s));
   if(hasLogged){const ok=await showConfirm(`Swap to ${newName}? Sets already logged for ${name} this session will be cleared.`);if(!ok)return;}
   const def=NAME_INDEX[newName];const prev=lastLog(newName);
-  const nSets=Math.max(def.sets,0,(oldDef&&oldDef.sets)||0);
+  const nSets=isOneOff(CUR.day)?CUR.ex[name].sets.length:Math.max(def.sets,0,(oldDef&&oldDef.sets)||0);
   touchActivity();CUR.order[i]=newName;
   CUR.swapOf=CUR.swapOf||{};CUR.swapOf[newName]=CUR.swapOf[name]||name;
   delete CUR.ex[name];
-  CUR.ex[newName]={sets:Array.from({length:nSets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
+  CUR.ex[newName]=isOneOff(CUR.day)?{sets:oneOffSets(newName,nSets)}:{sets:Array.from({length:nSets},(_,j)=>({weight:"",reps:"",ph:prev&&prev[j]!=null?String(prev[j].weight??"–"):"–",phReps:prev&&prev[j]!=null&&prev[j].reps!=null&&prev[j].reps!==""?String(prev[j].reps):""}))};
   saveCur();renderSession();
 }
 
@@ -3906,7 +4030,7 @@ async function finishSession(){
     const fin=await showConfirm("Your cardio is still running. Finish it first so it counts toward this session?",{okLabel:"Finish cardio",cancelLabel:"Save workout anyway"});
     if(fin){finishCardioLive();return;}
   }
-  const missedMain=CUR.order.find(n=>{const d=NAME_INDEX[n];const lg=CUR.ex[n];return d.main&&!lg.skipped&&lg.sets.filter(s=>setComplete(d,s)).length===0;});
+  const missedMain=isOneOff(CUR.day)?null:CUR.order.find(n=>{const d=NAME_INDEX[n];const lg=CUR.ex[n];return d.main&&!lg.skipped&&lg.sets.filter(s=>setComplete(d,s)).length===0;});
   if(missedMain){
     const proceed=await showConfirm(`You haven't logged ${missedMain} yet — it's today's key lift. Worth getting at least that one in before you finish.`,{okLabel:"Finish anyway",cancelLabel:"Go back to it"});
     if(!proceed){
@@ -3915,14 +4039,14 @@ async function finishSession(){
       return;
     }
   }
-  CUR.date=sessionEndAt();disarmIdle();const rec={day:CUR.day,date:CUR.date,start:(CUR.start==null?CUR.date:CUR.start),exOrder:CUR.order.slice(),ex:{}};let done=0,total=0,skipped=0;
+  CUR.date=sessionEndAt();disarmIdle();const rec={day:CUR.day,date:CUR.date,start:(CUR.start==null?CUR.date:CUR.start),exOrder:CUR.order.slice(),ex:{}};if(CUR.wasDay)rec.wasDay=CUR.wasDay;let done=0,total=0,skipped=0;
   const highlights=[];
   CUR.order.forEach(name=>{const ex=NAME_INDEX[name];const log=CUR.ex[name];const sets=log.sets.map(s=>({weight:s.weight,reps:s.reps}));rec.ex[name]={sets,skipped:!!log.skipped};const d=log.sets.filter(s=>setComplete(ex,s)).length;done+=d;total+=sets.length;if(d===0)skipped++;
     if(log.highlight&&!log.skipped)highlights.push(Object.assign({muscle:ex.m,name},log.highlight));});
   // The list now re-orders itself by progress, so only a manual drag counts as
   // "you changed the order" — and only the plan exercises' order gets saved.
   const planNow=PLAN[rec.day]?CUR.order.filter(n=>PLAN[rec.day].ex.some(e=>e.n===n)):[];
-  const orderChanged=!!CUR.userReordered&&JSON.stringify(planNow)!==JSON.stringify(getDayOrderNames(rec.day));
+  const orderChanged=!!CUR.userReordered&&!!PLAN[rec.day]&&JSON.stringify(planNow)!==JSON.stringify(getDayOrderNames(rec.day));
   HISTORY.push(rec);await sset("history",HISTORY);CUR=null;await sset("current",null);
   const milestone=MILESTONES.includes(HISTORY.length)?HISTORY.length:null;
   if(orderChanged){
@@ -3943,7 +4067,7 @@ const BACKUP_REPO="IsraelToledano/Gym-buddy";
 function askSnapshot(){
   const L=[];
   L.push(`app: ${APP_VERSION}   when: ${new Date().toISOString()}`);
-  L.push(`screen: ${CUR?`session ${CUR.day} (${PLAN[CUR.day]?PLAN[CUR.day].name:"?"})`:"home"}`);
+  L.push(`screen: ${CUR?`session ${CUR.day} (${dayName(CUR.day)||"?"}${CUR.wasDay?`, was ${CUR.wasDay}`:""})`:"home"}`);
   L.push(`ua: ${navigator.userAgent}`);
   if(CUR){
     const AL=computeAlerts();
